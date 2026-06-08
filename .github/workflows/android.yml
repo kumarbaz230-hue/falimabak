@@ -1,8 +1,6 @@
 name: Build Android APK
 
 on:
-  push:
-    branches: [main, master]
   workflow_dispatch:
 
 jobs:
@@ -37,8 +35,8 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.buildozer/android/packages
-          key: bz-pkgs-v6-${{ hashFiles('buildozer.spec') }}
-          restore-keys: bz-pkgs-v6-
+          key: bz-pkgs-v7-${{ hashFiles('buildozer.spec') }}
+          restore-keys: bz-pkgs-v7-
 
       - name: Install system dependencies
         run: |
@@ -46,7 +44,7 @@ jobs:
           sudo apt-get install -y --no-install-recommends \
             build-essential git zip unzip autoconf automake libtool pkg-config \
             zlib1g-dev libncurses5-dev libncursesw5-dev libtinfo5 cmake \
-            libffi-dev libssl-dev libglib2.0-dev \
+            libffi-dev libssl-dev libglib2.0-dev xvfb \
             libgl1-mesa-dev libgles2-mesa-dev libegl1-mesa-dev \
             libsdl2-dev libsdl2-image-dev libsdl2-mixer-dev libsdl2-ttf-dev \
             libportmidi-dev libswscale-dev libavformat-dev libavcodec-dev libavutil-dev
@@ -69,17 +67,14 @@ jobs:
           python -m pip install --upgrade pip setuptools
           pip install "cython==0.29.34" "buildozer==1.5.0"
 
-      - name: Show spec
-        run: |
-          grep -E "requirements|p4a.branch" buildozer.spec
-          python --version
-
       - name: Build APK
         run: |
           export PATH="$HOME/.local/bin:$PATH"
           export JAVA_HOME="${JAVA_HOME_17_X64:-$JAVA_HOME}"
           export ORG_GRADLE_JAVA_HOME="$JAVA_HOME"
           export PATH="$JAVA_HOME/bin:$PATH"
+          Xvfb :99 -screen 0 1280x720x24 &
+          export DISPLAY=:99
           rm -rf .buildozer bin
           set +o pipefail
           yes 2>/dev/null | buildozer -v android debug 2>&1 | tee buildozer.log
@@ -91,8 +86,7 @@ jobs:
         if: always()
         run: |
           if [ -f buildozer.log ]; then
-            grep -E "Command failed|gradlew failed|fatal error:|^ERROR" buildozer.log | grep -vi warning | tail -n 30 || true
-            tail -n 80 buildozer.log
+            grep -E "config.pxi|Command failed|gradlew failed|fatal error:" buildozer.log | grep -vi "warning:" | tail -n 20 || true
           fi
           ls -la bin/ 2>/dev/null || echo "bin/ yok"
 
@@ -103,7 +97,6 @@ jobs:
           name: falimabak-debug-apk
           path: bin/*.apk
           if-no-files-found: error
-          retention-days: 14
 
       - name: Upload log on failure
         if: failure()
@@ -112,4 +105,3 @@ jobs:
           name: buildozer-log
           path: buildozer.log
           if-no-files-found: ignore
-          retention-days: 7

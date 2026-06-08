@@ -8,7 +8,7 @@ source.dir = .
 source.main = main.py
 
 source.include_exts = py,png,jpg,jpeg,kv,json,webp,ttf,txt
-source.include_patterns = assets/*,config.ornek.json
+source.include_patterns = assets/*,config.ornek.json,recipes/*
 source.exclude_dirs = tests,bin,.git,__pycache__,.buildozer,.venv,venv,env,.idea,user_photos,.github
 source.exclude_patterns = license,images/*/*.jpg,*.bat,*.md,config.json,kullanici_veri.json,.env
 
@@ -36,5 +36,5 @@ android.presplash_color = #0F0C20
 
 log_level = 2
 warn_on_root = 1
-# develop = Python 3.14 gerekir. master = Python 3.11 ile stabil.
 p4a.branch = master
+p4a.local_recipes = ./recipes
