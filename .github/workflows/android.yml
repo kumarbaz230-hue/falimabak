@@ -35,8 +35,8 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.buildozer/android/packages
-          key: bz-pkgs-${{ hashFiles('buildozer.spec') }}
-          restore-keys: bz-pkgs-
+          key: bz-pkgs-v2-${{ hashFiles('buildozer.spec') }}
+          restore-keys: bz-pkgs-v2-
 
       - name: Install system dependencies
         run: |
@@ -58,7 +58,6 @@ jobs:
 
       - name: Show spec
         run: |
-          file buildozer.spec
           grep requirements buildozer.spec
           java -version
 
@@ -66,14 +65,18 @@ jobs:
         run: |
           export PATH="$HOME/.local/bin:$PATH"
           export JAVA_HOME="${JAVA_HOME_17_X64:-$JAVA_HOME}"
+          export ORG_GRADLE_JAVA_HOME="$JAVA_HOME"
           export PATH="$JAVA_HOME/bin:$PATH"
           rm -rf .buildozer bin
-          yes | buildozer -v android debug > buildozer.log 2>&1
-          BUILD_EXIT=$?
-          echo "buildozer exit: $BUILD_EXIT"
-          tail -n 60 buildozer.log
-          ls -la bin/ 2>/dev/null || true
-          exit $BUILD_EXIT
+          # accept_sdk_license=True spec'te; yes pipe gradlew'da broken pipe yapar
+          buildozer -v android debug > buildozer.log 2>&1
+          EC=$?
+          echo "===== HATA OZETI ====="
+          grep -E "gradlew failed|Command failed|FAILURE:|ERROR:|Traceback|Error code" buildozer.log | tail -n 50 || true
+          echo "===== SON 120 SATIR ====="
+          tail -n 120 buildozer.log
+          ls -la bin/ 2>/dev/null || echo "bin/ yok"
+          exit $EC
 
       - name: Upload APK
         if: success()
