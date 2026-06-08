@@ -35,8 +35,8 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.buildozer/android/packages
-          key: bz-pkgs-v2-${{ hashFiles('buildozer.spec') }}
-          restore-keys: bz-pkgs-v2-
+          key: bz-pkgs-v3-${{ hashFiles('buildozer.spec') }}
+          restore-keys: bz-pkgs-v3-
 
       - name: Install system dependencies
         run: |
@@ -47,6 +47,16 @@ jobs:
             libffi-dev libssl-dev \
             libsdl2-dev libsdl2-image-dev libsdl2-mixer-dev libsdl2-ttf-dev \
             libportmidi-dev libswscale-dev libavformat-dev libavcodec-dev libavutil-dev
+
+      - name: Accept Android SDK licenses
+        run: |
+          mkdir -p "$HOME/.android/licenses"
+          echo "24333f8a63b6825ea9c5514f83c2829b004d1fee" > "$HOME/.android/licenses/android-sdk-license"
+          echo "84831b9409646a918e305718201e" >> "$HOME/.android/licenses/android-sdk-license"
+          echo "d97579ad9d454c3b62de4ce1053f43212e" >> "$HOME/.android/licenses/android-sdk-license"
+          echo "601085b94cd77f0b157e" >> "$HOME/.android/licenses/android-sdk-license"
+          echo "33b6a2b64607f11b759f220" >> "$HOME/.android/licenses/android-sdk-license"
+          echo "8403addf88ab4874007e1c" > "$HOME/.android/licenses/android-sdk-preview-license"
 
       - name: Prepare config
         run: cp config.ornek.json config.json
@@ -68,15 +78,25 @@ jobs:
           export ORG_GRADLE_JAVA_HOME="$JAVA_HOME"
           export PATH="$JAVA_HOME/bin:$PATH"
           rm -rf .buildozer bin
-          # accept_sdk_license=True spec'te; yes pipe gradlew'da broken pipe yapar
-          buildozer -v android debug > buildozer.log 2>&1
-          EC=$?
-          echo "===== HATA OZETI ====="
-          grep -E "gradlew failed|Command failed|FAILURE:|ERROR:|Traceback|Error code" buildozer.log | tail -n 50 || true
-          echo "===== SON 120 SATIR ====="
-          tail -n 120 buildozer.log
-          ls -la bin/ 2>/dev/null || echo "bin/ yok"
+          set +o pipefail
+          yes 2>/dev/null | buildozer -v android debug 2>&1 | tee buildozer.log
+          EC=${PIPESTATUS[1]}
+          set -o pipefail
+          echo "buildozer exit code: $EC"
           exit $EC
+
+      - name: Dump build log
+        if: always()
+        run: |
+          echo "===== HATA OZETI ====="
+          if [ -f buildozer.log ]; then
+            grep -E "gradlew failed|Command failed|FAILURE:|ERROR:|Traceback|Error code" buildozer.log | tail -n 40 || true
+            echo "===== SON 150 SATIR ====="
+            tail -n 150 buildozer.log
+          else
+            echo "buildozer.log bulunamadi"
+          fi
+          ls -la bin/ 2>/dev/null || echo "bin/ yok"
 
       - name: Upload APK
         if: success()
