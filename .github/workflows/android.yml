@@ -15,6 +15,8 @@ jobs:
       ANDROID_NDK_HOME: ""
       ANDROID_NDK_ROOT: ""
       ANDROID_NDK_LATEST_HOME: ""
+      USE_OPENGL_ES2: "1"
+      USE_SDL2: "1"
 
     steps:
       - name: Checkout
@@ -29,14 +31,14 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.10'
 
       - name: Cache SDK packages only
         uses: actions/cache@v4
         with:
           path: ~/.buildozer/android/packages
-          key: bz-pkgs-v4-${{ hashFiles('buildozer.spec') }}
-          restore-keys: bz-pkgs-v4-
+          key: bz-pkgs-v5-${{ hashFiles('buildozer.spec') }}
+          restore-keys: bz-pkgs-v5-
 
       - name: Install system dependencies
         run: |
@@ -44,7 +46,8 @@ jobs:
           sudo apt-get install -y --no-install-recommends \
             build-essential git zip unzip autoconf automake libtool pkg-config \
             zlib1g-dev libncurses5-dev libncursesw5-dev libtinfo5 cmake \
-            libffi-dev libssl-dev \
+            libffi-dev libssl-dev libglib2.0-dev \
+            libgl1-mesa-dev libgles2-mesa-dev libegl1-mesa-dev \
             libsdl2-dev libsdl2-image-dev libsdl2-mixer-dev libsdl2-ttf-dev \
             libportmidi-dev libswscale-dev libavformat-dev libavcodec-dev libavutil-dev
 
@@ -64,11 +67,12 @@ jobs:
       - name: Install Buildozer
         run: |
           python -m pip install --upgrade pip
-          pip install "cython==0.29.33" buildozer
+          pip install "cython==0.29.33" "git+https://github.com/kivy/buildozer.git@master"
 
       - name: Show spec
         run: |
           grep requirements buildozer.spec
+          python --version
           java -version
 
       - name: Build APK
@@ -90,9 +94,9 @@ jobs:
         run: |
           echo "===== HATA OZETI ====="
           if [ -f buildozer.log ]; then
-            grep -E "gradlew failed|Command failed|FAILURE:|ERROR:|Traceback|Error code" buildozer.log | tail -n 40 || true
-            echo "===== SON 150 SATIR ====="
-            tail -n 150 buildozer.log
+            grep -E "config.pxi|gradlew failed|Command failed|FAILURE:|ERROR:|Traceback|Error code" buildozer.log | tail -n 50 || true
+            echo "===== SON 120 SATIR ====="
+            tail -n 120 buildozer.log
           else
             echo "buildozer.log bulunamadi"
           fi

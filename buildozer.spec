@@ -14,8 +14,8 @@ source.exclude_patterns = license,images/*/*.jpg,*.bat,*.md,config.json,kullanic
 
 version = 1.0.0
 
-# kivy 2.2.1 + eski p4a = config.pxi hatasi. develop + 2.3.0 kullan.
-requirements = python3,kivy==2.3.0,pillow,android
+# hostpython3: config.pxi uretimi icin host Python sabitlensin
+requirements = hostpython3,python3,kivy==2.3.0,pillow,android
 
 orientation = portrait
 fullscreen = 0
