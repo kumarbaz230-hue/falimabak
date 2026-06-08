@@ -41,10 +41,11 @@ jobs:
           python -c "import json; p='config.json'; d=json.load(open(p,encoding='utf-8')); d['gemini_api_key']=''; json.dump(d, open(p,'w',encoding='utf-8'), indent=2, ensure_ascii=False)"
 
       - name: Build with Buildozer
-        uses: ArtemShatalov/buildozer-action@v1
+        uses: ArtemSBulgakov/buildozer-action@v1
+        id: buildozer
         with:
-          command: buildozer -v android debug
-          buildozer_version: master
+          command: yes | buildozer -v android debug
+          buildozer_version: stable
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
