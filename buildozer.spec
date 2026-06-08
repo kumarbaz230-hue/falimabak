@@ -14,7 +14,8 @@ source.exclude_patterns = license,images/*/*.jpg,*.bat,*.md,config.json,kullanic
 
 version = 1.0.0
 
-requirements = python3,kivy==2.2.1,pillow,android
+# kivy 2.2.1 + eski p4a = config.pxi hatasi. develop + 2.3.0 kullan.
+requirements = python3,kivy==2.3.0,pillow,android
 
 orientation = portrait
 fullscreen = 0
@@ -36,3 +37,4 @@ android.presplash_color = #0F0C20
 
 log_level = 2
 warn_on_root = 1
+p4a.branch = develop
