@@ -1,0 +1,162 @@
+═══════════════════════════════════════════════════════════════
+  🃏 FIGMA 78 TAROT KARTI - EXPORT REHBERİ
+═══════════════════════════════════════════════════════════════
+
+Merhaba! Figma'daki "78 Tarot Cards" topluluğundan
+kart görsellerini export edip assets/ klasörüne koyman
+gerekiyor.
+
+═══════════════════════════════════════════════════════════════
+  📌 NASIL YAPILIR?
+═══════════════════════════════════════════════════════════════
+
+1. Figma linkine tıkla: 
+   https://www.figma.com/community/file/Ayi5EGAXazJbiM9A6mSTvB
+
+2. "Open in Figma" butonuna tıkla
+
+3. Her kartı seçip sağ panelden "Export" yap
+   (Format: PNG, Size: 2x veya dilediğin boyut)
+
+4. Export ettiğin dosyaları assets/ klasörüne at
+
+5. Dosya adlarını AŞAĞIDAKİ İSİMLENDİRMEYE GÖRE kaydet!
+
+═══════════════════════════════════════════════════════════════
+  📁 DOSYA İSİMLENDİRME ŞABLONU
+═══════════════════════════════════════════════════════════════
+
+┌─────────────────────────────────────────────────────────────┐
+│  Dosyaları assets/ klasörüne şu isimlerle kaydet:           │
+│                                                             │
+│  Örnek: major_00_fool.png                                    │
+│  Örnek: wands_01_ace.png                                     │
+│  Örnek: cups_06_six.png                                      │
+│                                                             │
+│  NOT: Uzantı .png, .jpg, .webp olabilir.                    │
+└─────────────────────────────────────────────────────────────┘
+
+═══════════════════════════════════════════════════════════════
+  🎯 MAJOR ARCANA (22 Kart)
+═══════════════════════════════════════════════════════════════
+
+  Kart Adı            │ Dosya Adı
+──────────────────────┼──────────────────────────
+  Soytarı             │ major_00_fool
+  Büyücü              │ major_01_magician
+  Yüksek Rahibe       │ major_02_high_priestess
+  İmparatoriçe        │ major_03_empress
+  İmparator           │ major_04_emperor
+  Aziz                │ major_05_hierophant
+  Aşıklar             │ major_06_lovers
+  Savaş Arabası       │ major_07_chariot
+  Güç                 │ major_08_strength
+  Azize               │ major_09_hermit
+  Şans Çarkı          │ major_10_wheel_of_fortune
+  Adalet              │ major_11_justice
+  Asılmış Adam        │ major_12_hanged_man
+  Ölüm                │ major_13_death
+  Denge               │ major_14_temperance
+  Şeytan              │ major_15_devil
+  Kule                │ major_16_tower
+  Yıldız              │ major_17_star
+  Ay                  │ major_18_moon
+  Güneş               │ major_19_sun
+  Yargı               │ major_20_judgement
+  Dünya               │ major_21_world
+
+═══════════════════════════════════════════════════════════════
+  🔥 DEĞNEK (Wands) - 14 Kart
+═══════════════════════════════════════════════════════════════
+
+  Kart Adı            │ Dosya Adı
+──────────────────────┼──────────────────────────
+  Değnek Ası          │ wands_01_ace
+  Değnek İkili        │ wands_02_two
+  Değnek Üçlü         │ wands_03_three
+  Değnek Dörtlü       │ wands_04_four
+  Değnek Beşli        │ wands_05_five
+  Değnek Altılı       │ wands_06_six
+  Değnek Yedili       │ wands_07_seven
+  Değnek Sekizli      │ wands_08_eight
+  Değnek Dokuzlu      │ wands_09_nine
+  Değnek Onlu         │ wands_10_ten
+  Değnek Vale         │ wands_11_page
+  Değnek Şövalye      │ wands_12_knight
+  Değnek Kraliçe      │ wands_13_queen
+  Değnek Kral         │ wands_14_king
+
+═══════════════════════════════════════════════════════════════
+  💧 KUPALAR (Cups) - 14 Kart
+═══════════════════════════════════════════════════════════════
+
+  Kart Adı            │ Dosya Adı
+──────────────────────┼──────────────────────────
+  Kupa Ası            │ cups_01_ace
+  Kupa İkili          │ cups_02_two
+  Kupa Üçlü           │ cups_03_three
+  Kupa Dörtlü         │ cups_04_four
+  Kupa Beşli          │ cups_05_five
+  Kupa Altılı         │ cups_06_six
+  Kupa Yedili         │ cups_07_seven
+  Kupa Sekizli        │ cups_08_eight
+  Kupa Dokuzlu        │ cups_09_nine
+  Kupa Onlu           │ cups_10_ten
+  Kupa Vale           │ cups_11_page
+  Kupa Şövalye        │ cups_12_knight
+  Kupa Kraliçe        │ cups_13_queen
+  Kupa Kral           │ cups_14_king
+
+═══════════════════════════════════════════════════════════════
+  ⚔️ KILIÇLAR (Swords) - 14 Kart
+═══════════════════════════════════════════════════════════════
+
+  Kart Adı            │ Dosya Adı
+──────────────────────┼──────────────────────────
+  Kılıç Ası           │ swords_01_ace
+  Kılıç İkili         │ swords_02_two
+  Kılıç Üçlü          │ swords_03_three
+  Kılıç Dörtlü        │ swords_04_four
+  Kılıç Beşli         │ swords_05_five
+  Kılıç Altılı        │ swords_06_six
+  Kılıç Yedili        │ swords_07_seven
+  Kılıç Sekizli       │ swords_08_eight
+  Kılıç Dokuzlu       │ swords_09_nine
+  Kılıç Onlu          │ swords_10_ten
+  Kılıç Vale          │ swords_11_page
+  Kılıç Şövalye       │ swords_12_knight
+  Kılıç Kraliçe       │ swords_13_queen
+  Kılıç Kral          │ swords_14_king
+
+═══════════════════════════════════════════════════════════════
+  💎 TILSIM (Pentacles) - 14 Kart
+═══════════════════════════════════════════════════════════════
+
+  Kart Adı            │ Dosya Adı
+──────────────────────┼──────────────────────────
+  Tılsım Ası          │ pentacles_01_ace
+  Tılsım İkili        │ pentacles_02_two
+  Tılsım Üçlü         │ pentacles_03_three
+  Tılsım Dörtlü       │ pentacles_04_four
+  Tılsım Beşli        │ pentacles_05_five
+  Tılsım Altılı       │ pentacles_06_six
+  Tılsım Yedili       │ pentacles_07_seven
+  Tılsım Sekizli      │ pentacles_08_eight
+  Tılsım Dokuzlu      │ pentacles_09_nine
+  Tılsım Onlu         │ pentacles_10_ten
+  Tılsım Vale         │ pentacles_11_page
+  Tılsım Şövalye      │ pentacles_12_knight
+  Tılsım Kraliçe      │ pentacles_13_queen
+  Tılsım Kral         │ pentacles_14_king
+
+═══════════════════════════════════════════════════════════════
+  ⚡ HIZLI İPUCU
+═══════════════════════════════════════════════════════════════
+
+Eğer sadece bazı kartları export edebiliyorsan, sorun değil!
+Uygulama şu anki 16 eski görseli de kullanmaya devam eder.
+Figma'dan export ettiğin her kart için ayrı ayrı assets
+klasörüne atabilirsin. Çalışan görsel varsa onu gösterir,
+yoksa emoji olarak görüntüler.
+
+═══════════════════════════════════════════════════════════════

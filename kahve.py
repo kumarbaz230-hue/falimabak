@@ -1,0 +1,378 @@
+"""
+☕ Kahve Falı Modülü - Kamera Entegrasyonlu
+Kullanıcı kahve fincanını fotoğraflar, uygulama yorumlar!
+"""
+
+from kivy.uix.screenmanager import Screen
+from kivy.uix.boxlayout import BoxLayout
+from kivy.uix.button import Button
+from kivy.uix.floatlayout import FloatLayout
+from kivy.graphics import Color, Rectangle, Ellipse
+from kivy.utils import get_color_from_hex
+from kivy.animation import Animation, Sequence
+from kivy.clock import Clock
+from kivy.metrics import dp
+import random
+
+from theme import (
+    RENKLER, TUS, YORUM_BEKLE, fontlari_yukle, metin_label,
+    tus_buton, baslik_satir, buton_metin_guncelle,
+    yorum_baslik, yorum_durum_notu, kaydirici_metin, FotoKutucukPanel,
+)
+from kamera import galeriden_sec, kameradan_cek
+from ai_yorum import yorum_al
+
+fontlari_yukle()
+
+RENKLER = {
+    'arka_plan': '#0d0221',
+    'arka_plan2': '#150534',
+    'kart_arka': '#1a0a3e',
+    'kart_kenar': '#2d1b69',
+    'altin': '#ffd700',
+    'altin_parlak': '#ffec6e',
+    'mor_parlak': '#b388ff',
+    'mor': '#7c4dff',
+    'mor_koyu': '#4a148c',
+    'beyaz': '#ffffff',
+    'gri_acik': '#e0e0e0',
+    'gri': '#9e9e9e',
+    'yesil': '#00e676',
+    'kirmizi': '#ff1744',
+    'turuncu': '#ff9100',
+    'pembe': '#e040fb',
+    'pembe_acik': '#ff80ab',
+    'lacivert': '#0d47a1',
+    'mavi_acik': '#40c4ff',
+    'mavi_parlak': '#00e5ff',
+    'kahve': '#6d4c41',
+    'kahve_acik': '#a1887f',
+    'sutlu': '#d7ccc8',
+    'krem': '#ffcc80',
+}
+
+# Kahve falı şekilleri - ZENGİN VERİTABANI
+KAHVE_SEKILLERI = [
+    # AŞK & İLİŞKİ
+    {'isim': 'Göz 👁️', 'kategori': 'Aşk', 'pozitif': 'Birisi size derinden aşık! Gözlerini sizden alamıyor.',
+     'negatif': 'Kıskançlık duyan biri var. Dikkatli olun, nazar değebilir.'},
+    {'isim': 'Kalp ❤️', 'kategori': 'Aşk', 'pozitif': 'Kocaman bir aşk kapınızda! Yeni bir ilişkiye hazır olun.',
+     'negatif': 'Aşk hayatınızda geçici bir kriz olabilir. Sabırlı olun.'},
+    {'isim': 'Yüzük 💍', 'kategori': 'Aşk', 'pozitif': 'EVLİLİK HABERİ GELİYOR! Parmakta yüzük görmeye hazır olun.',
+     'negatif': 'İlişkinizde bir karar vermeniz gerekiyor. Acele etmeyin.'},
+    {'isim': 'Kuğu 🦢', 'kategori': 'Aşk', 'pozitif': 'Sonsuz aşk ve sadakat. Ruh eşinizi buldunuz!',
+     'negatif': 'Bir ilişkide fedakarlık yapmanız gerekebilir.'},
+    {'isim': 'Gül 🌹', 'kategori': 'Aşk', 'pozitif': 'Romantik bir sürpriz sizi bekliyor. Çiçekler ve tatlı sözler!',
+     'negatif': 'Bir hayal kırıklığı yaşayabilirsiniz. Gerçekçi olun.'},
+    
+    # PARA & KARİYER
+    {'isim': 'Para 💰', 'kategori': 'Para', 'pozitif': 'Beklenmedik PARA! Miras, ikramiye veya zam kapıda.',
+     'negatif': 'Maddi konularda dikkat! Gereksiz harcamalardan kaçının.'},
+    {'isim': 'Balık 🐟', 'kategori': 'Para', 'pozitif': 'BOLLUK ve BEREKET! Para akışınız hızlanıyor.',
+     'negatif': 'Bir yatırımınız risk altında. Uzman görüşü alın.'},
+    {'isim': 'At Nalı 🍀', 'kategori': 'Para', 'pozitif': 'ŞANS peşinizi bırakmıyor! Piyango veya şans oyunları.',
+     'negatif': 'Şansa güvenmeyin, kendi yeteneklerinize güvenin.'},
+    {'isim': 'Merdiven 🪜', 'kategori': 'Kariyer', 'pozitif': 'Kariyerinizde YÜKSELİŞ! Terfi veya yeni iş teklifi.',
+     'negatif': 'Yükselmek için daha çok çalışmanız gerekiyor.'},
+    {'isim': 'Kitap 📖', 'kategori': 'Kariyer', 'pozitif': 'Yeni bilgiler size başarı getirecek. Eğitim zamanı!',
+     'negatif': 'Bir sınav veya görüşmede zorlanabilirsiniz. İyi hazırlanın.'},
+    
+    # SAĞLIK & ŞİFA
+    {'isim': 'Ağaç 🌳', 'kategori': 'Sağlık', 'pozitif': 'SAĞLIK ve uzun ömür! Enerjiniz yerinde, hayat dolu.',
+     'negatif': 'Sağlığınıza dikkat! Kontrol zamanı geldi.'},
+    {'isim': 'Yıldız ⭐', 'kategori': 'Sağlık', 'pozitif': 'ŞİFA enerjisi! Hastalık varsa geçecek, sağlık yerine gelecek.',
+     'negatif': 'Yorgunluk ve stres sizi etkiliyor. Dinlenin.'},
+    {'isim': 'Güneş ☀️', 'kategori': 'Sağlık', 'pozitif': 'ENERJİ ve canlılık! Kendinizi çok iyi hissedeceksiniz.',
+     'negatif': 'Aşırı güneşe dikkat! Sağlığınızı koruyun.'},
+    {'isim': 'Ay 🌙', 'kategori': 'Sağlık', 'pozitif': 'İç huzur ve dinginlik. Ruhsal şifa zamanı.',
+     'negatif': 'Uyku düzeninize dikkat edin. Uykusuzluk sorun olabilir.'},
+    
+    # YOLCULUK & HABER
+    {'isim': 'Uçak ✈️', 'kategori': 'Seyahat', 'pozitif': 'SEYAHAT vakti! Yurt dışı veya uzak bir şehre gideceksiniz.',
+     'negatif': 'Seyahat planlarınız ertelenebilir. Alternatif düşünün.'},
+    {'isim': 'Gemi ⛵', 'kategori': 'Seyahat', 'pozitif': 'Keyifli bir deniz yolculuğu veya tatil sizi bekliyor.',
+     'negatif': 'Duygusal dalgalanmalar yaşayabilirsiniz. Dengenizi koruyun.'},
+    {'isim': 'Kuş 🐦', 'kategori': 'Haber', 'pozitif': 'MÜJDE! Uzaktan güzel bir haber alacaksınız.',
+     'negatif': 'Bir haber sizi üzebilir. Doğrulamasını yapın.'},
+    {'isim': 'Mektup ✉️', 'kategori': 'Haber', 'pozitif': 'ÖNEMLİ bir yazılı haber! İş teklifi veya davet.',
+     'negatif': 'Bir yazışmada sorun çıkabilir. Dikkatli olun.'},
+    
+    # İNSANLAR & DOSTLAR
+    {'isim': 'Köpek 🐕', 'kategori': 'Dostluk', 'pozitif': 'SADAKAT! Gerçek dostunuz yanınızda, güvenin.',
+     'negatif': 'Bir arkadaşlıkta hayal kırıklığı yaşayabilirsiniz.'},
+    {'isim': 'Kedi 🐱', 'kategori': 'Dostluk', 'pozitif': 'BAĞIMSIZLIK! Yeni bir dostluk özgürlük getirecek.',
+     'negatif': 'Güvendiğiniz bir kişi sizi şaşırtabilir.'},
+    {'isim': 'Fil 🐘', 'kategori': 'Dostluk', 'pozitif': 'BİLGELİK! Tecrübeli bir dost size yol gösterecek.',
+     'negatif': 'Aşırı inatçılık sorun yaratabilir. Esnek olun.'},
+    {'isim': 'Kelebek 🦋', 'kategori': 'Dostluk', 'pozitif': 'DÖNÜŞÜM! Yeni dostluklar hayatınızı renklendirecek.',
+     'negatif': 'Geçici arkadaşlıklara fazla güvenmeyin.'},
+    
+    # DİĞER ÖNEMLİ SEMBOLLER
+    {'isim': 'Ev 🏠', 'kategori': 'Aile', 'pozitif': 'AİLE içinde huzur ve mutluluk! Güzel günler sizi bekliyor.',
+     'negatif': 'Ev içinde bir anlaşmazlık olabilir. Sakin olun.'},
+    {'isim': 'Bebek 👶', 'kategori': 'Aile', 'pozitif': 'MUTLU HABER! Aileye yeni bir üye katılabilir.',
+     'negatif': 'Bir sorumluluk sizi zorlayabilir. Hazırlıklı olun.'},
+    {'isim': 'Yol 🛤️', 'kategori': 'Hayat', 'pozitif': 'YENİ BAŞLANGIÇ! Hayatınızda yeni bir yol açılıyor.',
+     'negatif': 'Bir seçim yapmanız gerekiyor ve kararsızsınız.'},
+    {'isim': 'Kale 🏰', 'kategori': 'Hayat', 'pozitif': 'KORUNMA ve güvenlik. Hiçbir şeyden korkmayın!',
+     'negatif': 'Kendinizi kısıtlanmış hissedebilirsiniz. Özgürlüğünüzü arayın.'},
+    {'isim': 'Çiçek 🌸', 'kategori': 'Hayat', 'pozitif': 'GÜZEL GÜNLER! Hayatınız çiçek gibi açacak.',
+     'negatif': 'Kısa süreli bir üzüntü, ardından mutluluk.'},
+    {'isim': 'Yılan 🐍', 'kategori': 'Uyarı', 'pozitif': 'DÖNÜŞÜM! Eski sorunlardan kurtulup yenileneceksiniz.',
+     'negatif': 'DİKKAT! Çevrenizde size zarar vermek isteyen biri olabilir.'},
+    {'isim': 'Ejderha 🐉', 'kategori': 'Güç', 'pozitif': 'İÇSEL GÜÇ! Büyük engelleri aşacak güce sahipsiniz.',
+     'negatif': 'Öfkenizi kontrol edin. Aşırı hırs sorun yaratabilir.'},
+    {'isim': 'Kılıç ⚔️', 'kategori': 'Mücadele', 'pozitif': 'ADALET yerini bulacak. Doğru olan kazanacak.',
+     'negatif': 'Bir kavgadan veya anlaşmazlıktan uzak durun.'},
+    {'isim': 'Anahtar 🔑', 'kategori': 'Çözüm', 'pozitif': 'ÇÖZÜM! Her şeyin anahtarı elinizde. Sorun bitecek.',
+     'negatif': 'Bir sırrı açıklamakta zorlanabilirsiniz.'},
+    {'isim': 'Köprü 🌉', 'kategori': 'Bağlantı', 'pozitif': 'BAĞLANTI! Yeni insanlarla tanışacak, köprüler kuracaksınız.',
+     'negatif': 'Bir ilişkide kopma noktasına gelebilirsiniz.'},
+    {'isim': 'Dağ ⛰️', 'kategori': 'Engel', 'pozitif': 'ZİRVE! Büyük bir başarıya ulaşacak, dağın tepesini göreceksiniz.',
+     'negatif': 'Önünüzde aşılması gereken zorlu bir engel var. Vazgeçmeyin!'},
+]
+
+# Profesyonel yorumlar
+GENEL_YORUMLAR = [
+    "🌸 FALINIZDA MUHTEŞEM SEMBOLLER VAR! Önünüzdeki dönemde aşk, para ve mutluluk sizi bekliyor. Hayatınızda yeni bir sayfa açılıyor! 🌸",
+    "🌟 YILDIZLAR SİZE GÜLÜMSÜYOR! Bu hafta çok şanslısınız. Beklenmedik güzel haberler alacak, yüzünüz gülecek. Hazır olun! 🌟",
+    "⚡ ENERJİNİZ ÇOK YÜKSEK! Pozitif düşünceleriniz gerçeğe dönüşüyor. Sezgilerinize güvenin, sizi doğru yola yönlendirecek. ⚡",
+    "💫 FIRSATLAR AYAKLARINIZA GELİYOR! Kaçırmayın, değerlendirin. Özellikle iş ve kariyer konularında şanslı bir dönemdesiniz. 💫",
+    "🌈 GÖKKUŞAĞININ DİĞER UCUNDA MUTLULUK SİZİ BEKLİYOR! Zor günler geride kalıyor. Aydınlık bir gelecek sizi bekliyor. 🌈",
+    "🔮 SEZGİLERİNİZ ÇOK KUVVETLENİYOR! Rüyalarınıza dikkat edin. İç sesiniz size önemli mesajlar veriyor. Dinleyin! 🔮",
+    "💜 AŞK HAYATINIZDA HAREKETLİ GÜNLER! Kalbinizi açın, sevgiye izin verin. Doğru kişi çok yakında karşınıza çıkacak. 💜",
+    "💰 BOLLUK VE BEREKET ZAMANI! Maddi konularda rahatlayacaksınız. Yeni gelir kapıları açılıyor. Akıllıca harcayın. 💰",
+    "🌿 SAĞLIĞINIZA DİKKAT!! Vücudunuz size sinyaller gönderiyor. Spor, sağlıklı beslenme ve dinlenme zamanı. 🌿",
+    "🤝 SOSYAL ÇEVREMİZ GENİŞLİYOR! Yeni insanlarla tanışacak, güzel dostluklar kuracaksınız. Davetleri geri çevirmeyin. 🤝",
+    "🎯 HEDEFLERİNİZE ODAKLANIN! Başarı için gerekli tüm yeteneklere sahipsiniz. İnanın ve çalışın, kazanacaksınız. 🎯",
+    "🌺 İÇSEL HURUZA ULAŞMA ZAMANI! Meditasyon, yoga ve doğa yürüyüşleri size iyi gelecek. Ruhunuzu dinlendirin. 🌺",
+    "🎭 BİR SÜRPRİZ SİZİ BEKLİYOR! Ne olduğunu söylemeyelim ama güzel bir sürpriz olacak. Heyecanlanmaya hazır olun! 🎭",
+    "⭐ ŞANS PEŞİNİZİ BIRAKMIYOR! Bu hafta deneyeceğiniz her şey başarılı olacak. Şans oyunlarında bir şans verin! ⭐",
+    "🦋 DÖNÜŞÜM VE YENİLENME! Eski alışkanlıklarınızı bırakma zamanı. Yeni bir siz doğuyor. Değişime açık olun! 🦋",
+    "🏆 BAŞARI KAPIDA! Emeklerinizin karşılığını alacaksınız. Terfi, zam veya ödül sizi bekliyor olabilir. 🏆",
+]
+
+KAHVE_FOTO_SLOT = [
+    {'anahtar': 'fincan_ic1', 'baslik': 'Fincan İçi 1', 'ikon': '☕'},
+    {'anahtar': 'fincan_ic2', 'baslik': 'Fincan İçi 2', 'ikon': '☕'},
+    {'anahtar': 'tabak', 'baslik': 'Tabak', 'ikon': '🍽️'},
+]
+
+
+class KahveScreen(Screen):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.build_ui()
+    
+    def build_ui(self):
+        with self.canvas.before:
+            Color(*get_color_from_hex(RENKLER['arka_plan']))
+            self.rect = Rectangle(size=self.size, pos=self.pos)
+            self.bind(size=self._guncelle_rect, pos=self._guncelle_rect)
+            
+            # Dekoratif efektler
+            Color(*get_color_from_hex(RENKLER['turuncu']), 0.03)
+            Ellipse(pos=(200, 500), size=(150, 150))
+            Color(*get_color_from_hex(RENKLER['kahve']), 0.05)
+            Ellipse(pos=(50, -30), size=(200, 200))
+        
+        ana_layout = BoxLayout(orientation='vertical', spacing=8, padding=12)
+        
+        # === BAŞLIK ===
+        baslik_layout = BoxLayout(size_hint=(1, 0.08), padding=[dp(8), 0])
+        baslik_layout.add_widget(baslik_satir('☕', 'KAHVE FALI', font_size='24sp', height=dp(44)))
+        ana_layout.add_widget(baslik_layout)
+        
+        ana_layout.add_widget(metin_label(
+            'Fincan içini 2 kez + tabağı fotoğraflayın. Kutuya dokunup galeri/kamera ile ekleyin.',
+            font_size='12sp',
+            color=RENKLER['gri_acik'],
+            halign='center',
+            size_hint_y=None,
+            height=dp(36),
+        ))
+
+        self.foto_panel = FotoKutucukPanel(KAHVE_FOTO_SLOT, yukseklik=dp(128))
+        ana_layout.add_widget(self.foto_panel)
+
+        kamera_btn_layout = BoxLayout(
+            orientation='horizontal',
+            size_hint=(1, 0.08),
+            spacing=8,
+            padding=[12, 0, 12, 0],
+        )
+
+        galeri_btn = tus_buton('galeri', font_size='13sp')
+        galeri_btn.bind(on_press=lambda *_: galeriden_sec(self._foto_sonuc))
+
+        kamera_btn = tus_buton('kamera', vurgu=True, font_size='13sp')
+        kamera_btn.bind(on_press=lambda *_: kameradan_cek(self._foto_sonuc))
+
+        kamera_btn_layout.add_widget(galeri_btn)
+        kamera_btn_layout.add_widget(kamera_btn)
+        ana_layout.add_widget(kamera_btn_layout)
+        
+        # === ŞEKİLLER ALANI ===
+        self.sekiller_alani, self.sekiller_label = kaydirici_metin(0.16)
+        self.sekiller_label.halign = 'center'
+        ana_layout.add_widget(self.sekiller_alani)
+        
+        # === BUTONLAR ===
+        buton_layout = BoxLayout(
+            orientation='horizontal',
+            size_hint=(1, 0.08),
+            spacing=8
+        )
+        
+        self.fal_buton = tus_buton('yorumla', vurgu=True, font_size='15sp')
+        self.fal_buton.bind(on_press=self.fal_yorumla)
+        
+        geri_buton = tus_buton('geri', font_size='13sp')
+        geri_buton.bind(on_press=lambda x: setattr(self.manager, 'current', 'anasayfa'))
+        
+        buton_layout.add_widget(self.fal_buton)
+        buton_layout.add_widget(geri_buton)
+        ana_layout.add_widget(buton_layout)
+        
+        # === GENEL YORUM ALANI ===
+        self.yorum_alani, self.yorum_label = kaydirici_metin(0.24)
+        self.yorum_label.halign = 'left'
+        ana_layout.add_widget(self.yorum_alani)
+        
+        self.add_widget(ana_layout)
+    
+    def _guncelle_rect(self, *args):
+        self.rect.size = self.size
+        self.rect.pos = self.pos
+    
+    def _foto_sonuc(self, yol, hata):
+        if hata:
+            self.yorum_label.markup = True
+            self.yorum_label.text = f"[color={RENKLER['kirmizi']}]❌ {hata}[/color]"
+            return
+
+        self.foto_panel.fotograf_ekle(yol)
+        self.flas_efekti()
+    
+    def flas_efekti(self):
+        """Flaş efekti"""
+        flash = FloatLayout(size_hint=(1, 1))
+        with flash.canvas:
+            Color(1, 1, 1, 1)
+            Rectangle(size=self.size, pos=self.pos)
+        self.add_widget(flash)
+        anim = Animation(opacity=0, duration=0.3)
+        anim.start(flash)
+        Clock.schedule_once(lambda dt: self.remove_widget(flash) if flash in self.children else None, 0.3)
+    
+    def fal_yorumla(self, instance):
+        """Kahve falını yorumla"""
+        if not self.foto_panel.tamam_mi():
+            eksik = ', '.join(self.foto_panel.eksik_basliklar())
+            self.yorum_label.markup = True
+            self.yorum_label.text = (
+                f"[color={RENKLER['kirmizi']}]Eksik fotoğraflar: {eksik}[/color]\n"
+                f"[color={RENKLER['gri_acik']}]Her kutuya dokunup galeri veya kamera ile ekleyin.[/color]"
+            )
+            return
+        
+        # Animasyon
+        anim = Sequence(
+            Animation(opacity=0.5, duration=0.2),
+            Animation(opacity=1, duration=0.3)
+        )
+        anim.start(self.sekiller_alani)
+        
+        # Rastgele şekiller seç (4-5 tane)
+        secilen_sayisi = random.randint(4, 5)
+        secilen_sekiller = random.sample(KAHVE_SEKILLERI, secilen_sayisi)
+        
+        # Şekilleri göster
+        sekiller_text = ''
+        
+        # Kategorilere göre grupla
+        kategoriler = {}
+        for sekil in secilen_sekiller:
+            kat = sekil['kategori']
+            if kat not in kategoriler:
+                kategoriler[kat] = []
+            kategoriler[kat].append(sekil)
+        
+        sekiller_text += f"[b][color={RENKLER['altin']}]🔮 FİNCANINIZDA ÇIKANLAR:[/color][/b]\n\n"
+        
+        for kat, sekiller in kategoriler.items():
+            sekiller_text += f"[color={RENKLER['mor_parlak']}][b]✦ {kat} ✦[/b][/color]\n"
+            for sekil in sekiller:
+                durum = random.choice(['Pozitif', 'Negatif'])
+                yorum = sekil['pozitif'] if durum == 'Pozitif' else sekil['negatif']
+                renk = RENKLER['yesil'] if durum == 'Pozitif' else RENKLER['kirmizi']
+                
+                sekiller_text += f"  • [color={renk}]{sekil['isim']}[/color]\n"
+                sekiller_text += f"    [color={RENKLER['gri_acik']}]{yorum}[/color]\n"
+            sekiller_text += "\n"
+        
+        # Şanslı sayı
+        sansli_sayi = random.randint(1, 100)
+        sekiller_text += f"[color={RENKLER['altin']}]🍀 Şanslı Sayınız: [b]{sansli_sayi}[/b][/color]\n"
+        
+        self.sekiller_label.markup = True
+        self.sekiller_label.text = sekiller_text
+        
+        # Genel yorum
+        yorum = f"\n[b][color={RENKLER['altin']}]╔═══ ☕ GENEL YORUM ☕ ═══╗[/color][/b]\n\n"
+        
+        # Kategorilere göre özel yorum
+        kategori_yorumlari = []
+        for kat in kategoriler:
+            if kat == 'Aşk':
+                kategori_yorumlari.append("💕 Aşk şansınız çok yüksek! Kalbinizi açın.")
+            elif kat == 'Para':
+                kategori_yorumlari.append("💰 Para ve bolluk kapınızda! Fırsatları değerlendirin.")
+            elif kat == 'Kariyer':
+                kategori_yorumlari.append("🏆 Kariyerinizde yükselme zamanı! Yeteneklerinizi gösterin.")
+            elif kat == 'Sağlık':
+                kategori_yorumlari.append("🌿 Sağlığınız yerinde! Spor ve beslenmeye dikkat edin.")
+            elif kat == 'Seyahat':
+                kategori_yorumlari.append("✈️ Güzel bir seyahat sizi bekliyor! Bavul hazırlığı yapın.")
+            elif kat == 'Haber':
+                kategori_yorumlari.append("📬 Müjdeli haber yolda! Posta kutunuzu kontrol edin.")
+            elif kat == 'Dostluk':
+                kategori_yorumlari.append("🤝 Dostlarınız sizi seviyor! Onlarla vakit geçirin.")
+            elif kat == 'Aile':
+                kategori_yorumlari.append("👨‍👩‍👧‍👧 Aile içinde huzur ve mutluluk hakim olacak.")
+            elif kat == 'Uyarı':
+                kategori_yorumlari.append("⚠️ Dikkatli olun! Çevrenizdeki insanlara güveninizi sorgulayın.")
+            elif kat in ('Güç', 'Mücadele'):
+                kategori_yorumlari.append("💪 Güçlü ve kararlısınız! Her engeli aşacaksınız.")
+            else:
+                kategori_yorumlari.append("✨ Hayatınızda güzel değişiklikler oluyor. Hazır olun!")
+        
+        for ky in kategori_yorumlari:
+            yorum += f"[color={RENKLER['gri_acik']}]{ky}[/color]\n"
+        
+        yorum += f"\n[color={RENKLER['gri_acik']}]📝 {random.choice(GENEL_YORUMLAR)}[/color]"
+        
+        yorum += f"\n\n[color={RENKLER['altin']}]╚═══ ☕ NAZAR BONCUĞUNUZ SİZİ KORUSUN ═══╝[/color]"
+        
+        self.yorum_label.markup = True
+        self.yorum_label.text = yorum
+        self._son_kahve_yorum = yorum
+        buton_metin_guncelle(self.fal_buton, YORUM_BEKLE)
+        self.fal_buton.disabled = True
+
+        sekiller = [s['isim'] for s in secilen_sekiller]
+
+        def _ai_bitir(metin, ai_kullanildi, hata, kaynak=None, fotograf=False):
+            baslik = yorum_baslik(ai_kullanildi, kaynak, fotograf)
+            renk = RENKLER['pembe_acik'] if ai_kullanildi else RENKLER['gri_acik']
+            self.yorum_label.text = (
+                self._son_kahve_yorum
+                + f"\n\n[b][color={RENKLER['altin']}]» {baslik}[/color][/b]\n"
+                + f"[color={renk}]{metin}[/color]"
+                + yorum_durum_notu(hata, ai_kullanildi)
+            )
+            buton_metin_guncelle(self.fal_buton, TUS['tekrar'])
+            self.fal_buton.disabled = False
+
+        foto_veri = self.foto_panel.tum_veri()
+        yorum_al('kahve', {'sekiller': sekiller, **foto_veri}, _ai_bitir)

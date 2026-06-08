@@ -1,0 +1,55 @@
+name: Build Android APK
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Get date (cache key)
+        id: get-date
+        run: echo "date=$(date +'%Y-%m-%d')" >> $GITHUB_OUTPUT
+
+      - name: Cache Buildozer global directory
+        uses: actions/cache@v4
+        with:
+          path: ~/.buildozer
+          key: buildozer-global-${{ runner.os }}-${{ steps.get-date.outputs.date }}
+          restore-keys: |
+            buildozer-global-${{ runner.os }}-
+
+      - name: Cache Buildozer project directory
+        uses: actions/cache@v4
+        with:
+          path: .buildozer
+          key: buildozer-project-${{ runner.os }}-${{ hashFiles('buildozer.spec') }}
+          restore-keys: |
+            buildozer-project-${{ runner.os }}-
+
+      - name: Prepare config (API key repoda yok)
+        run: |
+          cp config.ornek.json config.json
+          python -c "import json; p='config.json'; d=json.load(open(p,encoding='utf-8')); d['gemini_api_key']=''; json.dump(d, open(p,'w',encoding='utf-8'), indent=2, ensure_ascii=False)"
+
+      - name: Build with Buildozer
+        uses: ArtemShatalov/buildozer-action@v1
+        with:
+          command: buildozer -v android debug
+          buildozer_version: master
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: falimabak-debug-apk
+          path: bin/*.apk
+          if-no-files-found: error
+          retention-days: 14

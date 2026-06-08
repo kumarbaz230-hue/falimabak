@@ -1,0 +1,34 @@
+# API key ve kullanıcı verisi — asla commit etme
+config.json
+kullanici_veri.json
+.env
+*.env
+
+# Buildozer / Android
+.buildozer/
+bin/
+*.apk
+*.aab
+*.keystore
+*.jks
+
+# Kullanıcı fotoğrafları
+user_photos/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+
+# IDE / OS
+.idea/
+.vscode/
+*.swp
+Thumbs.db
+Desktop.ini
+
+# Loglar
+*.log

@@ -1,0 +1,339 @@
+"""
+✨ Diğer Fallar Modülü
+İskambil Falı, Çiçek Falı, Nazar Falı, El Falı
+"""
+
+from kivy.uix.screenmanager import Screen
+from kivy.uix.boxlayout import BoxLayout
+from kivy.uix.gridlayout import GridLayout
+from kivy.uix.scrollview import ScrollView
+from kivy.uix.button import Button
+from kivy.uix.label import Label
+from kivy.uix.image import Image
+from kivy.graphics import Color, Rectangle, RoundedRectangle
+from kivy.utils import get_color_from_hex
+from kivy.animation import Animation
+import random
+
+from ai_yorum import yorum_al
+from theme import TUS, tus_buton, siyah_buton, baslik_satir, buton_metin_guncelle, yorum_baslik, yorum_bekle_markup, yorum_durum_notu
+
+RENKLER = {
+    'arka_plan': '#1a0a2e',
+    'altin': '#ffd700',
+    'mor': '#9b59b6',
+    'mor_koyu': '#6c3483',
+    'beyaz': '#ffffff',
+    'gri_acik': '#e0e0e0',
+    'yesil': '#2ecc71',
+    'kirmizi': '#e74c3c',
+    'turuncu': '#f39c12',
+    'pembe': '#e91e90',
+    'pembe_acik': '#ff80ab',
+    'lacivert': '#1a237e',
+    'mavi_acik': '#64B5F6',
+}
+
+# İskambil kağıdı anlamları
+ISKAMBIL_KARTLARI = [
+    {'isim': 'Kupa Ası', 'anlam': 'Aşk ve mutluluk kapınızda. Yeni bir ilişki başlangıcı.', 'sembol': '🃏❤️'},
+    {'isim': 'Kupa Kızı', 'anlam': 'Sevgi dolu bir kadın hayatınıza girecek.', 'sembol': '👩❤️'},
+    {'isim': 'Kupa Papazı', 'anlam': 'Duygusal ve sadık bir erkek figürü.', 'sembol': '👨❤️'},
+    {'isim': 'Kupa Vale', 'anlam': 'İyi haberler getiren genç bir arkadaş.', 'sembol': '🧑❤️'},
+    {'isim': 'Karo Ası', 'anlam': 'Maddi kazanç ve yeni iş fırsatı.', 'sembol': '🃏💎'},
+    {'isim': 'Karo Kızı', 'anlam': 'Zeki ve başarılı bir kadın iş hayatınızda.', 'sembol': '👩💼'},
+    {'isim': 'Karo Papazı', 'anlam': 'Güçlü bir iş ortağı veya patron.', 'sembol': '👨💼'},
+    {'isim': 'Karo Vale', 'anlam': 'Genç bir iş arkadaşından yardım.', 'sembol': '🧑💼'},
+    {'isim': 'Maça Ası', 'anlam': 'Zorlukların üstesinden gelme gücü.', 'sembol': '🃏♠️'},
+    {'isim': 'Maça Kızı', 'anlam': 'Dikkatli olmanız gereken bir kadın.', 'sembol': '👩⚔️'},
+    {'isim': 'Maça Papazı', 'anlam': 'Otoriter ve güçlü bir erkek figürü.', 'sembol': '👨⚔️'},
+    {'isim': 'Maça Vale', 'anlam': 'Genç bir rakip veya rekabet.', 'sembol': '🧑⚔️'},
+    {'isim': 'Sinek Ası', 'anlam': 'Yeni fikirler ve başarılı projeler.', 'sembol': '🃏♣️'},
+    {'isim': 'Sinek Kızı', 'anlam': 'Yaratıcı ve yardımsever bir kadın.', 'sembol': '👩🍀'},
+    {'isim': 'Sinek Papazı', 'anlam': 'Bilge ve tecrübeli bir danışman.', 'sembol': '👨🍀'},
+    {'isim': 'Sinek Vale', 'anlam': 'Genç bir arkadaştan güzel haber.', 'sembol': '🧑🍀'},
+]
+
+# Çiçek falı anlamları
+CICEK_FALI = [
+    {'isim': 'Gül 🌹', 'anlam': 'Büyük bir aşk ve tutku sizi bekliyor. Romantik günler yakın.'},
+    {'isim': 'Papatya 🌼', 'anlam': 'Saflık ve masumiyet. Temiz bir sayfa açma zamanı.'},
+    {'isim': 'Lale 🌷', 'anlam': 'Bolluk ve bereket. Maddi konularda şanslı dönem.'},
+    {'isim': 'Orkide 🏵️', 'anlam': 'Gizem ve zarafet. Özel biriyle tanışacaksınız.'},
+    {'isim': 'Ayçiçeği 🌻', 'anlam': 'Mutluluk ve pozitif enerji. Yüzünüz gülecek.'},
+    {'isim': 'Menekşe 💜', 'anlam': 'Sadakat ve güven. Dostluklarınız güçlenecek.'},
+    {'isim': 'Karanfil 🌸', 'anlam': 'Saygı ve hayranlık. İş hayatında başarı.'},
+    {'isim': 'Zambak 💮', 'anlam': 'Saflık ve yeniden doğuş. Ruhsal arınma zamanı.'},
+    {'isim': 'Nergis 🌺', 'anlam': 'Kendine güven ve başarı. Yeteneklerinizi keşfedin.'},
+    {'isim': 'Sümbül 🏵️', 'anlam': 'Spor ve sağlık. Yeni bir spora başlama zamanı.'},
+    {'isim': 'Kiraz Çiçeği 🌸', 'anlam': 'Güzellik ve geçicilik. Anın tadını çıkarın.'},
+    {'isim': 'Nilüfer 🪷', 'anlam': 'Ruhsal aydınlanma ve iç huzur. Meditasyon zamanı.'},
+    {'isim': 'Lavanta 💐', 'anlam': 'Huzur ve sakinlik. Stresli dönem sona eriyor.'},
+    {'isim': 'Yasemin 🌼', 'anlam': 'Romantizm ve duygusallık. Aşk hayatınız hareketleniyor.'},
+]
+
+# El falı çizgi anlamları
+EL_FALI = [
+    {'isim': 'Hayat Çizgisi', 'anlam': 'Uzun ve sağlıklı bir yaşam sizi bekliyor. Canlılığınız yüksek.'},
+    {'isim': 'Kader Çizgisi', 'anlam': 'Kariyerinizde büyük başarılar elde edeceksiniz.'},
+    {'isim': 'Kalp Çizgisi', 'anlam': 'Aşk hayatınızda derin ve anlamlı bir ilişki sizi bekliyor.'},
+    {'isim': 'Akıl Çizgisi', 'anlam': 'Zekanız ve analitik düşünceniz sayesinde her sorunu çözeceksiniz.'},
+    {'isim': 'Güneş Çizgisi', 'anlam': 'Yaratıcı yeteneklerinizle tanınacak ve takdir edileceksiniz.'},
+    {'isim': 'Sezgi Çizgisi', 'anlam': 'İçgüdüleriniz çok kuvvetli. Sezgilerinize güvenin.'},
+    {'isim': 'Merkür Çizgisi', 'anlam': 'İletişim yeteneğiniz sayesinde iş hayatında yükseleceksiniz.'},
+    {'isim': 'Evlilik Çizgisi', 'anlam': 'Yakın zamanda önemli bir ilişki kararı alacaksınız.'},
+    {'isim': 'Çocuk Çizgisi', 'anlam': 'Aile hayatınızda mutlu haberler sizi bekliyor.'},
+    {'isim': 'Para Çizgisi', 'anlam': 'Maddi konularda şanslı bir dönem. Yatırım zamanı.'},
+    {'isim': 'Sağlık Çizgisi', 'anlam': 'Sağlığınız yerinde. Düzenli spor yapmaya devam edin.'},
+    {'isim': 'Yolculuk Çizgisi', 'anlam': 'Yakında güzel bir seyahat sizi bekliyor.'},
+]
+
+# Nazar falı
+NAZAR_YORUMLARI = [
+    "Nazar boncuğunuz parlıyor! Kötü enerjilerden korunuyorsunuz.",
+    "Bu hafta nazara karşı dikkatli olun. Başarılarınız kıskanılabilir.",
+    "Nazar boncuğunuzu yanınızda taşıyın. Sizi koruyacak.",
+    "Enerjiniz çok yüksek! Olumlu düşünceleriniz gerçekleşiyor.",
+    "Birileri sizi kıskanıyor olabilir. Tedbirli olun.",
+    "Nazar boncuğunuz kırıldıysa, sizi büyük bir kazadan korumuş demektir.",
+    "Pozitif enerjiniz etrafa yayılıyor. Herkes sizi seviyor.",
+    "Mavi renk size şans getirecek. Mavi tonları kullanın.",
+    "Göz değmesine karşı dikkatli olun. Özellikle yeni başlangıçlarda.",
+    "Nazar duası okuyun ve korunduğunuzu hissedin.",
+    "İç huzurunuzu koruyun. Dış etkenler sizi etkilemesin.",
+    "Nazar boncuğu görmek size şans getirecek.",
+]
+
+
+class DigerFallarScreen(Screen):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.build_ui()
+    
+    def build_ui(self):
+        with self.canvas.before:
+            Color(*get_color_from_hex(RENKLER['arka_plan']))
+            self.rect = Rectangle(size=self.size, pos=self.pos)
+            self.bind(size=self._guncelle_rect, pos=self._guncelle_rect)
+        
+        ana_layout = BoxLayout(orientation='vertical', spacing=10, padding=15)
+        
+        from kivy.metrics import dp
+        ana_layout.add_widget(baslik_satir('✨', 'DİĞER FALLAR', font_size='24sp', height=dp(44)))
+        
+        # Fal türü seçimi
+        fal_turu_layout = GridLayout(cols=2, spacing=10, size_hint=(1, 0.2))
+        
+        fal_turleri = [
+            ('İskambil', 'iskambil', '🃏'),
+            ('Çiçek Falı', 'cicek', '🌸'),
+            ('El Falı', 'el', '✋'),
+            ('Nazar Falı', 'nazar', '👁'),
+        ]
+        
+        for text, fal_type, ikon in fal_turleri:
+            btn = siyah_buton(text, ikon=ikon, vurgu=True, font_size='13sp')
+            btn.bind(on_press=lambda x, ft=fal_type: self.fal_sec(ft))
+            fal_turu_layout.add_widget(btn)
+        
+        ana_layout.add_widget(fal_turu_layout)
+        
+        # Fal sonucu alanı
+        self.sonuc_alani = ScrollView(size_hint=(1, 0.55))
+        self.sonuc_label = Label(
+            text='[b][color={}]Yukarıdan bir fal türü seçin![/color][/b]'.format(RENKLER['gri_acik']),
+            font_size='16sp',
+            color=get_color_from_hex(RENKLER['beyaz']),
+            size_hint_y=None,
+            halign='center',
+            valign='top',
+            text_size=(380, None),
+            markup=True,
+            padding=(10, 10)
+        )
+        self.sonuc_label.bind(texture_size=self.sonuc_label.setter('size'))
+        self.sonuc_alani.add_widget(self.sonuc_label)
+        
+        ana_layout.add_widget(self.sonuc_alani)
+        
+        # Butonlar
+        buton_layout = BoxLayout(
+            orientation='horizontal',
+            size_hint=(1, 0.08),
+            spacing=10
+        )
+        
+        self.tekrar_buton = tus_buton('tekrar', vurgu=True, font_size='14sp')
+        self.tekrar_buton.bind(on_press=self.tekrar_bak)
+        self.tekrar_buton.disabled = True
+        
+        geri_buton = tus_buton('geri', font_size='13sp')
+        geri_buton.bind(on_press=lambda x: setattr(self.manager, 'current', 'anasayfa'))
+        
+        buton_layout.add_widget(self.tekrar_buton)
+        buton_layout.add_widget(geri_buton)
+        
+        ana_layout.add_widget(buton_layout)
+        
+        self.add_widget(ana_layout)
+    
+    def _guncelle_rect(self, *args):
+        self.rect.size = self.size
+        self.rect.pos = self.pos
+
+    def _ai_ekle(self, temel, tur, sonuc_ozet):
+        self._son_diger_yorum = temel
+        self.sonuc_label.text = temel + f"\n\n{yorum_bekle_markup()}"
+
+        def _bitir(metin, ai_kullanildi, hata, kaynak=None, fotograf=False):
+            baslik = yorum_baslik(ai_kullanildi, kaynak, fotograf)
+            renk = RENKLER['pembe_acik'] if ai_kullanildi else RENKLER['gri_acik']
+            self.sonuc_label.text = (
+                self._son_diger_yorum
+                + f"\n\n[b][color={RENKLER['altin']}]» {baslik}[/color][/b]\n"
+                + f"[color={renk}]{metin}[/color]"
+                + yorum_durum_notu(hata, ai_kullanildi)
+            )
+
+        yorum_al('diger', {'tur': tur, 'sonuc': sonuc_ozet}, _bitir)
+    
+    def fal_sec(self, fal_type):
+        """Seçilen fal türüne göre fal bak"""
+        self.fal_turu = fal_type
+        
+        if fal_type == 'iskambil':
+            self.iskambil_fali()
+        elif fal_type == 'cicek':
+            self.cicek_fali()
+        elif fal_type == 'el':
+            self.el_fali()
+        elif fal_type == 'nazar':
+            self.nazar_fali()
+        
+        self.tekrar_buton.disabled = False
+    
+    def tekrar_bak(self, instance):
+        """Aynı fal türünü tekrar bak"""
+        if hasattr(self, 'fal_turu'):
+            self.fal_sec(self.fal_turu)
+    
+    def iskambil_fali(self):
+        """İskambil falı"""
+        secilen = random.sample(ISKAMBIL_KARTLARI, 3)
+        
+        sonuc = f"[b][color={RENKLER['altin']}]🃏 İSKAMBİL FALI 🃏[/color][/b]\n\n"
+        
+        pozisyonlar = ['Geçmiş', 'Şu An', 'Gelecek']
+        
+        for i, (kart, pozisyon) in enumerate(zip(secilen, pozisyonlar)):
+            sonuc += f"[b][color={RENKLER['mor']}]{pozisyon}:[/color][/b] {kart['sembol']}\n"
+            sonuc += f"[b]{kart['isim']}[/b]\n"
+            sonuc += f"[color={RENKLER['gri_acik']}]{kart['anlam']}[/color]\n\n"
+        
+        sonuc += f"\n[color={RENKLER['altin']}]💫 Tavsiye:[/color]\n"
+        tavsiyeler = [
+            "Kalbinizin sesini dinleyin.",
+            "Mantıklı kararlar alın.",
+            "Sezgilerinize güvenin.",
+            "Cesur olun ve risk alın.",
+            "Sabırlı olun, her şey yoluna girecek.",
+            "Paylaşmak güzeldir. Sevdiklerinizle vakit geçirin.",
+            "Kendinize zaman ayırın.",
+            "Geçmişi bırakın, geleceğe bakın."
+        ]
+        sonuc += f"[color={RENKLER['gri_acik']}]{random.choice(tavsiyeler)}[/color]"
+        
+        self.sonuc_label.markup = True
+        self.sonuc_label.text = sonuc
+        self._ai_ekle(sonuc, 'İskambil Falı', ', '.join(k['isim'] for k in secilen))
+    
+    def cicek_fali(self):
+        """Çiçek falı"""
+        secilen = random.sample(CICEK_FALI, random.randint(2, 3))
+        
+        sonuc = f"[b][color={RENKLER['altin']}]🌸 ÇİÇEK FALI 🌸[/color][/b]\n\n"
+        
+        for cicek in secilen:
+            sonuc += f"[b]{cicek['isim']}[/b]\n"
+            sonuc += f"[color={RENKLER['gri_acik']}]{cicek['anlam']}[/color]\n\n"
+        
+        sonuc += f"[color={RENKLER['altin']}]💐 Çiçek Dili:[/color]\n"
+        cicek_dili = [
+            "Gül alın ve sevdiğinize verin.",
+            "Evde taze çiçek bulundurun.",
+            "Papatya falı bakmak için güzel bir gün.",
+            "Saksı bitkisi yetiştirmeye başlayın.",
+            "Sevdiklerinize çiçek hediye edin.",
+            "Doğada vakit geçirin, enerjiniz yüklenecek.",
+            "Çiçek bahçesi ziyaret edin.",
+            "Kurutulmuş çiçeklerle dekorasyon yapın."
+        ]
+        sonuc += f"[color={RENKLER['gri_acik']}]{random.choice(cicek_dili)}[/color]"
+        
+        self.sonuc_label.markup = True
+        self.sonuc_label.text = sonuc
+        self._ai_ekle(sonuc, 'Çiçek Falı', ', '.join(c['isim'] for c in secilen))
+    
+    def el_fali(self):
+        """El falı"""
+        secilen = random.sample(EL_FALI, random.randint(3, 4))
+        
+        sonuc = f"[b][color={RENKLER['altin']}]👐 EL FALI 👐[/color][/b]\n\n"
+        sonuc += f"[color={RENKLER['gri_acik']}]Sağ elinizdeki çizgiler okunuyor...[/color]\n\n"
+        
+        for cizgi in secilen:
+            sonuc += f"[b][color={RENKLER['turuncu']}]{cizgi['isim']}:[/color][/b]\n"
+            sonuc += f"[color={RENKLER['gri_acik']}]{cizgi['anlam']}[/color]\n\n"
+        
+        sonuc += f"[color={RENKLER['altin']}]✋ Parmak Analizi:[/color]\n"
+        parmak_analizi = [
+            "İşaret parmağınız uzun: Liderlik yeteneğiniz var.",
+            "Orta parmağınız düzgün: Sorumluluk sahibisiniz.",
+            "Yüzük parmağınız uzun: Yaratıcılığınız yüksek.",
+            "Serçe parmağınız esnek: İletişim yeteneğiniz güçlü.",
+            "Baş parmağınız kalın: Güçlü bir iradeniz var.",
+            "Tırnaklarınız sağlam: Sağlığınız yerinde.",
+            "Eliniz sıcak: Duygusal ve sevgi dolu birisiniz.",
+            "Eliniz soğuk: Sakin ve analitik düşünüyorsunuz."
+        ]
+        sonuc += f"[color={RENKLER['gri_acik']}]{random.choice(parmak_analizi)}[/color]"
+        
+        self.sonuc_label.markup = True
+        self.sonuc_label.text = sonuc
+        self._ai_ekle(sonuc, 'El Falı (Diğer)', ', '.join(c['isim'] for c in secilen))
+    
+    def nazar_fali(self):
+        """Nazar falı"""
+        sonuc = f"[b][color={RENKLER['altin']}]👁️ NAZAR FALI 👁️[/color][/b]\n\n"
+        
+        # Nazar boncuğu çizimi (emoji ile)
+        sonuc += "[b]🔵 NAZAR BONCUĞUNUZUN DURUMU 🔵[/b]\n\n"
+        
+        nazar_durumlari = [
+            "Nazar boncuğunuz sağlam ve koruyor. 🟢",
+            "Nazar boncuğunuzda çatlak var! Sizi korumuş. 🟡",
+            "Nazar boncuğunuz kırılmış. Yeni bir tane alın! 🔴",
+            "Nazar boncuğunuz parlıyor. Enerjiniz yüksek. 🟢",
+            "Nazar boncuğunuz matlaşmış. Enerjinizi tazeleyin. 🟡",
+        ]
+        sonuc += f"[color={RENKLER['mavi_acik']}]{random.choice(nazar_durumlari)}[/color]\n\n"
+        
+        sonuc += f"[b][color={RENKLER['altin']}]🔮 NAZAR YORUMU:[/color][/b]\n"
+        sonuc += f"[color={RENKLER['gri_acik']}]{random.choice(NAZAR_YORUMLARI)}[/color]\n\n"
+        
+        sonuc += f"[b][color={RENKLER['altin']}]💙 KORUNMA ÖNERİLERİ:[/color][/b]\n"
+        korunma = [
+            "Mavi renkli kıyafetler giyin.",
+            "Nazar boncuğu takın veya yanınızda taşıyın.",
+            "Evde nazar boncuğu bulundurun.",
+            "Olumlu düşünün, pozitif enerji yayın.",
+            "Nazar duasını okuyun.",
+            "Nane kokusu içinizi ferahlatacak.",
+            "Tuz rituelü yapın: Bir tutam tuzu omzunuzun üzerinden atın.",
+            "Üzerlik otu yakın, negatif enerjiyi temizleyin."
+        ]
+        sonuc += f"[color={RENKLER['gri_acik']}]{random.choice(korunma)}[/color]"
+        
+        self.sonuc_label.markup = True
+        self.sonuc_label.text = sonuc
+        self._ai_ekle(sonuc, 'Nazar Falı', 'Nazar boncuğu ve koruma yorumu')

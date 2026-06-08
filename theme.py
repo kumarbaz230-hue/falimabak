@@ -1,0 +1,873 @@
+"""FalımaBak - Ortak tema, renkler ve font yönetimi."""
+
+import os
+import platform
+
+from kivy.animation import Animation
+from kivy.clock import Clock
+from kivy.core.text import LabelBase
+from kivy.uix.boxlayout import BoxLayout
+from kivy.uix.label import Label
+from kivy.utils import get_color_from_hex
+from kivy.metrics import dp
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+ASSETS_DIR = os.path.join(BASE_DIR, 'assets')
+
+# ============================================================
+#  PROFESYONEL RENK PALETİ
+# ============================================================
+RENKLER = {
+    # Mystic Dark Theme — gece mavisi / antrasit
+    'arka_plan':       '#0F0C20',
+    'arka_plan2':      '#120E2E',
+    'kart_arka':       '#1A1435',
+    'kart_arka_cam':   '#221A42',
+    'kart_kenar':      '#2D2460',
+    
+    # Ana vurgu renkleri (kart ikonları için)
+    'mor':             '#7c4dff',
+    'mor_koyu':        '#4a148c',
+    'mor_parlak':      '#b388ff',
+    'turuncu':         '#ff9100',
+    'mavi_acik':       '#40c4ff',
+    'mavi_parlak':     '#00e5ff',
+    'pembe':           '#e040fb',
+    'pembe_acik':      '#ff80ab',
+    'yesil':           '#00e676',
+    
+    # Metin — koyu kart üzerinde yüksek kontrast
+    'beyaz':           '#FFFFFF',
+    'gri_acik':        '#D6D0E8',
+    'gri':             '#9B93B8',
+    'gri_koyu':        '#6E668A',
+
+    # Vurgu metinleri
+    'altin':           '#FFD700',
+    'altin_parlak':    '#FFEC6E',
+    'altin_yumusak':   '#E8D5A3',
+    
+    # Durum renkleri
+    'yesil_parlak':    '#69f0ae',
+    'kirmizi':         '#ff1744',
+    'kirmizi_acik':    '#ff5252',
+    
+    # Fallara özel renkler
+    'lacivert':        '#0d47a1',
+    'kahve':           '#6d4c41',
+    'kahve_acik':      '#a1887f',
+    'ten':             '#ffccbc',
+    
+    # Gölge
+    'golge':           '#000000',
+
+    # Siyah buton teması
+    'buton_arka':      '#0A0A0A',
+    'buton_arka2':     '#141414',
+    'buton_kenar':     '#2B2B2B',
+    'buton_vurgu':     '#1F1F1F',
+    'buton_altin':     '#C9A84C',
+}
+
+# ============================================================
+#  İKON SETİ - Material Design benzeri Unicode ikonlar
+# ============================================================
+# Ana menü kart arka planları — koyu, opak (beyaz kart görünümünü önler)
+KART_MENU_AR = {
+    'tarot':     '#1A1435',
+    'kahve':     '#2A1810',
+    'astroloji': '#101E35',
+    'elfali':    '#221535',
+    'diger':     '#122820',
+}
+
+# Tuş metinleri (Segoe UI) + ayrı emoji ikonları
+TUS = {
+    'geri':      '← Geri',
+    'fal_ac':    'Fal Aç',
+    'tekrar':    'Tekrar',
+    'galeri':    'Galeri',
+    'kamera':    'Kamera',
+    'yorumla':   'Yorumla',
+    'fal_bak':   'Fala Bak',
+    'bekle':     'Bekleyin',
+    'kart_adet': 'Kart',
+    'tamam':     'Tamam',
+}
+
+TUS_IKON = {
+    'fal_ac':    '🃏',
+    'tekrar':    '🔁',
+    'galeri':    '🖼',
+    'kamera':    '📷',
+    'yorumla':   '☕',
+    'fal_bak':   '🔮',
+    'bekle':     '⏳',
+    'kart_adet': '🃏',
+    'tamam':     '✅',
+}
+
+# Yorum markası — "AI" yerine FalımaBak
+YORUM_BEKLE = 'FalımaBak yorumluyor...'
+YORUM_BASLIK = 'FalımaBak Yorumluyor'
+YORUM_EK = 'FalımaBak Önerisi'
+
+FAL_IKONLARI = {
+    'tarot':     '🔮',
+    'kahve':     '☕',
+    'astroloji': '🌟',
+    'elfali':    '✋',
+    'diger':     '✨',
+    'ok':        '›',
+}
+
+# Mobil safe area (çentik / gesture bar)
+SAFE_UST = dp(8)
+SAFE_ALT = dp(10)
+BUTON_MIN_YUKSEK = dp(48)
+
+FON_ADI = 'AppFont'
+_font_yuklendi = False
+_emoji_font_yolu = None
+_emoji_font_denendi = False
+
+# Windows emoji font adayları (sırayla dene)
+_EMOJI_FONT_ADLARI = (
+    'seguiemj.ttf',
+    'segoeuiemj.ttf',
+    'SegoeUIEmoji.ttf',
+)
+
+
+def _windows_font_yolu(dosya):
+    return os.path.join(os.environ.get('WINDIR', r'C:\Windows'), 'Fonts', dosya)
+
+
+def fontlari_yukle():
+    global _font_yuklendi
+    if _font_yuklendi:
+        return
+
+    if platform.system() == 'Windows':
+        regular = _windows_font_yolu('segoeui.ttf')
+        bold = _windows_font_yolu('segoeuib.ttf')
+        if os.path.isfile(regular):
+            LabelBase.register(
+                name=FON_ADI,
+                fn_regular=regular,
+                fn_bold=bold if os.path.isfile(bold) else regular,
+            )
+            _font_yuklendi = True
+            return
+
+    LabelBase.register(name=FON_ADI, fn_regular='Roboto')
+    _font_yuklendi = True
+
+
+def emoji_font_yolu():
+    """Emoji fontunun tam dosya yolunu döndürür (Kivy'ye doğrudan verilir)."""
+    global _emoji_font_yolu, _emoji_font_denendi
+    if _emoji_font_denendi:
+        return _emoji_font_yolu or ''
+
+    _emoji_font_denendi = True
+    if platform.system() == 'Windows':
+        for dosya in _EMOJI_FONT_ADLARI:
+            yol = os.path.normpath(_windows_font_yolu(dosya))
+            if os.path.isfile(yol):
+                _emoji_font_yolu = yol
+                return yol
+
+    _emoji_font_yolu = ''
+    return ''
+
+
+def emoji_font_yukle():
+    """Geriye dönük uyumluluk."""
+    return emoji_font_yolu() or FON_ADI
+
+
+def emoji_label(text, font_size='28sp', **kwargs):
+    """Kırık kutu (X) olmadan emoji gösteren Label."""
+    fontlari_yukle()
+    yol = emoji_font_yolu()
+    fon = yol if yol else FON_ADI
+    kwargs.setdefault('halign', 'center')
+    kwargs.setdefault('valign', 'middle')
+    kwargs.setdefault('color', get_color_from_hex(RENKLER['beyaz']))
+    return Label(text=text, font_name=fon, font_size=font_size, **kwargs)
+
+
+def siyah_buton(text='', ikon=None, vurgu=False, altin_yazi=False, **kwargs):
+    """Siyah temalı buton — ikon varsa emoji + metin yan yana."""
+    if ikon:
+        return ikonlu_siyah_buton(ikon, text, vurgu=vurgu, altin_yazi=altin_yazi, **kwargs)
+
+    from kivy.uix.button import Button
+
+    fontlari_yukle()
+    arka = RENKLER['buton_vurgu'] if vurgu else RENKLER['buton_arka']
+    yazi = RENKLER['buton_altin'] if altin_yazi else RENKLER['beyaz']
+    defaults = {
+        'text': text,
+        'font_name': FON_ADI,
+        'font_size': '14sp',
+        'bold': True,
+        'background_normal': '',
+        'background_color': get_color_from_hex(arka),
+        'color': get_color_from_hex(yazi),
+        'size_hint_y': None,
+        'height': BUTON_MIN_YUKSEK,
+    }
+    defaults.update(kwargs)
+    return Button(**defaults)
+
+
+def ikonlu_siyah_buton(ikon, metin, vurgu=False, altin_yazi=False, **kwargs):
+    """Emoji ikon + metin içeren tıklanabilir buton."""
+    from kivy.graphics import Color, RoundedRectangle
+    from kivy.uix.behaviors import ButtonBehavior
+    from kivy.uix.boxlayout import BoxLayout
+    from kivy.uix.label import Label
+
+    fontlari_yukle()
+    arka = RENKLER['buton_vurgu'] if vurgu else RENKLER['buton_arka']
+    yazi = RENKLER['buton_altin'] if altin_yazi else RENKLER['beyaz']
+    font_size = kwargs.pop('font_size', '14sp')
+    ikon_size = kwargs.pop('ikon_size', '15sp')
+    height = kwargs.pop('height', BUTON_MIN_YUKSEK)
+
+    class _IkonluButon(ButtonBehavior, BoxLayout):
+        pass
+
+    btn = _IkonluButon(
+        orientation='horizontal',
+        spacing=dp(4),
+        padding=[dp(8), dp(6)],
+        size_hint_y=None,
+        height=height,
+        **kwargs,
+    )
+    with btn.canvas.before:
+        Color(*get_color_from_hex(arka))
+        btn._bg = RoundedRectangle(radius=[dp(8)])
+
+    def _ciz(inst, *_):
+        btn._bg.pos = inst.pos
+        btn._bg.size = inst.size
+
+    btn.bind(pos=_ciz, size=_ciz)
+    Clock.schedule_once(lambda dt: _ciz(btn), 0)
+
+    btn.add_widget(emoji_label(
+        ikon, font_size=ikon_size,
+        size_hint_x=None, width=dp(28),
+    ))
+    btn._metin_lbl = Label(
+        text=metin,
+        font_name=FON_ADI,
+        font_size=font_size,
+        bold=True,
+        color=get_color_from_hex(yazi),
+        halign='left',
+        valign='middle',
+        size_hint_x=1,
+    )
+    btn.add_widget(btn._metin_lbl)
+    return btn
+
+
+def buton_metin_guncelle(btn, metin):
+    """İkonlu veya normal buton metnini günceller."""
+    if hasattr(btn, '_metin_lbl'):
+        btn._metin_lbl.text = metin
+    elif hasattr(btn, 'text'):
+        btn.text = metin
+
+
+def tus_buton(anahtar, vurgu=False, altin_yazi=False, **kwargs):
+    """TUS + TUS_IKON ile standart uygulama butonu."""
+    metin = TUS.get(anahtar, anahtar)
+    ikon = TUS_IKON.get(anahtar, '')
+    if anahtar == 'geri':
+        return siyah_buton(metin, vurgu=vurgu, altin_yazi=altin_yazi, **kwargs)
+    return siyah_buton(metin, ikon=ikon, vurgu=vurgu, altin_yazi=altin_yazi, **kwargs)
+
+
+def baslik_satir(ikon, metin, font_size='22sp', renk=None, height=None, **kwargs):
+    """Ekran başlığı: emoji + metin (kırık kutu yok)."""
+    from kivy.uix.boxlayout import BoxLayout
+
+    satir = BoxLayout(
+        orientation='horizontal',
+        size_hint_y=None,
+        height=height or dp(40),
+        spacing=dp(8),
+        padding=[0, dp(2), 0, dp(2)],
+        **kwargs,
+    )
+    if ikon:
+        satir.add_widget(emoji_label(
+            ikon, font_size=font_size,
+            size_hint_x=None, width=dp(36),
+        ))
+    satir.add_widget(metin_label(
+        metin,
+        font_size=font_size,
+        bold=True,
+        color=renk or RENKLER['altin'],
+        halign='left',
+        valign='middle',
+        size_hint_x=1,
+    ))
+    return satir
+
+
+def talimat_kutusu(ikon, satirlar, font_size='16sp', renk=None):
+    """Kamera/talimat alanı — büyük emoji + Türkçe metin."""
+    from kivy.uix.boxlayout import BoxLayout
+
+    kutu = BoxLayout(orientation='vertical', spacing=dp(6), padding=dp(8))
+    kutu.add_widget(emoji_label(ikon, font_size='42sp', size_hint_y=None, height=dp(52)))
+    for satir in satirlar:
+        kutu.add_widget(metin_label(
+            satir,
+            font_size=font_size,
+            color=renk or RENKLER['gri_acik'],
+            halign='center',
+            size_hint_y=None,
+            height=dp(22),
+        ))
+    return kutu
+
+
+def yorum_baslik(ai_kullanildi=True, kaynak=None, fotograf=False):
+    if not ai_kullanildi:
+        return YORUM_EK
+    if kaynak == 'gemini':
+        ek = ' (Bulut · Fotoğraf)' if fotograf else ' (Bulut)'
+        return f'{YORUM_BASLIK}{ek}'
+    if kaynak == 'ollama':
+        return f'{YORUM_BASLIK} (Yerel)'
+    return YORUM_BASLIK
+
+
+def yorum_bekle_markup():
+    return f"[color={RENKLER['altin_yumusak']}]{YORUM_BEKLE}[/color]"
+
+
+def yorum_durum_notu(hata=None, ai_kullanildi=True):
+    """AI başarısız olduğunda kullanıcıya küçük uyarı satırı."""
+    if ai_kullanildi:
+        return ''
+    if hata:
+        return f"\n[color={RENKLER['turuncu']}][size=13sp]⚠ {hata}[/size][/color]"
+    return f"\n[color={RENKLER['gri']}][size=13sp]Hazır yorum[/size][/color]"
+
+
+def kaydirici_metin(yukseklik_hint=0.2, zemin_renk=None):
+    """Koyu zeminli kaydırılabilir metin alanı — beyaz flash / sızıntı yok."""
+    from kivy.graphics import Color, Rectangle
+    from kivy.uix.scrollview import ScrollView
+
+    scroll = ScrollView(
+        size_hint=(1, yukseklik_hint),
+        do_scroll_x=False,
+        bar_width=dp(3),
+        bar_color=get_color_from_hex(RENKLER['mor_parlak'] + '99'),
+        bar_inactive_color=get_color_from_hex(RENKLER['gri_koyu'] + '66'),
+    )
+    renk = zemin_renk or RENKLER['kart_arka_cam']
+    with scroll.canvas.before:
+        Color(*get_color_from_hex(renk))
+        scroll._kaydir_bg = Rectangle()
+
+    def _kaydir_bg_guncelle(*_):
+        scroll._kaydir_bg.pos = scroll.pos
+        scroll._kaydir_bg.size = scroll.size
+
+    scroll.bind(pos=_kaydir_bg_guncelle, size=_kaydir_bg_guncelle)
+    Clock.schedule_once(lambda *_: _kaydir_bg_guncelle(), 0)
+
+    fontlari_yukle()
+    label = Label(
+        text='',
+        font_name=FON_ADI,
+        font_size='13sp',
+        color=get_color_from_hex(RENKLER['gri_acik']),
+        size_hint_y=None,
+        halign='left',
+        valign='top',
+        markup=True,
+        padding=(dp(10), dp(10)),
+    )
+
+    def _metin_genisligi(*_):
+        label.text_size = (max(scroll.width - dp(20), dp(100)), None)
+
+    def _metin_yuksekligi(inst, texture_size):
+        inst.height = max(texture_size[1] + dp(12), dp(40))
+
+    label.bind(texture_size=_metin_yuksekligi)
+    scroll.bind(width=_metin_genisligi)
+    Clock.schedule_once(lambda *_: _metin_genisligi(), 0)
+
+    scroll.add_widget(label)
+    return scroll, label
+
+
+class FotoKutucukPanel(BoxLayout):
+    """Çoklu fotoğraf yükleme kutucukları — galeri/kamera ile doldurulur."""
+
+    def __init__(self, slotlar, yukseklik=None, **kwargs):
+        from kivy.uix.behaviors import ButtonBehavior
+        from kivy.uix.image import Image
+        from kivy.uix.relativelayout import RelativeLayout
+        from kivy.graphics import Color, Line
+
+        super().__init__(
+            orientation='horizontal',
+            spacing=dp(8),
+            padding=(dp(4), dp(6)),
+            size_hint_y=None,
+            height=yukseklik or dp(132),
+            **kwargs,
+        )
+        self._slotlar = list(slotlar)
+        self._yollar = {s['anahtar']: None for s in slotlar}
+        self._kutular = {}
+        self._secili = slotlar[0]['anahtar'] if slotlar else None
+
+        class _FotoSlot(ButtonBehavior, RelativeLayout):
+            pass
+
+        fontlari_yukle()
+        for slot in slotlar:
+            anahtar = slot['anahtar']
+            kutu = _FotoSlot(size_hint=(1, 1))
+            kutu.anahtar = anahtar
+            kutu.panel = self
+            kutu.bind(on_press=lambda inst, a=anahtar: self.kutu_sec(a))
+
+            koyu_zemin_ekle(kutu, RENKLER['kart_arka_cam'], radius=12)
+
+            oniz = Image(
+                allow_stretch=True,
+                keep_ratio=True,
+                size_hint=(0.92, 0.72),
+                pos_hint={'center_x': 0.5, 'center_y': 0.58},
+                opacity=0,
+            )
+            ikon = emoji_label(
+                slot.get('ikon', '📷'),
+                font_size='26sp',
+                size_hint=(1, None),
+                height=dp(32),
+                pos_hint={'center_x': 0.5, 'center_y': 0.55},
+            )
+            baslik = metin_label(
+                slot['baslik'],
+                font_size='10sp',
+                color=RENKLER['gri_acik'],
+                halign='center',
+                size_hint=(1, None),
+                height=dp(28),
+                pos_hint={'center_x': 0.5, 'y': dp(4)},
+            )
+
+            with kutu.canvas.after:
+                kutu._cerceve_renk = Color(*get_color_from_hex(RENKLER['kart_kenar']))
+                kutu._cerceve = Line(rounded_rectangle=(0, 0, 0, 0, dp(12)), width=dp(1.2))
+
+            kutu.onizleme = oniz
+            kutu.ikon = ikon
+            kutu.baslik = baslik
+            kutu.add_widget(oniz)
+            kutu.add_widget(ikon)
+            kutu.add_widget(baslik)
+
+            def _cerceve_guncelle(inst, *_):
+                w, h = inst.size
+                inst._cerceve.rounded_rectangle = (0, 0, w, h, dp(12))
+
+            kutu.bind(size=_cerceve_guncelle)
+            Clock.schedule_once(lambda *_: _cerceve_guncelle(kutu), 0)
+
+            self._kutular[anahtar] = kutu
+            self.add_widget(kutu)
+
+        self.kutu_sec(self._secili)
+
+    def kutu_sec(self, anahtar):
+        if anahtar not in self._kutular:
+            return
+        self._secili = anahtar
+        for key, kutu in self._kutular.items():
+            secili = key == anahtar
+            kutu.baslik.color = get_color_from_hex(
+                RENKLER['altin'] if secili else RENKLER['gri_acik'],
+            )
+            kutu.baslik.bold = secili
+            kutu._cerceve_renk.rgba = get_color_from_hex(
+                RENKLER['altin'] if secili else RENKLER['kart_kenar'],
+            )
+            kutu._cerceve.width = dp(2.2) if secili else dp(1.2)
+
+    def fotograf_ekle(self, yol):
+        """Seçili kutuya fotoğraf ata; doluysa sonraki boş kutuya geç."""
+        if not yol:
+            return
+        hedef = self._secili
+        if self._yollar.get(hedef):
+            for slot in self._slotlar:
+                if not self._yollar.get(slot['anahtar']):
+                    hedef = slot['anahtar']
+                    break
+        self._yollar[hedef] = yol
+        self._onizleme_guncelle(hedef)
+        self.kutu_sec(hedef)
+        for slot in self._slotlar:
+            if not self._yollar.get(slot['anahtar']):
+                self.kutu_sec(slot['anahtar'])
+                break
+
+    def _onizleme_guncelle(self, anahtar):
+        kutu = self._kutular.get(anahtar)
+        yol = self._yollar.get(anahtar)
+        if not kutu:
+            return
+        if yol:
+            kutu.onizleme.source = yol
+            kutu.onizleme.reload()
+            kutu.onizleme.opacity = 1
+            kutu.ikon.opacity = 0.15
+        else:
+            kutu.onizleme.opacity = 0
+            kutu.ikon.opacity = 1
+
+    def tamam_mi(self):
+        return all(self._yollar.get(s['anahtar']) for s in self._slotlar)
+
+    def eksik_basliklar(self):
+        return [s['baslik'] for s in self._slotlar if not self._yollar.get(s['anahtar'])]
+
+    def tum_veri(self):
+        yollar = []
+        aciklamalar = []
+        for slot in self._slotlar:
+            yol = self._yollar.get(slot['anahtar'])
+            if yol:
+                yollar.append(yol)
+                aciklamalar.append(slot['baslik'])
+        return {
+            'foto_yollari': yollar,
+            'foto_aciklamalari': aciklamalar,
+        }
+
+
+def metin_label(text, font_size='16sp', bold=False, color=None, halign='left', valign='middle', **kwargs):
+    """Türkçe karakter destekli, düzgün hizalanmış Label."""
+    fontlari_yukle()
+    renk = get_color_from_hex(color or RENKLER['beyaz'])
+    lbl = Label(
+        text=text,
+        font_name=FON_ADI,
+        font_size=font_size,
+        bold=bold,
+        color=renk,
+        halign=halign,
+        valign=valign,
+        **kwargs,
+    )
+
+    def _text_size_guncelle(inst, _val):
+        genislik = max(inst.width, dp(80))
+        yukseklik = max(inst.height, dp(16))
+        if halign in ('left', 'right', 'center'):
+            inst.text_size = (genislik, None)
+        else:
+            inst.text_size = (genislik, yukseklik)
+
+    lbl.bind(size=_text_size_guncelle, texture_size=_text_size_guncelle)
+    Clock.schedule_once(lambda *_: _text_size_guncelle(lbl, None), 0)
+    return lbl
+
+
+def koyu_zemin_ekle(parent, renk_hex, radius=18, vurgu_renk=None):
+    """Kart içine tam kaplama koyu zemin (canvas.before yerine — beyaz flash önlenir)."""
+    from kivy.graphics import Color, RoundedRectangle, Rectangle
+    from kivy.uix.widget import Widget
+
+    r = dp(radius)
+    zemin = Widget(size_hint=(1, 1))
+    with zemin.canvas:
+        Color(*get_color_from_hex(renk_hex))
+        govde = RoundedRectangle(radius=[r])
+        if vurgu_renk:
+            Color(*get_color_from_hex(vurgu_renk))
+            serit = Rectangle()
+
+    def _guncelle(*_):
+        w, h = zemin.size
+        govde.pos = (0, 0)
+        govde.size = (w, h)
+        if vurgu_renk:
+            serit.pos = (dp(6), dp(12))
+            serit.size = (dp(4), max(h - dp(24), dp(8)))
+
+    zemin.bind(size=_guncelle)
+    parent.add_widget(zemin, index=0)
+    Clock.schedule_once(lambda *_: _guncelle(), 0)
+    return zemin
+
+
+def arka_plan_ekle(widget, renk=None):
+    """Mystic dark arka plan — tek katman, clear() yok (render çökmesini önler)."""
+    from kivy.graphics import Color, Rectangle
+
+    renk_hex = renk or RENKLER['arka_plan']
+    with widget.canvas.before:
+        Color(*get_color_from_hex(renk_hex))
+        rect = Rectangle(size=widget.size, pos=widget.pos)
+
+    def _guncelle_rect(*_):
+        rect.pos = widget.pos
+        rect.size = widget.size
+
+    widget.bind(pos=_guncelle_rect, size=_guncelle_rect)
+    return rect
+
+
+def gradient_arka_plan_ekle(widget):
+    """Opak mistik gradient — yarı saydam katman yok (beyaz sızıntı önlenir)."""
+    from kivy.core.window import Window
+    from kivy.graphics import Color, Rectangle
+
+    with widget.canvas.before:
+        Color(*get_color_from_hex(RENKLER['arka_plan']))
+        kat1 = Rectangle()
+        Color(*get_color_from_hex(RENKLER['arka_plan2']))
+        kat2 = Rectangle()
+        Color(*get_color_from_hex('#18122E'))
+        kat3 = Rectangle()
+
+    def _guncelle(*_):
+        x, y = widget.pos
+        w = widget.width if widget.width > 1 else Window.width
+        h = widget.height if widget.height > 1 else Window.height
+        kat1.pos = (x, y)
+        kat1.size = (w, h)
+        kat2.pos = (x, y + h * 0.35)
+        kat2.size = (w, h * 0.65)
+        kat3.pos = (x, y + h * 0.68)
+        kat3.size = (w, h * 0.32)
+
+    widget.bind(pos=_guncelle, size=_guncelle)
+    Window.bind(size=lambda *_: _guncelle())
+    Clock.schedule_once(lambda *_: _guncelle(), 0)
+    return kat1, kat2, kat3
+
+
+def ekran_icerik_sar(screen, icerik):
+    """Tam ekran opak zemin + içerik (beyaz boşlukları kapatır)."""
+    from kivy.core.window import Window
+    from kivy.graphics import Color, Rectangle
+    from kivy.uix.floatlayout import FloatLayout
+    from kivy.uix.widget import Widget
+
+    gradient_arka_plan_ekle(screen)
+
+    kok = FloatLayout(size_hint=(1, 1))
+    zemin = Widget(size_hint=(1, 1))
+    with zemin.canvas:
+        Color(*get_color_from_hex(RENKLER['arka_plan']))
+        z_rect = Rectangle()
+
+    def _zemin_guncelle(*_):
+        z_rect.pos = (0, 0)
+        z_rect.size = zemin.size
+
+    zemin.bind(size=_zemin_guncelle, pos=_zemin_guncelle)
+    Window.bind(size=lambda *_: Clock.schedule_once(lambda __: _zemin_guncelle(), 0))
+    Clock.schedule_once(lambda *_: _zemin_guncelle(), 0)
+
+    kok.add_widget(zemin)
+    icerik.size_hint = (1, 1)
+    kok.add_widget(icerik)
+    screen.add_widget(kok)
+    return kok
+
+
+def mobil_ekran_sarmal(icerik_widget):
+    """Safe area padding ile ekran sarmalayıcı."""
+    from kivy.uix.boxlayout import BoxLayout
+
+    sarmal = BoxLayout(
+        orientation='vertical',
+        padding=[dp(12), SAFE_UST, dp(12), SAFE_ALT],
+    )
+    sarmal.add_widget(icerik_widget)
+    return sarmal
+
+
+def ust_baslik_bar(baslik, geri_callback=None):
+    """Tüm fal ekranları için ortak üst bar."""
+    from kivy.uix.boxlayout import BoxLayout
+
+    bar = BoxLayout(
+        orientation='horizontal',
+        size_hint_y=None,
+        height=dp(52),
+        spacing=dp(8),
+        padding=[0, dp(4), 0, dp(4)],
+    )
+    if geri_callback:
+        btn = tus_buton('geri', font_size='13sp', size_hint_x=0.3)
+        btn.bind(on_press=lambda *_: geri_callback())
+        bar.add_widget(btn)
+    else:
+        bar.add_widget(BoxLayout(size_hint_x=0.3))
+
+    bar.add_widget(metin_label(
+        baslik,
+        font_size='17sp',
+        bold=True,
+        color=RENKLER['altin'],
+        halign='center',
+        size_hint_x=0.4,
+    ))
+    bar.add_widget(BoxLayout(size_hint_x=0.3))
+    return bar
+
+
+class YukleniyorAnimasyon(Label):
+    """FalımaBak yorumluyor — nabız animasyonlu gösterge."""
+
+    def __init__(self, **kwargs):
+        fontlari_yukle()
+        super().__init__(
+            text=YORUM_BEKLE,
+            font_name=FON_ADI,
+            font_size='14sp',
+            bold=True,
+            color=get_color_from_hex(RENKLER['altin_yumusak']),
+            halign='center',
+            size_hint_y=None,
+            height=dp(36),
+            **kwargs,
+        )
+        self._anim = None
+        Clock.schedule_once(lambda *_: self._baslat(), 0)
+
+    def _baslat(self):
+        self._anim = (
+            Animation(opacity=0.4, duration=0.7)
+            + Animation(opacity=1.0, duration=0.7)
+        )
+        self._anim.repeat = True
+        self._anim.start(self)
+
+    def durdur(self):
+        if self._anim:
+            self._anim.cancel(self)
+            self.opacity = 1
+
+
+def alt_nav_bar(aktif='anasayfa', on_sec=None):
+    """Alt navigasyon: Ana Sayfa | Geçmiş | Ayarlar."""
+    from kivy.graphics import Color, Rectangle, RoundedRectangle, Line
+    from kivy.uix.boxlayout import BoxLayout
+    from kivy.uix.behaviors import ButtonBehavior
+
+    class NavBtn(ButtonBehavior, BoxLayout):
+        def __init__(self, etiket, anahtar, secili=False, ikon='', **kw):
+            super().__init__(orientation='vertical', **kw)
+            self.anahtar = anahtar
+            self.size_hint_x = 1 / 3
+            self.size_hint_y = None
+            self.height = dp(54)
+            self.padding = [0, dp(4), 0, dp(4)]
+            renk = RENKLER['altin'] if secili else RENKLER['gri']
+            ust = BoxLayout(orientation='horizontal', size_hint_y=None, height=dp(24), spacing=dp(4))
+            if ikon:
+                ust.add_widget(emoji_label(ikon, font_size='14sp', size_hint_x=None, width=dp(22)))
+            ust.add_widget(metin_label(
+                etiket,
+                font_size='13sp',
+                bold=secili,
+                color=renk,
+                halign='center',
+                size_hint_x=1,
+            ))
+            self.add_widget(ust)
+            if secili:
+                with self.canvas.after:
+                    Color(*get_color_from_hex(RENKLER['altin']), 0.8)
+                    self._cizgi = RoundedRectangle(radius=[dp(1)])
+                self.bind(pos=self._ciz, size=self._ciz)
+                Clock.schedule_once(lambda *_: self._ciz(), 0)
+
+        def _ciz(self, *_):
+            if hasattr(self, '_cizgi'):
+                self._cizgi.pos = (self.center_x - dp(16), self.y + dp(2))
+                self._cizgi.size = (dp(32), dp(3))
+
+        def on_release(self):
+            if on_sec:
+                on_sec(self.anahtar)
+
+    nav = BoxLayout(
+        orientation='horizontal',
+        size_hint_y=None,
+        height=dp(58),
+        padding=[dp(8), 0, dp(8), SAFE_ALT],
+        spacing=dp(4),
+    )
+    with nav.canvas.before:
+        Color(*get_color_from_hex(RENKLER['arka_plan']))
+        nav._bg = Rectangle()
+        Color(*get_color_from_hex(RENKLER['kart_arka']))
+        nav._bg2 = Rectangle()
+        Color(*get_color_from_hex(RENKLER['altin']), 0.35)
+        nav._ust = Line(width=1)
+
+    def _nav_ciz(*_):
+        nav._bg.pos = nav.pos
+        nav._bg.size = (nav.width, nav.height + dp(40))
+        nav._bg2.pos = nav.pos
+        nav._bg2.size = nav.size
+        nav._ust.points = [nav.x, nav.top, nav.right, nav.top]
+
+    nav.bind(pos=_nav_ciz, size=_nav_ciz)
+    Clock.schedule_once(lambda *_: _nav_ciz(), 0)
+
+    nav.add_widget(NavBtn('Ana Sayfa', 'anasayfa', secili=aktif == 'anasayfa', ikon='🏠'))
+    nav.add_widget(NavBtn('Geçmiş', 'gecmis', secili=aktif == 'gecmis', ikon='📜'))
+    nav.add_widget(NavBtn('Ayarlar', 'ayarlar', secili=aktif == 'ayarlar', ikon='⚙️'))
+    return nav
+
+
+def kart_zemin_bagla(widget, renk_hex=None, radius=12):
+    """Kart canvas arka planını güvenli şekilde widget'a bağlar."""
+    from kivy.graphics import Color, RoundedRectangle
+
+    renk = renk_hex or RENKLER['kart_arka']
+    r = dp(radius)
+    with widget.canvas.before:
+        Color(*get_color_from_hex(renk))
+        rect = RoundedRectangle(radius=[r])
+
+    def _ciz(inst=None, *_):
+        hedef = inst if inst is not None else widget
+        if not hasattr(hedef, 'pos'):
+            return
+        rect.pos = hedef.pos
+        rect.size = hedef.size
+
+    widget.bind(pos=lambda inst, *a: _ciz(inst), size=lambda inst, *a: _ciz(inst))
+    Clock.schedule_once(lambda dt: _ciz(), 0)
+    return rect
+
+
+def asset_yolu(dosya):
+    return os.path.join(ASSETS_DIR, dosya)
