@@ -14,8 +14,7 @@ source.exclude_patterns = license,images/*/*.jpg,*.bat,*.md,config.json,kullanic
 
 version = 1.0.0
 
-# hostpython3: config.pxi uretimi icin host Python sabitlensin
-requirements = hostpython3,python3,kivy==2.3.0,pillow,android
+requirements = python3,kivy==2.3.0,pillow,android
 
 orientation = portrait
 fullscreen = 0
@@ -37,4 +36,5 @@ android.presplash_color = #0F0C20
 
 log_level = 2
 warn_on_root = 1
-p4a.branch = develop
+# develop = Python 3.14 gerekir. master = Python 3.11 ile stabil.
+p4a.branch = master
