@@ -23,8 +23,8 @@ version = 1.0.0
 
 # opencv-python ve tkinter Android'de çalışmaz — dahil edilmedi.
 # plyer: mobil kamera/galeri için (kamera.py güncellenince kullanılır).
-# google-generativeai: isteğe bağlı SDK; şu an ai_yorum.py urllib kullanıyor.
-requirements = python3,kivy,pillow,requests,google-generativeai,urllib3,plyer,android
+# Gemini: ai_yorum.py urllib ile çağırıyor; google-generativeai APK build'i kırar.
+requirements = python3,kivy,pillow,requests,urllib3,plyer,android
 
 orientation = portrait
 fullscreen = 0
@@ -40,7 +40,8 @@ android.ndk = 25b
 # Android 13+ galeri için READ_MEDIA_IMAGES eklendi
 android.permissions = INTERNET,WRITE_EXTERNAL_STORAGE,READ_EXTERNAL_STORAGE,READ_MEDIA_IMAGES,CAMERA
 
-android.archs = arm64-v8a,armeabi-v7a
+# CI hızı için tek mimari; eski telefon gerekirse armeabi-v7a ekle
+android.archs = arm64-v8a
 android.accept_sdk_license = True
 android.allow_backup = True
 

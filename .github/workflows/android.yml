@@ -3,7 +3,6 @@ name: Build Android APK
 on:
   push:
     branches: [main, master]
-  pull_request:
   workflow_dispatch:
 
 jobs:
@@ -15,37 +14,52 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Get date (cache key)
-        id: get-date
-        run: echo "date=$(date +'%Y-%m-%d')" >> $GITHUB_OUTPUT
-
-      - name: Cache Buildozer global directory
+      - name: Cache Buildozer SDK
         uses: actions/cache@v4
         with:
-          path: ~/.buildozer
-          key: buildozer-global-${{ runner.os }}-${{ steps.get-date.outputs.date }}
+          path: |
+            ~/.buildozer
+            .buildozer
+          key: buildozer-${{ hashFiles('buildozer.spec') }}
           restore-keys: |
-            buildozer-global-${{ runner.os }}-
+            buildozer-
 
-      - name: Cache Buildozer project directory
-        uses: actions/cache@v4
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
         with:
-          path: .buildozer
-          key: buildozer-project-${{ runner.os }}-${{ hashFiles('buildozer.spec') }}
-          restore-keys: |
-            buildozer-project-${{ runner.os }}-
+          distribution: temurin
+          java-version: '17'
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            git zip unzip autoconf libtool pkg-config \
+            zlib1g-dev libncurses5-dev libncursesw5-dev libtinfo5 \
+            cmake libffi-dev libssl-dev automake \
+            libsdl2-dev libsdl2-image-dev libsdl2-mixer-dev libsdl2-ttf-dev \
+            libportmidi-dev libswscale-dev libavformat-dev libavcodec-dev \
+            libavdevice-dev libavutil-dev libavfilter-dev
 
       - name: Prepare config (API key repoda yok)
         run: |
           cp config.ornek.json config.json
           python -c "import json; p='config.json'; d=json.load(open(p,encoding='utf-8')); d['gemini_api_key']=''; json.dump(d, open(p,'w',encoding='utf-8'), indent=2, ensure_ascii=False)"
 
-      - name: Build with Buildozer
-        uses: ArtemSBulgakov/buildozer-action@v1
-        id: buildozer
-        with:
-          command: yes | buildozer -v android debug
-          buildozer_version: stable
+      - name: Install Buildozer
+        run: |
+          python -m pip install --upgrade pip
+          pip install "cython==0.29.36" buildozer
+
+      - name: Build APK
+        run: |
+          export JAVA_HOME="$JAVA_HOME_17_X64"
+          yes | buildozer -v android debug
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
