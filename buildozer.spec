@@ -44,6 +44,7 @@ android.permissions = INTERNET,WRITE_EXTERNAL_STORAGE,READ_EXTERNAL_STORAGE,READ
 android.archs = arm64-v8a
 android.accept_sdk_license = True
 android.allow_backup = True
+android.enable_androidx = True
 
 # Koyu tema / yükleme ekranı (presplash PNG eklenirse açılır)
 # presplash.filename = %(source.dir)s/assets/presplash.png
@@ -57,4 +58,4 @@ android.presplash_color = #0F0C20
 log_level = 2
 warn_on_root = 1
 
-p4a.branch = develop
+# p4a.branch = develop

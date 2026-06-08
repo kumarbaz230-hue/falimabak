@@ -31,9 +31,9 @@ jobs:
           path: |
             ~/.buildozer
             .buildozer
-          key: buildozer-v4-${{ hashFiles('buildozer.spec') }}
+          key: buildozer-v5-${{ hashFiles('buildozer.spec') }}
           restore-keys: |
-            buildozer-v4-
+            buildozer-v5-
 
       - name: Install system dependencies
         run: |
@@ -58,14 +58,23 @@ jobs:
         run: |
           set -o pipefail
           export PATH="$HOME/.local/bin:$PATH"
+          # GitHub runner'daki Gradle 9 / NDK buildozer'ı bozar
+          unset GRADLE_HOME
+          unset ANDROID_NDK ANDROID_NDK_HOME ANDROID_NDK_ROOT ANDROID_NDK_LATEST_HOME
+          export JAVA_HOME="${JAVA_HOME_17_X64:-$JAVA_HOME}"
+          export PATH="$JAVA_HOME/bin:$PATH"
+          java -version
+          rm -rf .buildozer/android/platform/build-arm64-v8a/dists || true
           yes | buildozer -v android debug 2>&1 | tee buildozer.log
           ls -la bin/ || true
 
       - name: Show last log lines on failure
         if: failure()
         run: |
-          echo "===== SON 150 SATIR ====="
-          tail -n 150 buildozer.log || true
+          echo "===== GRADLE / HATA SATIRLARI ====="
+          grep -E "gradlew failed|Command failed|FAILURE:|ERROR:|Error code" buildozer.log | tail -n 40 || true
+          echo "===== SON 80 SATIR ====="
+          tail -n 80 buildozer.log || true
 
       - name: Upload APK
         if: success()
