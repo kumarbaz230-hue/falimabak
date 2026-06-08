@@ -1,0 +1,4 @@
+# Masaüstü geliştirme (PC): pip install -r requirements-desktop.txt
+kivy>=2.3.0
+pillow>=10.0.0
+opencv-python>=4.8.0

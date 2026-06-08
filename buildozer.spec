@@ -23,8 +23,8 @@ version = 1.0.0
 
 # opencv-python ve tkinter Android'de çalışmaz — dahil edilmedi.
 # plyer: mobil kamera/galeri için (kamera.py güncellenince kullanılır).
-# Gemini: ai_yorum.py urllib ile çağırıyor; google-generativeai APK build'i kırar.
-requirements = python3,kivy,pillow,requests,urllib3,plyer,android
+# Gemini: urllib (stdlib). requests SDK yok — derleme hafif kalır.
+requirements = python3,kivy==2.3.0,pillow,plyer,android,pyjnius
 
 orientation = portrait
 fullscreen = 0
@@ -32,8 +32,8 @@ fullscreen = 0
 # Uygulama ikonu hazır olunca satırı açın (512x512 PNG önerilir):
 # icon.filename = %(source.dir)s/assets/app_icon.png
 
-# Play Store hedefi için API 34
-android.api = 34
+# API 31 — CI derlemesinde daha stabil (Play için sonra 33+ yükseltilebilir)
+android.api = 31
 android.minapi = 24
 android.ndk = 25b
 
