@@ -9,6 +9,12 @@ jobs:
   build:
     runs-on: ubuntu-22.04
     timeout-minutes: 120
+    env:
+      GRADLE_HOME: ""
+      ANDROID_NDK: ""
+      ANDROID_NDK_HOME: ""
+      ANDROID_NDK_ROOT: ""
+      ANDROID_NDK_LATEST_HOME: ""
 
     steps:
       - name: Checkout
@@ -25,59 +31,49 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Cache Buildozer
+      - name: Cache SDK packages only
         uses: actions/cache@v4
         with:
-          path: |
-            ~/.buildozer
-            .buildozer
-          key: buildozer-v6-${{ hashFiles('buildozer.spec') }}
-          restore-keys: |
-            buildozer-v6-
+          path: ~/.buildozer/android/packages
+          key: bz-pkgs-${{ hashFiles('buildozer.spec') }}
+          restore-keys: bz-pkgs-
 
       - name: Install system dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
-            build-essential ccache git zip unzip openjdk-17-jdk \
-            autoconf automake libtool pkg-config \
+            build-essential git zip unzip autoconf automake libtool pkg-config \
             zlib1g-dev libncurses5-dev libncursesw5-dev libtinfo5 cmake \
             libffi-dev libssl-dev \
             libsdl2-dev libsdl2-image-dev libsdl2-mixer-dev libsdl2-ttf-dev \
             libportmidi-dev libswscale-dev libavformat-dev libavcodec-dev libavutil-dev
 
-      - name: Prepare config (API key repoda yok)
+      - name: Prepare config
         run: cp config.ornek.json config.json
 
       - name: Install Buildozer
         run: |
           python -m pip install --upgrade pip
-          pip install "cython==0.29.36" "buildozer==1.5.0"
+          pip install "cython==0.29.36" buildozer
+
+      - name: Show spec
+        run: |
+          file buildozer.spec
+          grep requirements buildozer.spec
+          java -version
 
       - name: Build APK
         run: |
-          set -o pipefail
           export PATH="$HOME/.local/bin:$PATH"
-          # GitHub runner'daki Gradle 9 / NDK buildozer'ı bozar
-          unset GRADLE_HOME
-          unset ANDROID_NDK ANDROID_NDK_HOME ANDROID_NDK_ROOT ANDROID_NDK_LATEST_HOME
           export JAVA_HOME="${JAVA_HOME_17_X64:-$JAVA_HOME}"
           export PATH="$JAVA_HOME/bin:$PATH"
-          java -version
-          echo "=== buildozer.spec requirements ==="
-          grep "^requirements" buildozer.spec
-          yes | buildozer android clean || true
-          rm -rf .buildozer/android/platform/build-arm64-v8a || true
-          yes | buildozer -v android debug 2>&1 | tee buildozer.log
-          ls -la bin/ || true
-
-      - name: Show last log lines on failure
-        if: failure()
-        run: |
-          echo "===== GRADLE / HATA SATIRLARI ====="
-          grep -E "gradlew failed|Command failed|FAILURE:|ERROR:|Error code" buildozer.log | tail -n 40 || true
-          echo "===== SON 80 SATIR ====="
-          tail -n 80 buildozer.log || true
+          rm -rf .buildozer bin
+          yes | buildozer -v android debug > buildozer.log 2>&1
+          BUILD_EXIT=$?
+          echo "buildozer exit: $BUILD_EXIT"
+          tail -n 60 buildozer.log
+          ls -la bin/ 2>/dev/null || true
+          exit $BUILD_EXIT
 
       - name: Upload APK
         if: success()
