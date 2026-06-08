@@ -23,8 +23,8 @@ version = 1.0.0
 
 # opencv-python ve tkinter Android'de çalışmaz — dahil edilmedi.
 # plyer: mobil kamera/galeri için (kamera.py güncellenince kullanılır).
-# Gemini: urllib (stdlib). pyjnius android ile gelir — ayrı yazma.
-requirements = python3,kivy,pillow,plyer,android
+# İlk APK: minimum paket (plyer sonra eklenir). pyjnius/android çifti build'i kırar.
+requirements = python3,kivy,pillow,android
 
 orientation = portrait
 fullscreen = 0

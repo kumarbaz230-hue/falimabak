@@ -31,9 +31,9 @@ jobs:
           path: |
             ~/.buildozer
             .buildozer
-          key: buildozer-v5-${{ hashFiles('buildozer.spec') }}
+          key: buildozer-v6-${{ hashFiles('buildozer.spec') }}
           restore-keys: |
-            buildozer-v5-
+            buildozer-v6-
 
       - name: Install system dependencies
         run: |
@@ -64,7 +64,10 @@ jobs:
           export JAVA_HOME="${JAVA_HOME_17_X64:-$JAVA_HOME}"
           export PATH="$JAVA_HOME/bin:$PATH"
           java -version
-          rm -rf .buildozer/android/platform/build-arm64-v8a/dists || true
+          echo "=== buildozer.spec requirements ==="
+          grep "^requirements" buildozer.spec
+          yes | buildozer android clean || true
+          rm -rf .buildozer/android/platform/build-arm64-v8a || true
           yes | buildozer -v android debug 2>&1 | tee buildozer.log
           ls -la bin/ || true
 
