@@ -1,4 +1,4 @@
-"""FalımaBak — Ayarlar (dil, profil, AI)."""
+"""FalımaBak — Ayarlar (dil + profil)."""
 
 from kivy.app import App
 from kivy.uix.screenmanager import Screen
@@ -13,10 +13,9 @@ from theme import (
     guvenli_textinput, kart_zemin_bagla,
 )
 from gecmis import kullanici_ismi, isim_guncelle, gecmis_temizle, dil_al
-from ai_yorum import config_kaydet, _ayar_yukle, gemini_key_kisa
 from dil import t, dil_listesi, dil_etiket, dil_degistir
 
-_SURUM = '1.0.16'
+_SURUM = '1.0.17'
 
 
 def _ayar_karti(baslik, alt_baslik=None):
@@ -42,7 +41,6 @@ def _ayar_karti(baslik, alt_baslik=None):
 class AyarlarScreen(Screen):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self._dil_kodlar = [k for k, _ in dil_listesi()]
         self._kur()
 
     def _kur(self):
@@ -68,15 +66,6 @@ class AyarlarScreen(Screen):
         profil.height = dp(130)
         ana.add_widget(profil)
 
-        ai_kart = _ayar_karti(t('settings_ai'), t('settings_ai_hint'))
-        self._api_input = guvenli_textinput(
-            hint_text='Gemini API (optional)',
-            password=True,
-        )
-        ai_kart.add_widget(self._api_input)
-        ai_kart.height = dp(148)
-        ana.add_widget(ai_kart)
-
         islem = _ayar_karti(t('settings_data'))
         kaydet_btn = siyah_buton(t('settings_save'), vurgu=True, font_size='15sp')
         kaydet_btn.bind(on_press=self._kaydet)
@@ -95,7 +84,7 @@ class AyarlarScreen(Screen):
 
         ana.add_widget(BoxLayout(size_hint_y=1))
         ana.add_widget(metin_label(
-            f'FalımaBak v{_SURUM} · {t("premium_tag")}',
+            f'FalımaBak v{_SURUM}',
             font_size='10sp', color=RENKLER['gri_koyu'],
             halign='center', size_hint_y=None, height=dp(18),
         ))
@@ -108,12 +97,6 @@ class AyarlarScreen(Screen):
     def _yukle(self):
         self._isim_input.text = kullanici_ismi()
         self._dil_spinner.text = dil_etiket(dil_al())
-        ayar = _ayar_yukle()
-        mevcut = (ayar.get('gemini_api_key') or '').strip()
-        self._api_input.text = mevcut
-        kisa = gemini_key_kisa(ayar)
-        if kisa and not mevcut:
-            self._api_input.hint_text = f'App key ({kisa})'
         self._mesaj.text = ''
 
     def _secili_dil_kodu(self):
@@ -127,15 +110,9 @@ class AyarlarScreen(Screen):
         eski_dil = dil_al()
         yeni = self._secili_dil_kodu()
         dil_degistir(yeni)
-
-        isim = self._isim_input.text.strip()
-        isim_guncelle(isim)
-        api = self._api_input.text.strip()
-        config_kaydet({'gemini_api_key': api})
-
+        isim_guncelle(self._isim_input.text.strip())
         self._mesaj.text = t('settings_saved')
         self._mesaj.color = get_color_from_hex(RENKLER['yesil'])
-
         if yeni != eski_dil:
             app = App.get_running_app()
             if app and hasattr(app, 'ekranlari_yenile_dil'):

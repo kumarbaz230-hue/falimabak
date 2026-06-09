@@ -69,4 +69,4 @@ for name, col, sym in [
             d.line([(32, 32), (32 + 18 * math.cos(a), 32 + 18 * math.sin(a))], fill=col, width=2)
     img.save(os.path.join(BASE, name))
 
-print('OK:', sorted(os.listdir(BASE)))
+print('menu icons ok')

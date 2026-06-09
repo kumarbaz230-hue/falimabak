@@ -1,5 +1,5 @@
 """
-🔮 FalımaBak - Premium Fal Uygulaması v1.0.16
+🔮 FalımaBak - Premium Fal Uygulaması v1.0.17
 Mystic Dark Dashboard — mobil odaklı
 """
 
@@ -47,13 +47,13 @@ from kivy.clock import Clock
 from kivy.metrics import dp
 
 from theme import (
-    RENKLER, KART_MENU_AR,
+    RENKLER,
     SAFE_UST, SAFE_ALT,
     fontlari_yukle, emoji_font_yukle, emoji_label,
-    fal_ikon_widget, guvenli_textinput,
+    guvenli_textinput,
     metin_label, gradient_arka_plan_ekle, asset_yolu,
     alt_nav_bar, ekran_icerik_sar, kart_zemin_bagla, baslik_satir,
-    yorum_baslik_metin, tus_metin,
+    yorum_baslik_metin,
 )
 from gecmis import (
     onboarding_gerekli, onboarding_tamamla, kullanici_ismi,
@@ -68,106 +68,58 @@ if os.path.isfile(_ikon):
         pass
 
 
-class DashboardKart(ButtonBehavior, BoxLayout):
-    """Tıklanabilir premium fal kartı."""
+class DashboardKart(ButtonBehavior, FloatLayout):
+    """PNG arka planlı menü kartı — metin dinamik (dil destekli)."""
+    ORAN = 192 / 1080
 
     def __init__(self, baslik='', aciklama='', ikon_anahtar='tarot', renk='#7c4dff', hedef='', **kwargs):
-        super().__init__(orientation='horizontal', **kwargs)
+        super().__init__(size_hint_y=None, **kwargs)
         self.hedef = hedef
-        self.renk = renk
-        self.kart_bg = KART_MENU_AR.get(ikon_anahtar, RENKLER['kart_arka'])
-        self.size_hint_y = None
-        self.height = dp(86)
-        self.padding = [dp(14), dp(10), dp(14), dp(10)]
-        self.spacing = dp(12)
 
-        with self.canvas.before:
-            Color(0, 0, 0, 0.45)
-            self._golge = RoundedRectangle(radius=[dp(16)])
-            Color(*get_color_from_hex('#06040E'))
-            self._golge2 = RoundedRectangle(radius=[dp(16)])
-            Color(*get_color_from_hex(self.kart_bg))
-            self._bg = RoundedRectangle(radius=[dp(16)])
-            Color(*get_color_from_hex(renk), 0.18)
-            self._parilti = RoundedRectangle(radius=[dp(16)])
-            Color(*get_color_from_hex(renk))
-            self._serit = RoundedRectangle(radius=[dp(2)])
+        bg_yol = asset_yolu(f'menu_kart_{ikon_anahtar}.png')
+        if not os.path.isfile(bg_yol):
+            bg_yol = asset_yolu('menu_kart_tarot.png')
 
-        with self.canvas.after:
-            Color(*get_color_from_hex(RENKLER['altin']), 0.22)
-            self._kenar = Line(width=dp(1.2))
-
-        self.bind(pos=self._kart_ciz, size=self._kart_ciz)
-        Clock.schedule_once(lambda *_: self._kart_ciz(), 0)
-
-        ikon_sarmal = BoxLayout(size_hint=(None, 1), width=dp(46))
-        with ikon_sarmal.canvas.before:
-            ikon_sarmal._daire_koyu = Color(*get_color_from_hex(RENKLER['kart_arka_cam']))
-            ikon_sarmal._daire_ic = Ellipse()
-            ikon_sarmal._daire_renk = Color(*get_color_from_hex(renk))
-            ikon_sarmal._daire_dis = Ellipse()
-        ikon_sarmal.bind(
-            pos=lambda *a, k=ikon_sarmal: self._ikon_daire_guncelle(k),
-            size=lambda *a, k=ikon_sarmal: self._ikon_daire_guncelle(k),
+        self._bg = Image(
+            source=bg_yol if os.path.isfile(bg_yol) else '',
+            allow_stretch=True,
+            keep_ratio=False,
+            size_hint=(1, 1),
         )
-        Clock.schedule_once(lambda *_: self._ikon_daire_guncelle(ikon_sarmal), 0)
-        ikon_sarmal.add_widget(fal_ikon_widget(ikon_anahtar, renk, font_size='26sp', size_hint=(1, 1)))
-        self.add_widget(ikon_sarmal)
+        self.add_widget(self._bg)
 
-        metin_kutu = BoxLayout(orientation='vertical', size_hint=(1, 1), spacing=dp(2))
-        metin_kutu.add_widget(metin_label(
-            baslik, font_size='18sp', bold=True, color=RENKLER['beyaz'],
+        satir = BoxLayout(
+            orientation='horizontal',
+            size_hint=(1, 1),
+            padding=[dp(104), dp(10), dp(12), dp(10)],
+            spacing=dp(6),
+        )
+        kutu = BoxLayout(orientation='vertical', size_hint=(1, 1), spacing=dp(2))
+        kutu.add_widget(metin_label(
+            baslik, font_size='17sp', bold=True, color=RENKLER['beyaz'],
             halign='left', valign='middle', size_hint=(1, 0.55),
         ))
-        metin_kutu.add_widget(metin_label(
+        kutu.add_widget(metin_label(
             aciklama, font_size='11sp', color=RENKLER['altin_yumusak'],
             halign='left', valign='top', size_hint=(1, 0.45),
         ))
-        self.add_widget(metin_kutu)
-        ok = BoxLayout(size_hint=(None, 1), width=dp(28))
-        with ok.canvas.before:
-            Color(*get_color_from_hex(RENKLER['altin']), 0.12)
-            ok._halka = Ellipse()
-        ok.bind(pos=lambda *a, k=ok: self._ok_guncelle(k), size=lambda *a, k=ok: self._ok_guncelle(k))
-        Clock.schedule_once(lambda *_: self._ok_guncelle(ok), 0)
-        ok.add_widget(metin_label(
-            '›', font_size='26sp', bold=True, color=RENKLER['altin'],
-            halign='center', valign='middle',
-        ))
-        self.add_widget(ok)
+        satir.add_widget(kutu)
+        self.add_widget(satir)
 
-    def _kart_ciz(self, *_):
-        x, y = self.pos
-        w, h = self.size
-        r = dp(16)
-        self._golge.pos = (x + dp(3), y - dp(4))
-        self._golge.size = (w - dp(6), h)
-        self._golge2.pos = (x + dp(1), y - dp(2))
-        self._golge2.size = (w - dp(2), h)
-        self._bg.pos = (x, y)
-        self._bg.size = (w, h)
-        self._parilti.pos = (x, y + h * 0.55)
-        self._parilti.size = (w, h * 0.45)
-        self._serit.pos = (x + dp(5), y + dp(10))
-        self._serit.size = (dp(5), max(h - dp(20), dp(10)))
-        self._kenar.rounded_rectangle = (x, y, w, h, r)
+        self.bind(width=self._boyut, pos=self._bg_konum, size=self._bg_konum)
+        Clock.schedule_once(lambda *_: self._boyut(), 0)
 
-    def _ok_guncelle(self, kutu, *_):
-        cx, cy = kutu.center_x, kutu.center_y
-        r = min(kutu.width, kutu.height) * 0.42
-        kutu._halka.pos = (cx - r, cy - r)
-        kutu._halka.size = (r * 2, r * 2)
+    def _boyut(self, *_):
+        if self.width < 1:
+            return
+        self.height = max(self.width * self.ORAN, dp(74))
 
-    def _ikon_daire_guncelle(self, kutu, *_):
-        cx, cy = kutu.center_x, kutu.center_y
-        r = min(kutu.width, kutu.height) * 0.44
-        kutu._daire_ic.pos = (cx - r + dp(2), cy - r + dp(2))
-        kutu._daire_ic.size = ((r - dp(2)) * 2, (r - dp(2)) * 2)
-        kutu._daire_dis.pos = (cx - r, cy - r)
-        kutu._daire_dis.size = (r * 2, r * 2)
+    def _bg_konum(self, *_):
+        self._bg.pos = self.pos
+        self._bg.size = self.size
 
     def on_press(self):
-        Animation(opacity=0.82, duration=0.06).start(self)
+        Animation(opacity=0.88, duration=0.06).start(self)
 
     def on_release(self):
         Animation(opacity=1, duration=0.1).start(self)
@@ -189,20 +141,10 @@ class GunlukFalKarti(ButtonBehavior, BoxLayout):
         self._gunluk = gunluk_fal()
 
         with self.canvas.before:
-            Color(0, 0, 0, 0.4)
-            self._golge = RoundedRectangle(radius=[dp(16)])
             Color(*get_color_from_hex('#1A1238'))
-            self._bg = RoundedRectangle(radius=[dp(16)])
-            Color(*get_color_from_hex('#2A1F52'))
-            self._cizgi_sol = RoundedRectangle(radius=[dp(2)])
-            Color(*get_color_from_hex(RENKLER['altin']), 0.15)
-            self._parilti = RoundedRectangle(radius=[dp(16)])
+            self._bg = RoundedRectangle(radius=[dp(14)])
             Color(*get_color_from_hex(RENKLER['altin']))
-            self._ciz = RoundedRectangle(radius=[dp(1)])
-
-        with self.canvas.after:
-            Color(*get_color_from_hex(RENKLER['altin']), 0.28)
-            self._kenar = Line(width=dp(1))
+            self._serit = RoundedRectangle(radius=[dp(2)])
 
         self.bind(pos=self._cizim, size=self._cizim)
         Clock.schedule_once(lambda *_: self._cizim(), 0)
@@ -229,18 +171,10 @@ class GunlukFalKarti(ButtonBehavior, BoxLayout):
     def _cizim(self, *_):
         x, y = self.pos
         w, h = self.size
-        r = dp(16)
-        self._golge.pos = (x + dp(2), y - dp(3))
-        self._golge.size = (w - dp(4), h)
         self._bg.pos = (x, y)
         self._bg.size = (w, h)
-        self._parilti.pos = (x, y + h * 0.5)
-        self._parilti.size = (w, h * 0.5)
-        self._cizgi_sol.pos = (x + dp(5), y + dp(10))
-        self._cizgi_sol.size = (dp(5), max(h - dp(20), dp(10)))
-        self._ciz.pos = (x + dp(12), y + h - dp(3))
-        self._ciz.size = (w - dp(24), dp(2))
-        self._kenar.rounded_rectangle = (x, y, w, h, r)
+        self._serit.pos = (x + dp(4), y + dp(8))
+        self._serit.size = (dp(4), max(h - dp(16), dp(8)))
 
     def on_release(self):
         app = App.get_running_app()
@@ -248,51 +182,23 @@ class GunlukFalKarti(ButtonBehavior, BoxLayout):
             app.root.current = self._gunluk['hedef']
 
 
-class OranliBanner(BoxLayout):
-    """Banner PNG — en-boy oranı korunur, taşma yok."""
-    ORAN = 220 / 1080
+class BannerGorsel(Image):
+    ORAN = 200 / 1080
 
     def __init__(self, source, **kwargs):
-        super().__init__(orientation='vertical', size_hint_y=None, **kwargs)
-        self._clip = FloatLayout(size_hint=(1, None))
-        self._img = Image(
-            source=source, allow_stretch=True, keep_ratio=True, size_hint=(None, None),
+        super().__init__(
+            source=source,
+            allow_stretch=True,
+            keep_ratio=False,
+            size_hint=(1, None),
+            **kwargs,
         )
-        with self._clip.canvas.before:
-            Color(0, 0, 0, 0.32)
-            self._golge = RoundedRectangle(radius=[dp(16)])
-        self._clip.add_widget(self._img)
-        self.add_widget(self._clip)
-        self.bind(width=self._genislik_guncelle)
-        self._clip.bind(pos=self._kapak, size=self._kapak)
-        self._img.bind(texture=self._kapak)
-        Clock.schedule_once(lambda *_: self._genislik_guncelle(), 0)
+        self.bind(width=self._boyut)
+        Clock.schedule_once(lambda *_: self._boyut(), 0)
 
-    def _genislik_guncelle(self, *_):
-        if self.width < 1:
-            return
-        h = self.width * self.ORAN
-        self.height = h
-        self._clip.height = h
-        self._kapak()
-
-    def _kapak(self, *_):
-        if self._clip.width < 1 or self._clip.height < 1:
-            return
-        tex = self._img.texture
-        if not tex:
-            return
-        pw, ph = self._clip.width, self._clip.height
-        tw, th = tex.size
-        olcek = max(pw / tw, ph / th)
-        iw, ih = tw * olcek, th * olcek
-        self._img.size = (iw, ih)
-        self._img.pos = (
-            self._clip.x + (pw - iw) * 0.5,
-            self._clip.y + (ph - ih) * 0.5,
-        )
-        self._golge.pos = (self._clip.x + dp(2), self._clip.y - dp(2))
-        self._golge.size = (pw, ph)
+    def _boyut(self, *_):
+        if self.width > 1:
+            self.height = self.width * self.ORAN
 
 
 class BaslikKarti(BoxLayout):
@@ -303,23 +209,20 @@ class BaslikKarti(BoxLayout):
         isim = kullanici_ismi()
 
         if os.path.isfile(banner_yol):
-            banner = OranliBanner(source=banner_yol)
+            banner = BannerGorsel(source=banner_yol)
             self.add_widget(banner)
-            selam_lbl = None
             if isim:
-                selam_lbl = metin_label(
+                self.add_widget(metin_label(
                     f'✦ {t("hello", name=isim)}',
                     font_size='12sp', bold=True, color=RENKLER['altin_parlak'],
                     halign='left', size_hint_y=None, height=dp(18),
-                )
-                self.add_widget(selam_lbl)
+                ))
 
             def _yukseklik(*_):
-                ek = dp(24) if selam_lbl else 0
-                self.height = banner.height + ek + dp(6)
+                ek = dp(22) if isim else 0
+                self.height = banner.height + ek + dp(4)
 
             banner.bind(height=_yukseklik)
-            self.bind(width=_yukseklik)
             Clock.schedule_once(lambda *_: _yukseklik(), 0)
             return
 
@@ -627,7 +530,7 @@ class Anasayfa(Screen):
                 ikon_anahtar=ikon, renk=renk, hedef=hedef))
         ana.add_widget(menu)
 
-        ana.add_widget(metin_label('FalımaBak v1.0.16', font_size='10sp', bold=True,
+        ana.add_widget(metin_label('FalımaBak v1.0.17', font_size='10sp', bold=True,
             color=RENKLER['altin_yumusak'], halign='center', size_hint_y=None, height=dp(18)))
         ana.add_widget(alt_nav_bar('anasayfa', on_sec=self._nav))
         ekran_icerik_sar(self, ana)
