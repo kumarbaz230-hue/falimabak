@@ -282,6 +282,13 @@ def _kaynak_sirasi(ayar):
     return sira
 
 
+def _veri_nonce(veri):
+    """Her fal bakışında benzersiz rastgelelik."""
+    v = dict(veri or {})
+    v['_nonce'] = (time.time_ns() % 2_000_000_000) + random.randint(0, 999_999)
+    return v
+
+
 def _ana_thread(fn):
     Clock.schedule_once(lambda *_: fn(), 0)
 
@@ -722,12 +729,22 @@ def _prompt_olustur(tip, veri, gorsel_var=False):
         )
 
     if tip == 'diger':
+        alt = veri.get('alt_tip') or veri.get('tur', '')
+        ozet = veri.get('sonuc', '')
+        if veri.get('kartlar'):
+            sat = '; '.join(
+                f"{k.get('pozisyon')}: {k.get('isim')}" for k in veri['kartlar']
+            )
+            ozet = sat or ozet
+        elif veri.get('cicekler'):
+            ozet = ', '.join(c.get('isim', '') for c in veri['cicekler'])
         return (
             'Sen mistik fal yorumcususun. Eğlence amaçlı Türkçe yaz.\n'
             f'{kullanici}'
-            f"Fal türü: {veri.get('tur', '')}\n"
-            f"Sonuç: {veri.get('sonuc', '')}\n"
-            '2-3 paragraf yorum.'
+            f'Fal türü: {alt}\n'
+            f'Sonuç/semboller: {ozet}\n'
+            '4-6 paragraf zengin yorum: aşk, kariyer, sağlık, genel mesaj. '
+            'Her seferinde farklı ifadeler kullan. Olumlu ama gerçekçi ol.'
         )
 
     return f'Eğlence amaçlı kısa Türkçe fal yorumu yaz.\n{kullanici}{veri}'
@@ -840,7 +857,7 @@ def yorum_al(tip, veri, callback):
         if not ayar.get('ai_aktif', True):
             from offline_yorum import offline_yorum_uret
             metin = offline_yorum_uret(
-                tip, {**veri, 'foto_aciklamalari': aciklamalar}, foto_ozellikleri,
+                tip, _veri_nonce({**veri, 'foto_aciklamalari': aciklamalar}), foto_ozellikleri,
             )
             _ana_thread(lambda m=metin: _sonuc(m, True, None, 'cihaz', fotograf_fal))
             return
@@ -875,7 +892,7 @@ def yorum_al(tip, veri, callback):
 
         from offline_yorum import offline_yorum_uret
         offline_metin = offline_yorum_uret(
-            tip, {**veri, 'foto_aciklamalari': aciklamalar}, foto_ozellikleri,
+            tip, _veri_nonce({**veri, 'foto_aciklamalari': aciklamalar}), foto_ozellikleri,
         )
         if hatalar:
             print(f'AI: bulut başarısız ({", ".join(hatalar)}), cihaz yorumu', flush=True)

@@ -63,7 +63,7 @@ class AyarlarScreen(Screen):
 
         ana.add_widget(BoxLayout(size_hint_y=1))
         ana.add_widget(metin_label(
-            'FalımaBak v1.0.12',
+            'FalımaBak v1.0.13',
             font_size='10sp', color=RENKLER['gri_koyu'],
             halign='center', size_hint_y=None, height=dp(18),
         ))
