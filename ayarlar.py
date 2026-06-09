@@ -13,7 +13,7 @@ from theme import (
 from gecmis import kullanici_ismi, isim_guncelle, gecmis_temizle
 from ai_yorum import config_kaydet, _ayar_yukle, gemini_key_kisa
 
-_SURUM = '1.0.14'
+_SURUM = '1.0.15'
 
 
 def _ayar_karti(baslik, alt_baslik=None):

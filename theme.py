@@ -1087,24 +1087,31 @@ def alt_nav_bar(aktif='anasayfa', on_sec=None):
     nav = BoxLayout(
         orientation='horizontal',
         size_hint_y=None,
-        height=dp(58),
-        padding=[dp(8), 0, dp(8), SAFE_ALT],
-        spacing=dp(4),
+        height=dp(62),
+        padding=[dp(10), dp(4), dp(10), SAFE_ALT],
+        spacing=dp(6),
     )
     with nav.canvas.before:
-        Color(*get_color_from_hex(RENKLER['arka_plan']))
+        Color(0, 0, 0, 0.55)
+        nav._golge = Rectangle()
+        Color(*get_color_from_hex('#120E28'))
         nav._bg = Rectangle()
-        Color(*get_color_from_hex(RENKLER['kart_arka']))
+        Color(*get_color_from_hex(RENKLER['kart_arka_cam']))
         nav._bg2 = Rectangle()
-        Color(*get_color_from_hex(RENKLER['altin']), 0.35)
-        nav._ust = Line(width=1)
+        Color(*get_color_from_hex(RENKLER['altin']), 0.55)
+        nav._ust = Line(width=dp(1.5))
+        Color(*get_color_from_hex(RENKLER['mor_parlak']), 0.15)
+        nav._alt = Line(width=dp(1))
 
     def _nav_ciz(*_):
+        nav._golge.pos = (nav.x, nav.y - dp(2))
+        nav._golge.size = (nav.width, nav.height + dp(2))
         nav._bg.pos = nav.pos
         nav._bg.size = (nav.width, nav.height + dp(40))
         nav._bg2.pos = nav.pos
         nav._bg2.size = nav.size
         nav._ust.points = [nav.x, nav.top, nav.right, nav.top]
+        nav._alt.points = [nav.x, nav.y + dp(1), nav.right, nav.y + dp(1)]
 
     nav.bind(pos=_nav_ciz, size=_nav_ciz)
     Clock.schedule_once(lambda *_: _nav_ciz(), 0)
