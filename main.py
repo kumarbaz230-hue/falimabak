@@ -1,5 +1,5 @@
 """
-🔮 FalımaBak - Premium Fal Uygulaması v1.1.6
+🔮 FalımaBak - Premium Fal Uygulaması v1.2.0
 Mystic Dark Dashboard — mobil odaklı
 """
 
@@ -566,19 +566,23 @@ class Anasayfa(Screen):
             halign='center', size_hint_y=None, height=dp(22),
         ))
 
-        menu = BoxLayout(orientation='vertical', spacing=dp(10), size_hint_y=1)
+        menu_kaydir = ScrollView(size_hint_y=1, do_scroll_x=False, bar_width=dp(3))
+        menu = BoxLayout(orientation='vertical', spacing=dp(10), size_hint_y=None)
+        menu.bind(minimum_height=menu.setter('height'))
         for baslik, aciklama, ikon, renk, hedef in [
             (t('menu_tarot'), t('menu_tarot_desc'), 'tarot', RENKLER['mor'], 'tarot'),
             (t('menu_kahve'), t('menu_kahve_desc'), 'kahve', RENKLER['turuncu'], 'kahve'),
             (t('menu_astro'), t('menu_astro_desc'), 'astroloji', RENKLER['mavi_acik'], 'astroloji'),
             (t('menu_el'), t('menu_el_desc'), 'elfali', RENKLER['pembe'], 'elfali'),
+            (t('menu_burc_esles'), t('menu_burc_esles_desc'), 'burc_eslesme', RENKLER['pembe_acik'], 'burc_eslesme'),
             (t('menu_diger'), t('menu_diger_desc'), 'diger', RENKLER['yesil'], 'diger_fallar'),
         ]:
             menu.add_widget(DashboardKart(baslik=baslik, aciklama=aciklama,
                 ikon_anahtar=ikon, renk=renk, hedef=hedef))
-        ana.add_widget(menu)
+        menu_kaydir.add_widget(menu)
+        ana.add_widget(menu_kaydir)
 
-        ana.add_widget(metin_label('FalımaBak v1.1.6', font_size='10sp', bold=True,
+        ana.add_widget(metin_label('FalımaBak v1.2.0', font_size='10sp', bold=True,
             color=RENKLER['altin_yumusak'], halign='center', size_hint_y=None, height=dp(18)))
         try:
             from reklam import reklam_alani_bosluk
@@ -711,6 +715,7 @@ class FalimaBakApp(App):
             from astroloji import AstrolojiScreen
             from diger_fallar import DigerFallarScreen
             from elfali import ElFaliScreen
+            from burc_eslesme import BurcEslesmeScreen
             from ayarlar import AyarlarScreen
             from gizlilik import GizlilikScreen
 
@@ -725,6 +730,7 @@ class FalimaBakApp(App):
                 ('astroloji', lambda: AstrolojiScreen(name='astroloji')),
                 ('diger_fallar', lambda: DigerFallarScreen(name='diger_fallar')),
                 ('elfali', lambda: ElFaliScreen(name='elfali')),
+                ('burc_eslesme', lambda: BurcEslesmeScreen(name='burc_eslesme')),
             ]
             for _, fab in ekranlar:
                 sm.add_widget(fab())

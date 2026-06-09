@@ -182,4 +182,6 @@ def baslik_olustur(tip, veri=None):
         return 'El Falı'
     if tip == 'diger':
         return f"Diğer — {veri.get('tur', 'Fal')}"
+    if tip == 'burc_eslesme':
+        return f"Burç Eşleşmesi — {veri.get('burc1', '?')} & {veri.get('burc2', '?')}"
     return tip.capitalize()

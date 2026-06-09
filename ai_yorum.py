@@ -728,6 +728,19 @@ def _prompt_olustur(tip, veri, gorsel_var=False):
             'Haftalık yorum: aşk, iş, sağlık ve şans. 3-4 paragraf.'
         )
 
+    if tip == 'burc_eslesme':
+        return (
+            'Sen burç uyumu ve ilişki astrolojisi uzmanısın. Eğlence amaçlı Türkçe yaz.\n'
+            f'{kullanici}'
+            f"1. kişi: {veri.get('isim1', '')} — {veri.get('burc1', '')} "
+            f"(doğum: {veri.get('dogum1', '')})\n"
+            f"2. kişi: {veri.get('isim2', '')} — {veri.get('burc2', '')} "
+            f"(doğum: {veri.get('dogum2', '')})\n"
+            f"Temel uyum skoru (eğlence): {veri.get('skor', '')}/100\n"
+            'Yaz: genel uyum, aşk ve iletişim, güçlü yanlar, dikkat edilecek noktalar, '
+            'ilişki tavsiyesi. 4-6 paragraf. Olumlu ama dengeli ol; kesin gelecek iddiası kullanma.'
+        )
+
     if tip == 'diger':
         alt = veri.get('alt_tip') or veri.get('tur', '')
         ozet = veri.get('sonuc', '')
@@ -778,6 +791,14 @@ def _yedek_yorum(tip, veri):
     if tip == 'astroloji':
         burc = veri.get('burc', 'yıldızlar')
         return f'{hitap}{burc} burcu için enerji yükseliyor. İş ve ilişkilerde denge kurduğunuzda şans sizinle olacak.'
+    if tip == 'burc_eslesme':
+        b1 = veri.get('burc1', '')
+        b2 = veri.get('burc2', '')
+        skor = veri.get('skor', 70)
+        return (
+            f'{hitap}{b1} ve {b2} burçları %{skor} uyum gösteriyor. '
+            'Farklılıklarınız sizi tamamlayabilir; iletişim ve sabırla güzel bir denge kurabilirsiniz.'
+        )
     if tip == 'diger':
         return f'{hitap}yıldızlar size güzel günler müjdeliyor. Pozitif kalın ve sezgilerinize güvenin.'
     return f'{hitap}evren size güzel haberler hazırlıyor. Pozitif kalın ve fırsatları değerlendirin.'

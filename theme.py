@@ -80,6 +80,7 @@ KART_MENU_AR = {
     'astroloji': '#101E35',
     'elfali':    '#221535',
     'diger':     '#122820',
+    'burc_eslesme': '#281428',
 }
 
 # Tuş metinleri (Segoe UI) + ayrı emoji ikonları
@@ -134,6 +135,7 @@ FAL_IKONLARI = {
     'astroloji': '🌟',
     'elfali':    '✋',
     'diger':     '✨',
+    'burc_eslesme': '💞',
     'ok':        '›',
 }
 
@@ -144,6 +146,7 @@ MENU_IKON_DOSYALARI = {
     'astroloji': 'menu_astroloji.png',
     'elfali':    'menu_elfali.png',
     'diger':     'menu_diger.png',
+    'burc_eslesme': 'menu_burc_eslesme.png',
 }
 
 NAV_IKON_DOSYALARI = {
@@ -326,7 +329,7 @@ def fal_ikon_widget_yedek(anahtar, renk_hex, font_size='26sp', **kwargs):
         return emoji_label(metin, font_size=font_size, color=renk_hex, **kwargs)
     harf = {
         'tarot': 'T', 'kahve': 'K', 'astroloji': 'Y',
-        'elfali': 'E', 'diger': 'D',
+        'elfali': 'E', 'diger': 'D', 'burc_eslesme': 'B',
     }.get(anahtar, 'F')
     return metin_label(
         harf, font_size=font_size, bold=True, color=renk_hex,
