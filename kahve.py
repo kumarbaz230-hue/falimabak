@@ -17,7 +17,7 @@ import random
 from theme import (
     RENKLER, TUS, YORUM_BEKLE, fontlari_yukle, metin_label,
     tus_buton, baslik_satir, buton_metin_guncelle,
-    yorum_baslik, yorum_durum_notu, kaydirici_metin, FotoKutucukPanel,
+    yorum_sonuc_metni, kaydirici_metin, FotoKutucukPanel,
 )
 from kamera import galeriden_sec, kameradan_cek
 from ai_yorum import yorum_al
@@ -153,9 +153,9 @@ GENEL_YORUMLAR = [
 ]
 
 KAHVE_FOTO_SLOT = [
-    {'anahtar': 'fincan_ic1', 'baslik': 'Fincan İçi 1', 'ikon': '☕'},
-    {'anahtar': 'fincan_ic2', 'baslik': 'Fincan İçi 2', 'ikon': '☕'},
-    {'anahtar': 'tabak', 'baslik': 'Tabak', 'ikon': '🍽️'},
+    {'anahtar': 'fincan_ic1', 'baslik': 'Fincan İçi 1', 'ikon_metin': '1'},
+    {'anahtar': 'fincan_ic2', 'baslik': 'Fincan İçi 2', 'ikon_metin': '2'},
+    {'anahtar': 'tabak', 'baslik': 'Tabak', 'ikon_metin': 'T'},
 ]
 
 
@@ -363,13 +363,8 @@ class KahveScreen(Screen):
         sekiller = [s['isim'] for s in secilen_sekiller]
 
         def _ai_bitir(metin, ai_kullanildi, hata, kaynak=None, fotograf=False):
-            baslik = yorum_baslik(ai_kullanildi, kaynak, fotograf)
-            renk = RENKLER['pembe_acik'] if ai_kullanildi else RENKLER['gri_acik']
-            self.yorum_label.text = (
-                self._son_kahve_yorum
-                + f"\n\n[b][color={RENKLER['altin']}]» {baslik}[/color][/b]\n"
-                + f"[color={renk}]{metin}[/color]"
-                + yorum_durum_notu(hata, ai_kullanildi)
+            self.yorum_label.text = yorum_sonuc_metni(
+                self._son_kahve_yorum, metin, ai_kullanildi, hata, kaynak, fotograf,
             )
             buton_metin_guncelle(self.fal_buton, TUS['tekrar'])
             self.fal_buton.disabled = False

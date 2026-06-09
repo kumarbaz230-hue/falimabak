@@ -22,7 +22,7 @@ import random
 
 from theme import (
     RENKLER, TUS, YORUM_BEKLE, fontlari_yukle, metin_label,
-    tus_buton, baslik_satir, buton_metin_guncelle, yorum_baslik, yorum_durum_notu,
+    tus_buton, baslik_satir, buton_metin_guncelle, yorum_sonuc_metni,
     kaydirici_metin, FotoKutucukPanel,
 )
 from kamera import galeriden_sec, kameradan_cek
@@ -212,8 +212,8 @@ EL_TIPLERI = [
 ]
 
 EL_FOTO_SLOT = [
-    {'anahtar': 'avuc_ici', 'baslik': 'Avuç İçi', 'ikon': '🖐️'},
-    {'anahtar': 'el_disi', 'baslik': 'El Dışı', 'ikon': '✋'},
+    {'anahtar': 'avuc_ici', 'baslik': 'Avuç İçi', 'ikon_metin': '1'},
+    {'anahtar': 'el_disi', 'baslik': 'El Dışı', 'ikon_metin': '2'},
 ]
 
 
@@ -382,13 +382,8 @@ class ElFaliScreen(Screen):
         self.fal_bak_btn.disabled = True
 
         def _ai_bitir(metin, ai_kullanildi, hata, kaynak=None, fotograf=False):
-            baslik = yorum_baslik(ai_kullanildi, kaynak, fotograf)
-            renk = RENKLER['pembe_acik'] if ai_kullanildi else RENKLER['gri_acik']
-            self.sonuc_label.text = (
-                self._son_elfali_yorum
-                + f"\n\n[b][color={RENKLER['altin']}]» {baslik}[/color][/b]\n"
-                + f"[color={renk}]{metin}[/color]"
-                + yorum_durum_notu(hata, ai_kullanildi)
+            self.sonuc_label.text = yorum_sonuc_metni(
+                self._son_elfali_yorum, metin, ai_kullanildi, hata, kaynak, fotograf,
             )
             buton_metin_guncelle(self.fal_bak_btn, TUS['tekrar'])
             self.fal_bak_btn.disabled = False

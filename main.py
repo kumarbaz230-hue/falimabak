@@ -527,6 +527,11 @@ class FalimaBakApp(App):
                 shutil.copy2(ornek, hedef)
         except Exception as e:
             print(f'Config kopyalama: {e}', flush=True)
+        try:
+            from kamera import uygulama_izinlerini_iste
+            Clock.schedule_once(lambda *_: uygulama_izinlerini_iste(), 1.5)
+        except Exception:
+            pass
 
     def build(self):
         try:

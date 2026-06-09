@@ -1,6 +1,5 @@
 """
-FalımaBak - Fotoğraf seçme / kamera (Windows + Android plyer).
-Android'de plyer ana thread'de çalışmalı — arka planda çağrı çöker.
+FalımaBak - Fotoğraf seçme / kamera (Windows + Android).
 """
 
 import os
@@ -42,6 +41,38 @@ def _android_mi():
     )
 
 
+def kamera_izni_iste(callback):
+    """Android runtime kamera izni."""
+    if not _android_mi():
+        callback(True)
+        return
+    try:
+        from android.permissions import request_permissions, Permission, check_permission
+
+        if check_permission(Permission.CAMERA):
+            callback(True)
+            return
+
+        def _sonuc(permissions, grants):
+            callback(bool(grants and grants[0]))
+
+        request_permissions([Permission.CAMERA], _sonuc)
+    except Exception as e:
+        print(f'Kamera izni: {e}', flush=True)
+        callback(True)
+
+
+def uygulama_izinlerini_iste():
+    """Açılışta kamera iznini önceden iste."""
+    if not _android_mi():
+        return
+
+    def _cb(ok):
+        print(f'Kamera izni: {"verildi" if ok else "reddedildi"}', flush=True)
+
+    kamera_izni_iste(_cb)
+
+
 def _kopyala(kaynak):
     if not kaynak:
         return None
@@ -57,10 +88,9 @@ def _kopyala(kaynak):
             FileOutputStream = autoclass('java.io.FileOutputStream')
             uri = autoclass('android.net.Uri').parse(kaynak)
             stream = resolver.openInputStream(uri)
-            ext = '.jpg'
             hedef = os.path.join(
                 _foto_dir(),
-                f'foto_{datetime.now().strftime("%Y%m%d_%H%M%S")}{ext}',
+                f'foto_{datetime.now().strftime("%Y%m%d_%H%M%S")}.jpg',
             )
             out = FileOutputStream(hedef)
             buf = bytearray(8192)
@@ -105,8 +135,7 @@ def _galeri_plyer(callback):
                 else:
                     _ana_thread(lambda: callback(None, 'Fotoğraf kopyalanamadı'))
             except Exception:
-                err = traceback.format_exc()
-                print(err, flush=True)
+                print(traceback.format_exc(), flush=True)
                 _ana_thread(lambda: callback(None, 'Galeri hatası'))
 
         filechooser.open_file(
@@ -115,7 +144,7 @@ def _galeri_plyer(callback):
         )
     except Exception as e:
         print(f'Galeri plyer: {e}', flush=True)
-        _ana_thread(lambda: callback(None, 'Galeri açılamadı. İzinleri kontrol edin.'))
+        _ana_thread(lambda: callback(None, 'Galeri açılamadı'))
 
 
 def _galeri_masaustu(callback):
@@ -146,7 +175,6 @@ def _galeri_masaustu(callback):
 
 
 def galeriden_sec(callback):
-    """Galeriden resim seç."""
     if _android_mi():
         Clock.schedule_once(lambda *_: _galeri_plyer(callback), 0)
     else:
@@ -157,14 +185,17 @@ def _kamera_plyer(callback):
     try:
         from plyer import camera
 
+        klasor = _foto_dir()
+        os.makedirs(klasor, exist_ok=True)
         yol = os.path.join(
-            _foto_dir(),
+            klasor,
             f'cam_{datetime.now().strftime("%Y%m%d_%H%M%S")}.jpg',
         )
+        open(yol, 'ab').close()
 
         def _bitti(ok):
             try:
-                if ok and os.path.isfile(yol):
+                if ok and os.path.isfile(yol) and os.path.getsize(yol) > 0:
                     _ana_thread(lambda: callback(os.path.normpath(yol), None))
                 else:
                     _ana_thread(lambda: callback(None, 'Fotoğraf çekilmedi'))
@@ -174,7 +205,7 @@ def _kamera_plyer(callback):
         camera.take_picture(filename=yol, on_complete=_bitti)
     except Exception as e:
         print(f'Kamera plyer: {e}', flush=True)
-        _ana_thread(lambda: callback(None, 'Kamera açılamadı. İzin verildi mi?'))
+        _ana_thread(lambda: callback(None, 'Kamera açılamadı. Ayarlardan kamera iznini açın.'))
 
 
 def _kamera_masaustu(callback):
@@ -219,8 +250,16 @@ def _kamera_masaustu(callback):
 
 
 def kameradan_cek(callback):
-    """Kamera ile fotoğraf çek."""
     if _android_mi():
-        Clock.schedule_once(lambda *_: _kamera_plyer(callback), 0)
+        def _izinli(ok):
+            if ok:
+                Clock.schedule_once(lambda *_: _kamera_plyer(callback), 0)
+            else:
+                _ana_thread(lambda: callback(
+                    None,
+                    'Kamera izni kapalı. Telefon Ayarları > Uygulamalar > FalımaBak > İzinler',
+                ))
+
+        kamera_izni_iste(_izinli)
     else:
         _kamera_masaustu(callback)

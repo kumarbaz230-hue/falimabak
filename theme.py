@@ -2,6 +2,7 @@
 
 import os
 import platform
+import re
 
 from kivy.animation import Animation
 from kivy.clock import Clock
@@ -512,7 +513,7 @@ def tus_buton(anahtar, vurgu=False, altin_yazi=False, **kwargs):
     """TUS + TUS_IKON ile standart uygulama butonu."""
     metin = TUS.get(anahtar, anahtar)
     ikon = TUS_IKON.get(anahtar, '')
-    if _android_mi() and not emoji_font_yolu():
+    if _android_mi():
         ikon = ''
     if anahtar == 'geri':
         return siyah_buton(metin, vurgu=vurgu, altin_yazi=altin_yazi, **kwargs)
@@ -566,14 +567,23 @@ def talimat_kutusu(ikon, satirlar, font_size='16sp', renk=None):
     return kutu
 
 
+def emoji_temizle(metin):
+    """Android'de görünmeyen emoji/kutu karakterlerini temizler."""
+    if not metin:
+        return metin
+    for em, yedek in EMOJI_YEDEK.items():
+        metin = metin.replace(em, yedek)
+    metin = re.sub(
+        r'[\U0001F300-\U0001FAFF\U00002600-\U000027BF\U0000FE00-\U0000FEFF'
+        r'\U0001F000-\U0001F02F\U0001F0A0-\U0001F0FF]+',
+        '',
+        metin,
+    )
+    return re.sub(r'  +', ' ', metin).strip()
+
+
 def yorum_baslik(ai_kullanildi=True, kaynak=None, fotograf=False):
-    if not ai_kullanildi:
-        return YORUM_EK
-    if kaynak == 'gemini':
-        ek = ' (Bulut · Fotoğraf)' if fotograf else ' (Bulut)'
-        return f'{YORUM_BASLIK}{ek}'
-    if kaynak == 'ollama':
-        return f'{YORUM_BASLIK} (Yerel)'
+    """Kullanıcıya her zaman aynı marka — AI/bulut/hazır ayrımı yok."""
     return YORUM_BASLIK
 
 
@@ -582,12 +592,19 @@ def yorum_bekle_markup():
 
 
 def yorum_durum_notu(hata=None, ai_kullanildi=True):
-    """AI başarısız olduğunda kullanıcıya küçük uyarı satırı."""
-    if ai_kullanildi:
-        return ''
-    if hata:
-        return f"\n[color={RENKLER['turuncu']}][size=13sp]⚠ {hata}[/size][/color]"
-    return f"\n[color={RENKLER['gri']}][size=13sp]Hazır yorum[/size][/color]"
+    """Kullanıcıya hata/AI bilgisi gösterme."""
+    return ''
+
+
+def yorum_sonuc_metni(temel, metin, ai_kullanildi=True, hata=None, kaynak=None, fotograf=False):
+    """Fal ekranları için birleşik yorum metni."""
+    baslik = yorum_baslik(ai_kullanildi, kaynak, fotograf)
+    govde = emoji_temizle(metin or '')
+    return (
+        emoji_temizle(temel or '')
+        + f"\n\n[b][color={RENKLER['altin']}]» {baslik}[/color][/b]\n"
+        + f"[color={RENKLER['pembe_acik']}]{govde}[/color]"
+    )
 
 
 def kaydirici_metin(yukseklik_hint=0.2, zemin_renk=None):
@@ -683,9 +700,13 @@ class FotoKutucukPanel(BoxLayout):
                 pos_hint={'center_x': 0.5, 'center_y': 0.58},
                 opacity=0,
             )
-            ikon = emoji_label(
-                slot.get('ikon', '📷'),
-                font_size='26sp',
+            ikon_metin = slot.get('ikon_metin') or EMOJI_YEDEK.get(slot.get('ikon', ''), '+')
+            ikon = metin_label(
+                ikon_metin,
+                font_size='22sp',
+                bold=True,
+                color=RENKLER['altin'],
+                halign='center',
                 size_hint=(1, None),
                 height=dp(32),
                 pos_hint={'center_x': 0.5, 'center_y': 0.55},

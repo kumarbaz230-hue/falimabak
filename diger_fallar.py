@@ -18,7 +18,7 @@ import random
 from ai_yorum import yorum_al
 from theme import (
     TUS, tus_buton, siyah_buton, baslik_satir, buton_metin_guncelle,
-    yorum_baslik, yorum_bekle_markup, yorum_durum_notu, diger_fal_buton,
+    yorum_bekle_markup, yorum_sonuc_metni, diger_fal_buton, emoji_temizle,
 )
 
 RENKLER = {
@@ -130,7 +130,6 @@ class DigerFallarScreen(Screen):
         fal_turleri = [
             ('İskambil', 'iskambil'),
             ('Çiçek Falı', 'cicek'),
-            ('El Falı', 'el'),
             ('Nazar Falı', 'nazar'),
         ]
         
@@ -189,13 +188,9 @@ class DigerFallarScreen(Screen):
         self.sonuc_label.text = temel + f"\n\n{yorum_bekle_markup()}"
 
         def _bitir(metin, ai_kullanildi, hata, kaynak=None, fotograf=False):
-            baslik = yorum_baslik(ai_kullanildi, kaynak, fotograf)
-            renk = RENKLER['pembe_acik'] if ai_kullanildi else RENKLER['gri_acik']
-            self.sonuc_label.text = (
-                self._son_diger_yorum
-                + f"\n\n[b][color={RENKLER['altin']}]» {baslik}[/color][/b]\n"
-                + f"[color={renk}]{metin}[/color]"
-                + yorum_durum_notu(hata, ai_kullanildi)
+            self.sonuc_label.markup = True
+            self.sonuc_label.text = yorum_sonuc_metni(
+                self._son_diger_yorum, metin, ai_kullanildi, hata, kaynak, fotograf,
             )
 
         yorum_al('diger', {'tur': tur, 'sonuc': sonuc_ozet}, _bitir)
@@ -208,8 +203,6 @@ class DigerFallarScreen(Screen):
             self.iskambil_fali()
         elif fal_type == 'cicek':
             self.cicek_fali()
-        elif fal_type == 'el':
-            self.el_fali()
         elif fal_type == 'nazar':
             self.nazar_fali()
         
@@ -224,16 +217,16 @@ class DigerFallarScreen(Screen):
         """İskambil falı"""
         secilen = random.sample(ISKAMBIL_KARTLARI, 3)
         
-        sonuc = f"[b][color={RENKLER['altin']}]🃏 İSKAMBİL FALI 🃏[/color][/b]\n\n"
+        sonuc = f"[b][color={RENKLER['altin']}]İSKAMBİL FALI[/color][/b]\n\n"
         
         pozisyonlar = ['Geçmiş', 'Şu An', 'Gelecek']
         
         for i, (kart, pozisyon) in enumerate(zip(secilen, pozisyonlar)):
-            sonuc += f"[b][color={RENKLER['mor']}]{pozisyon}:[/color][/b] {kart['sembol']}\n"
+            sonuc += f"[b][color={RENKLER['mor']}]{pozisyon}:[/color][/b]\n"
             sonuc += f"[b]{kart['isim']}[/b]\n"
             sonuc += f"[color={RENKLER['gri_acik']}]{kart['anlam']}[/color]\n\n"
         
-        sonuc += f"\n[color={RENKLER['altin']}]💫 Tavsiye:[/color]\n"
+        sonuc += f"\n[color={RENKLER['altin']}]Tavsiye:[/color]\n"
         tavsiyeler = [
             "Kalbinizin sesini dinleyin.",
             "Mantıklı kararlar alın.",
@@ -247,20 +240,20 @@ class DigerFallarScreen(Screen):
         sonuc += f"[color={RENKLER['gri_acik']}]{random.choice(tavsiyeler)}[/color]"
         
         self.sonuc_label.markup = True
-        self.sonuc_label.text = sonuc
+        self.sonuc_label.text = emoji_temizle(sonuc)
         self._ai_ekle(sonuc, 'İskambil Falı', ', '.join(k['isim'] for k in secilen))
     
     def cicek_fali(self):
         """Çiçek falı"""
         secilen = random.sample(CICEK_FALI, random.randint(2, 3))
         
-        sonuc = f"[b][color={RENKLER['altin']}]🌸 ÇİÇEK FALI 🌸[/color][/b]\n\n"
+        sonuc = f"[b][color={RENKLER['altin']}]ÇİÇEK FALI[/color][/b]\n\n"
         
         for cicek in secilen:
             sonuc += f"[b]{cicek['isim']}[/b]\n"
             sonuc += f"[color={RENKLER['gri_acik']}]{cicek['anlam']}[/color]\n\n"
         
-        sonuc += f"[color={RENKLER['altin']}]💐 Çiçek Dili:[/color]\n"
+        sonuc += f"[color={RENKLER['altin']}]Çiçek Dili:[/color]\n"
         cicek_dili = [
             "Gül alın ve sevdiğinize verin.",
             "Evde taze çiçek bulundurun.",
@@ -274,57 +267,28 @@ class DigerFallarScreen(Screen):
         sonuc += f"[color={RENKLER['gri_acik']}]{random.choice(cicek_dili)}[/color]"
         
         self.sonuc_label.markup = True
-        self.sonuc_label.text = sonuc
+        self.sonuc_label.text = emoji_temizle(sonuc)
         self._ai_ekle(sonuc, 'Çiçek Falı', ', '.join(c['isim'] for c in secilen))
-    
-    def el_fali(self):
-        """El falı"""
-        secilen = random.sample(EL_FALI, random.randint(3, 4))
-        
-        sonuc = f"[b][color={RENKLER['altin']}]👐 EL FALI 👐[/color][/b]\n\n"
-        sonuc += f"[color={RENKLER['gri_acik']}]Sağ elinizdeki çizgiler okunuyor...[/color]\n\n"
-        
-        for cizgi in secilen:
-            sonuc += f"[b][color={RENKLER['turuncu']}]{cizgi['isim']}:[/color][/b]\n"
-            sonuc += f"[color={RENKLER['gri_acik']}]{cizgi['anlam']}[/color]\n\n"
-        
-        sonuc += f"[color={RENKLER['altin']}]✋ Parmak Analizi:[/color]\n"
-        parmak_analizi = [
-            "İşaret parmağınız uzun: Liderlik yeteneğiniz var.",
-            "Orta parmağınız düzgün: Sorumluluk sahibisiniz.",
-            "Yüzük parmağınız uzun: Yaratıcılığınız yüksek.",
-            "Serçe parmağınız esnek: İletişim yeteneğiniz güçlü.",
-            "Baş parmağınız kalın: Güçlü bir iradeniz var.",
-            "Tırnaklarınız sağlam: Sağlığınız yerinde.",
-            "Eliniz sıcak: Duygusal ve sevgi dolu birisiniz.",
-            "Eliniz soğuk: Sakin ve analitik düşünüyorsunuz."
-        ]
-        sonuc += f"[color={RENKLER['gri_acik']}]{random.choice(parmak_analizi)}[/color]"
-        
-        self.sonuc_label.markup = True
-        self.sonuc_label.text = sonuc
-        self._ai_ekle(sonuc, 'El Falı (Diğer)', ', '.join(c['isim'] for c in secilen))
     
     def nazar_fali(self):
         """Nazar falı"""
-        sonuc = f"[b][color={RENKLER['altin']}]👁️ NAZAR FALI 👁️[/color][/b]\n\n"
+        sonuc = f"[b][color={RENKLER['altin']}]NAZAR FALI[/color][/b]\n\n"
         
-        # Nazar boncuğu çizimi (emoji ile)
-        sonuc += "[b]🔵 NAZAR BONCUĞUNUZUN DURUMU 🔵[/b]\n\n"
+        sonuc += "[b]NAZAR BONCUĞUNUZUN DURUMU[/b]\n\n"
         
         nazar_durumlari = [
-            "Nazar boncuğunuz sağlam ve koruyor. 🟢",
-            "Nazar boncuğunuzda çatlak var! Sizi korumuş. 🟡",
-            "Nazar boncuğunuz kırılmış. Yeni bir tane alın! 🔴",
-            "Nazar boncuğunuz parlıyor. Enerjiniz yüksek. 🟢",
-            "Nazar boncuğunuz matlaşmış. Enerjinizi tazeleyin. 🟡",
+            "Nazar boncuğunuz sağlam ve koruyor.",
+            "Nazar boncuğunuzda çatlak var! Sizi korumuş.",
+            "Nazar boncuğunuz kırılmış. Yeni bir tane alın!",
+            "Nazar boncuğunuz parlıyor. Enerjiniz yüksek.",
+            "Nazar boncuğunuz matlaşmış. Enerjinizi tazeleyin.",
         ]
         sonuc += f"[color={RENKLER['mavi_acik']}]{random.choice(nazar_durumlari)}[/color]\n\n"
         
-        sonuc += f"[b][color={RENKLER['altin']}]🔮 NAZAR YORUMU:[/color][/b]\n"
+        sonuc += f"[b][color={RENKLER['altin']}]NAZAR YORUMU:[/color][/b]\n"
         sonuc += f"[color={RENKLER['gri_acik']}]{random.choice(NAZAR_YORUMLARI)}[/color]\n\n"
         
-        sonuc += f"[b][color={RENKLER['altin']}]💙 KORUNMA ÖNERİLERİ:[/color][/b]\n"
+        sonuc += f"[b][color={RENKLER['altin']}]KORUNMA ÖNERİLERİ:[/color][/b]\n"
         korunma = [
             "Mavi renkli kıyafetler giyin.",
             "Nazar boncuğu takın veya yanınızda taşıyın.",
@@ -338,5 +302,5 @@ class DigerFallarScreen(Screen):
         sonuc += f"[color={RENKLER['gri_acik']}]{random.choice(korunma)}[/color]"
         
         self.sonuc_label.markup = True
-        self.sonuc_label.text = sonuc
+        self.sonuc_label.text = emoji_temizle(sonuc)
         self._ai_ekle(sonuc, 'Nazar Falı', 'Nazar boncuğu ve koruma yorumu')

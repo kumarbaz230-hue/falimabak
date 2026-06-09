@@ -3,8 +3,8 @@
   "ai_aktif": true,
   "ai_timeout": 45,
   "gemini_api_key": "",
-  "gemini_model": "gemini-2.5-flash-lite",
-  "gemini_yedek_modeller": ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"],
+  "gemini_model": "gemini-2.0-flash",
+  "gemini_yedek_modeller": ["gemini-2.0-flash-lite", "gemini-1.5-flash", "gemini-1.5-flash-8b"],
   "ollama_url": "http://127.0.0.1:11434/api/generate",
   "ollama_model": "llama3.1:8b",
   "ollama_masaustu": true

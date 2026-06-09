@@ -25,7 +25,7 @@ import unicodedata
 
 from theme import (
     RENKLER, FON_ADI, TUS, fontlari_yukle, metin_label, gradient_arka_plan_ekle, ASSETS_DIR,
-    tus_buton, baslik_satir, buton_metin_guncelle, yorum_baslik, yorum_bekle_markup, yorum_durum_notu,
+    tus_buton, baslik_satir, buton_metin_guncelle, yorum_bekle_markup, yorum_sonuc_metni,
 )
 from ai_yorum import yorum_al
 
@@ -395,14 +395,11 @@ class TarotScreen(Screen):
         self.yorum.text = self._son_temel_yorum + f"\n\n{yorum_bekle_markup()}"
 
         def _bitir(metin, ai_kullanildi, hata, kaynak=None, fotograf=False):
-            baslik = yorum_baslik(ai_kullanildi, kaynak, fotograf)
-            renk = RENKLER['pembe_acik'] if ai_kullanildi else RENKLER['gri_acik']
             self.yorum.text = (
-                self._son_temel_yorum
-                + f"\n\n[b][color={RENKLER['altin']}]» {baslik}[/color][/b]\n"
-                + f"[color={renk}]{metin}[/color]"
-                + yorum_durum_notu(hata, ai_kullanildi)
-                + f"\n\n[color={RENKLER['gri']}]📚 78 karttan {self.kart_adet} kart çekildi[/color]"
+                yorum_sonuc_metni(
+                    self._son_temel_yorum, metin, ai_kullanildi, hata, kaynak, fotograf,
+                )
+                + f"\n\n[color={RENKLER['gri']}]78 karttan {self.kart_adet} kart çekildi[/color]"
             )
             self.yorum.height = max(self.yorum.texture_size[1] + dp(10), dp(80))
 

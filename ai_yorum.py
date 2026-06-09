@@ -44,11 +44,11 @@ _varsayilan = {
     # Google Gemini — mobil + Play Store için (ücretsiz API key)
     # https://aistudio.google.com/apikey
     'gemini_api_key': '',
-    'gemini_model': 'gemini-2.5-flash-lite',
+    'gemini_model': 'gemini-2.0-flash',
     'gemini_yedek_modeller': [
-        'gemini-2.5-flash',
-        'gemini-2.0-flash',
+        'gemini-2.0-flash-lite',
         'gemini-1.5-flash',
+        'gemini-1.5-flash-8b',
     ],
     # Masaüstü Ollama (mobilde atlanır)
     'ollama_url': 'http://127.0.0.1:11434/api/generate',
@@ -202,6 +202,8 @@ def ai_durum_metni():
 
 
 def _kaynak_sirasi(ayar):
+    if _android_mi() and _gemini_anahtar(ayar):
+        return ['gemini']
     mod = (ayar.get('ai_mod') or 'otomatik').lower()
     if mod == 'offline':
         return []
@@ -209,7 +211,6 @@ def _kaynak_sirasi(ayar):
         return ['gemini']
     if mod == 'ollama':
         return ['ollama']
-    # otomatik — mobilde önce bulut, PC'de bulut + ollama
     sira = []
     if _gemini_anahtar(ayar):
         sira.append('gemini')
@@ -275,16 +276,15 @@ def _gemini_istek(prompt, ayar, model=None, gorsel=None):
     anahtar = _gemini_anahtar(ayar)
     if not anahtar:
         return None
-    model = model or ayar.get('gemini_model', 'gemini-2.5-flash-lite')
+    model = model or ayar.get('gemini_model', 'gemini-2.0-flash')
     url = (
         f'https://generativelanguage.googleapis.com/v1beta/models/'
         f'{model}:generateContent'
     )
-    headers = {}
-    if anahtar.startswith('AQ.'):
-        headers['x-goog-api-key'] = anahtar
-    else:
-        url = f'{url}?key={anahtar}'
+    headers = {
+        'Content-Type': 'application/json',
+        'x-goog-api-key': anahtar,
+    }
 
     parcalar = []
     for g in _gorseller_listesi(gorsel):
@@ -322,11 +322,12 @@ def _gemini_istek(prompt, ayar, model=None, gorsel=None):
 
 
 def _gemini_modeller(ayar):
-    primary = ayar.get('gemini_model', 'gemini-2.5-flash-lite')
+    primary = ayar.get('gemini_model', 'gemini-2.0-flash')
     modeller = [primary]
     for yedek in ayar.get('gemini_yedek_modeller') or (
-        'gemini-2.5-flash',
-        'gemini-3.5-flash',
+        'gemini-2.0-flash-lite',
+        'gemini-1.5-flash',
+        'gemini-1.5-flash-8b',
     ):
         if yedek and yedek not in modeller:
             modeller.append(yedek)
@@ -339,7 +340,7 @@ def _gemini_dene(prompt, ayar, gorsel=None):
     if not anahtar:
         return None, None
 
-    primary = ayar.get('gemini_model', 'gemini-2.5-flash-lite')
+    primary = ayar.get('gemini_model', 'gemini-2.0-flash')
     modeller = _gemini_modeller(ayar)
 
     son_kod = None
@@ -632,8 +633,7 @@ def yorum_al(tip, veri, callback):
             return
 
         yedek = _yedek_yorum(tip, veri)
-        kullanici_hata = _kullanici_hata_mesaji(hatalar or [])
-        print(f'AI: hazır yorum kullanıldı ({kullanici_hata})', flush=True)
-        _ana_thread(lambda y=yedek, h=kullanici_hata: _sonuc(y, False, h, None))
+        print(f'AI: yedek yorum kullanıldı', flush=True)
+        _ana_thread(lambda y=yedek: _sonuc(y, False, None, None))
 
     threading.Thread(target=_calistir, daemon=True).start()
