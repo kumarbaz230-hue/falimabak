@@ -4,15 +4,25 @@ Mystic Dark Dashboard — mobil odaklı
 """
 
 import os
+import shutil
+import traceback
 
 os.environ['KIVY_ORIENTATION'] = 'portrait'
 
 from kivy.config import Config
 
-Config.set('graphics', 'width', '400')
-Config.set('graphics', 'height', '780')
+_ANDROID = (
+    'ANDROID_ARGUMENT' in os.environ
+    or 'ANDROID_ROOT' in os.environ
+    or 'ANDROID_BOOTLOGO' in os.environ
+)
+
+if not _ANDROID:
+    Config.set('graphics', 'width', '400')
+    Config.set('graphics', 'height', '780')
 Config.set('kivy', 'window_icon', '')
-Config.set('input', 'mouse', 'mouse,disable_multitouch')
+if not _ANDROID:
+    Config.set('input', 'mouse', 'mouse,disable_multitouch')
 
 from kivy.app import App
 from kivy.core.window import Window
@@ -40,16 +50,6 @@ from gecmis import (
     onboarding_gerekli, onboarding_tamamla, kullanici_ismi,
     gunluk_fal, gecmis_listesi,
 )
-from tarot import TarotScreen
-from kahve import KahveScreen
-from astroloji import AstrolojiScreen
-from diger_fallar import DigerFallarScreen
-from elfali import ElFaliScreen
-from ayarlar import AyarlarScreen
-
-fontlari_yukle()
-emoji_font_yukle()
-Window.clearcolor = get_color_from_hex(RENKLER['arka_plan'])
 
 _ikon = asset_yolu('app_icon.png')
 if os.path.isfile(_ikon):
@@ -297,9 +297,16 @@ class SplashScreen(Screen):
             self._anim_logo.cancel(self.logo)
         if getattr(self, '_anim_txt', None):
             self._anim_txt.cancel(self.yukleniyor)
+        if not self.manager:
+            return
+        if 'hata' in self.manager.screen_names:
+            self.manager.current = 'hata'
+            return
         hedef = 'onboarding' if onboarding_gerekli() else 'anasayfa'
-        if self.manager:
-            self.manager.current = hedef
+        if hedef not in self.manager.screen_names:
+            Clock.schedule_once(self._gec, 0.25)
+            return
+        self.manager.current = hedef
 
 
 class OnboardingScreen(Screen):
@@ -476,8 +483,41 @@ class Anasayfa(Screen):
             self.manager.current = 'ayarlar'
 
 
+class HataScreen(Screen):
+    """Başlangıç hatasını ekranda göster (logcat olmadan teşhis)."""
+
+    def __init__(self, mesaj='', **kwargs):
+        super().__init__(**kwargs)
+        gradient_arka_plan_ekle(self)
+        kutu = BoxLayout(orientation='vertical', padding=dp(20), spacing=dp(12))
+        kutu.add_widget(metin_label(
+            'Başlangıç hatası', font_size='20sp', bold=True, color=RENKLER['altin'],
+            halign='center', size_hint_y=None, height=dp(36),
+        ))
+        kutu.add_widget(metin_label(
+            mesaj[:1200],
+            font_size='11sp', color=RENKLER['gri_acik'],
+            halign='left', size_hint_y=1,
+        ))
+        self.add_widget(kutu)
+
+
 class FalimaBakApp(App):
+    def on_start(self):
+        if not _ANDROID:
+            return
+        try:
+            os.makedirs(self.user_data_dir, exist_ok=True)
+            hedef = os.path.join(self.user_data_dir, 'config.json')
+            ornek = os.path.join(os.path.dirname(__file__), 'config.ornek.json')
+            if not os.path.isfile(hedef) and os.path.isfile(ornek):
+                shutil.copy2(ornek, hedef)
+        except Exception as e:
+            print(f'Config kopyalama: {e}', flush=True)
+
     def build(self):
+        fontlari_yukle()
+        emoji_font_yukle()
         self.title = 'FalımaBak'
         Window.clearcolor = get_color_from_hex(RENKLER['arka_plan'])
         sm = ScreenManager(transition=FadeTransition(duration=0.25))
@@ -492,16 +532,37 @@ class FalimaBakApp(App):
         sm.bind(pos=_sm_zemin, size=_sm_zemin)
         Clock.schedule_once(lambda *_: _sm_zemin(), 0)
         sm.add_widget(SplashScreen(name='splash'))
-        sm.add_widget(OnboardingScreen(name='onboarding'))
-        sm.add_widget(Anasayfa(name='anasayfa'))
-        sm.add_widget(GecmisScreen(name='gecmis'))
-        sm.add_widget(AyarlarScreen(name='ayarlar'))
-        sm.add_widget(TarotScreen(name='tarot'))
-        sm.add_widget(KahveScreen(name='kahve'))
-        sm.add_widget(AstrolojiScreen(name='astroloji'))
-        sm.add_widget(DigerFallarScreen(name='diger_fallar'))
-        sm.add_widget(ElFaliScreen(name='elfali'))
+        self._sm = sm
+        Clock.schedule_once(lambda *_: self._ekranlari_yukle(), 0.05)
         return sm
+
+    def _ekranlari_yukle(self):
+        sm = self._sm
+        try:
+            from tarot import TarotScreen
+            from kahve import KahveScreen
+            from astroloji import AstrolojiScreen
+            from diger_fallar import DigerFallarScreen
+            from elfali import ElFaliScreen
+            from ayarlar import AyarlarScreen
+
+            for w in (
+                OnboardingScreen(name='onboarding'),
+                Anasayfa(name='anasayfa'),
+                GecmisScreen(name='gecmis'),
+                AyarlarScreen(name='ayarlar'),
+                TarotScreen(name='tarot'),
+                KahveScreen(name='kahve'),
+                AstrolojiScreen(name='astroloji'),
+                DigerFallarScreen(name='diger_fallar'),
+                ElFaliScreen(name='elfali'),
+            ):
+                sm.add_widget(w)
+        except Exception:
+            err = traceback.format_exc()
+            print(err, flush=True)
+            sm.add_widget(HataScreen(mesaj=err, name='hata'))
+            sm.current = 'hata'
 
 
 if __name__ == '__main__':

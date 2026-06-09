@@ -12,7 +12,7 @@ source.include_patterns = assets/*,config.ornek.json
 source.exclude_dirs = tests,bin,.git,__pycache__,.buildozer,.venv,venv,env,.idea,user_photos,.github,recipes
 source.exclude_patterns = license,images/*/*.jpg,*.bat,*.md,config.json,kullanici_veri.json,.env
 
-version = 1.0.0
+version = 1.0.1
 
 # Novfensec örnek projesiyle aynı çizgi: develop p4a + kivy 2.3.1
 requirements = python3,kivy==2.3.1,pillow,android

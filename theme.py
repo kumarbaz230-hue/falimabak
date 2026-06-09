@@ -143,8 +143,17 @@ def _windows_font_yolu(dosya):
     return os.path.join(os.environ.get('WINDIR', r'C:\Windows'), 'Fonts', dosya)
 
 
+def _android_mi():
+    return (
+        'ANDROID_ARGUMENT' in os.environ
+        or 'ANDROID_ROOT' in os.environ
+        or 'ANDROID_BOOTLOGO' in os.environ
+    )
+
+
 def fontlari_yukle():
-    global _font_yuklendi
+    """Windows: Segoe. Android: gömülü Roboto (dosya yolu ile register etme — presplash'te takılır)."""
+    global _font_yuklendi, FON_ADI
     if _font_yuklendi:
         return
 
@@ -160,7 +169,22 @@ def fontlari_yukle():
             _font_yuklendi = True
             return
 
-    LabelBase.register(name=FON_ADI, fn_regular='Roboto')
+    if _android_mi():
+        # Kivy Android APK içindeki Roboto — AppFont olarak yanlış path register ETME
+        FON_ADI = 'Roboto'
+        _font_yuklendi = True
+        return
+
+    bundled = os.path.join(ASSETS_DIR, 'Roboto-Regular.ttf')
+    if os.path.isfile(bundled):
+        bold_path = os.path.join(ASSETS_DIR, 'Roboto-Bold.ttf')
+        LabelBase.register(
+            name=FON_ADI,
+            fn_regular=bundled,
+            fn_bold=bold_path if os.path.isfile(bold_path) else bundled,
+        )
+    else:
+        FON_ADI = 'Roboto'
     _font_yuklendi = True
 
 
