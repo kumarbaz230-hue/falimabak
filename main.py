@@ -1,5 +1,5 @@
 """
-🔮 FalımaBak - Premium Fal Uygulaması v1.1.0
+🔮 FalımaBak - Premium Fal Uygulaması v1.1.1
 Mystic Dark Dashboard — mobil odaklı
 """
 
@@ -578,7 +578,7 @@ class Anasayfa(Screen):
                 ikon_anahtar=ikon, renk=renk, hedef=hedef))
         ana.add_widget(menu)
 
-        ana.add_widget(metin_label('FalımaBak v1.1.0', font_size='10sp', bold=True,
+        ana.add_widget(metin_label('FalımaBak v1.1.1', font_size='10sp', bold=True,
             color=RENKLER['altin_yumusak'], halign='center', size_hint_y=None, height=dp(18)))
         try:
             from reklam import reklam_alani_bosluk

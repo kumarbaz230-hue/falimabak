@@ -15,7 +15,7 @@ from theme import (
 from gecmis import kullanici_ismi, isim_guncelle, gecmis_temizle, dil_al
 from dil import t, dil_listesi, dil_etiket, dil_degistir
 
-_SURUM = '1.1.0'
+_SURUM = '1.1.1'
 
 
 def _ayar_karti(baslik, alt_baslik=None):
