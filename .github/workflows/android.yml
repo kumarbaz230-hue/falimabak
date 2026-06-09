@@ -7,104 +7,46 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     timeout-minutes: 120
-    env:
-      GRADLE_HOME: ""
-      ANDROID_NDK: ""
-      ANDROID_NDK_HOME: ""
-      ANDROID_NDK_ROOT: ""
-      ANDROID_NDK_LATEST_HOME: ""
-      USE_OPENGL_ES2: "1"
-      USE_SDL2: "1"
-      KIVY_CROSS_PLATFORM: "android"
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Java 17
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: '17'
-
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-
-      - name: Cache SDK packages only
-        uses: actions/cache@v4
-        with:
-          path: ~/.buildozer/android/packages
-          key: bz-pkgs-v8-${{ hashFiles('buildozer.spec') }}
-          restore-keys: bz-pkgs-v8-
-
-      - name: Install system dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends \
-            build-essential git zip unzip autoconf automake libtool pkg-config \
-            zlib1g-dev libncurses5-dev libncursesw5-dev libtinfo5 cmake \
-            libffi-dev libssl-dev libglib2.0-dev xvfb \
-            libgl1-mesa-dev libgles2-mesa-dev libegl1-mesa-dev \
-            libsdl2-dev libsdl2-image-dev libsdl2-mixer-dev libsdl2-ttf-dev \
-            libportmidi-dev libswscale-dev libavformat-dev libavcodec-dev libavutil-dev
-
-      - name: Accept Android SDK licenses
-        run: |
-          mkdir -p "$HOME/.android/licenses"
-          echo "24333f8a63b6825ea9c5514f83c2829b004d1fee" > "$HOME/.android/licenses/android-sdk-license"
-          echo "84831b9409646a918e305718201e" >> "$HOME/.android/licenses/android-sdk-license"
-          echo "d97579ad9d454c3b62de4ce1053f43212e" >> "$HOME/.android/licenses/android-sdk-license"
-          echo "601085b94cd77f0b157e" >> "$HOME/.android/licenses/android-sdk-license"
-          echo "33b6a2b64607f11b759f220" >> "$HOME/.android/licenses/android-sdk-license"
-          echo "8403addf88ab4874007e1c" > "$HOME/.android/licenses/android-sdk-preview-license"
-
       - name: Prepare config
         run: cp config.ornek.json config.json
 
-      - name: Install Buildozer
-        run: |
-          python -m pip install --upgrade pip setuptools wheel virtualenv
-          pip install "cython==0.29.34" "buildozer==1.5.0"
+      - name: Cache Buildozer downloads
+        uses: actions/cache@v4
+        with:
+          path: |
+            .buildozer_global
+            .buildozer/android/packages
+          key: bz-docker-v1-${{ hashFiles('buildozer.spec') }}
+          restore-keys: bz-docker-v1-
 
-      - name: Build APK
-        run: |
-          export PATH="$HOME/.local/bin:$PATH"
-          export JAVA_HOME="${JAVA_HOME_17_X64:-$JAVA_HOME}"
-          export ORG_GRADLE_JAVA_HOME="$JAVA_HOME"
-          export PATH="$JAVA_HOME/bin:$PATH"
-          Xvfb :99 -screen 0 1280x720x24 &
-          export DISPLAY=:99
-          rm -rf .buildozer bin
-          set +o pipefail
-          yes 2>/dev/null | buildozer -v android debug 2>&1 | tee buildozer.log
-          EC=${PIPESTATUS[1]}
-          set -o pipefail
-          exit $EC
-
-      - name: Dump build log
-        if: always()
-        run: |
-          if [ -f buildozer.log ]; then
-            grep -E "config.pxi|Command failed|gradlew failed|fatal error:|# Android packaging" buildozer.log | grep -vi "warning:" | tail -n 30 || true
-          fi
-          ls -la bin/ 2>/dev/null || echo "bin/ yok"
+      - name: Build with Buildozer (Docker)
+        uses: ArtemSBulgakov/buildozer-action@v1
+        id: buildozer
+        with:
+          command: pip install --user 'Cython==0.29.34' && buildozer -v android debug
+          buildozer_version: stable
 
       - name: Upload APK
         if: success()
         uses: actions/upload-artifact@v4
         with:
           name: falimabak-debug-apk
-          path: bin/*.apk
+          path: ${{ steps.buildozer.outputs.filename }}
           if-no-files-found: error
 
-      - name: Upload log on failure
+      - name: Upload build log on failure
         if: failure()
         uses: actions/upload-artifact@v4
         with:
           name: buildozer-log
-          path: buildozer.log
+          path: |
+            .buildozer/**/*.log
+            bin/**
           if-no-files-found: ignore
