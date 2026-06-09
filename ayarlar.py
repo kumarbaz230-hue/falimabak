@@ -19,7 +19,7 @@ class AyarlarScreen(Screen):
         self._kur()
 
     def _kur(self):
-        ana = BoxLayout(orientation='vertical', padding=[dp(12), SAFE_UST, dp(12), 0], spacing=dp(10])
+        ana = BoxLayout(orientation='vertical', padding=[dp(12), SAFE_UST, dp(12), 0], spacing=dp(10))
         ana.add_widget(baslik_satir('', 'Ayarlar', font_size='22sp', height=dp(40)))
 
         ana.add_widget(metin_label(
@@ -46,7 +46,7 @@ class AyarlarScreen(Screen):
 
         ana.add_widget(BoxLayout(size_hint_y=1))
         ana.add_widget(metin_label(
-            'FalımaBak v1.0.8',
+            'FalımaBak v1.0.9',
             font_size='10sp', color=RENKLER['gri_koyu'],
             halign='center', size_hint_y=None, height=dp(18),
         ))
