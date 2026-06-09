@@ -1,5 +1,5 @@
 """
-🔮 FalımaBak - Premium Fal Uygulaması v1.0.15
+🔮 FalımaBak - Premium Fal Uygulaması v1.0.16
 Mystic Dark Dashboard — mobil odaklı
 """
 
@@ -47,12 +47,13 @@ from kivy.clock import Clock
 from kivy.metrics import dp
 
 from theme import (
-    RENKLER, KART_MENU_AR, YORUM_BASLIK,
+    RENKLER, KART_MENU_AR,
     SAFE_UST, SAFE_ALT,
     fontlari_yukle, emoji_font_yukle, emoji_label,
     fal_ikon_widget, guvenli_textinput,
     metin_label, gradient_arka_plan_ekle, asset_yolu,
     alt_nav_bar, ekran_icerik_sar, kart_zemin_bagla, baslik_satir,
+    yorum_baslik_metin, tus_metin,
 )
 from gecmis import (
     onboarding_gerekli, onboarding_tamamla, kullanici_ismi,
@@ -179,6 +180,7 @@ class GunlukFalKarti(ButtonBehavior, BoxLayout):
     """Günlük fal önerisi kartı."""
 
     def __init__(self, **kwargs):
+        from dil import t
         super().__init__(orientation='horizontal', **kwargs)
         self.size_hint_y = None
         self.height = dp(72)
@@ -208,7 +210,7 @@ class GunlukFalKarti(ButtonBehavior, BoxLayout):
         self.add_widget(emoji_label(self._gunluk['ikon'], font_size='28sp', size_hint=(None, 1), width=dp(40)))
         kutu = BoxLayout(orientation='vertical', size_hint=(1, 1), spacing=dp(2))
         kutu.add_widget(metin_label(
-            f"Günlük Fal — {self._gunluk['tarih']}",
+            f"{t('daily_fal')} — {self._gunluk['tarih']}",
             font_size='12sp', bold=True, color=RENKLER['altin'],
             halign='left', size_hint_y=None, height=dp(18),
         ))
@@ -219,7 +221,7 @@ class GunlukFalKarti(ButtonBehavior, BoxLayout):
         ))
         self.add_widget(kutu)
         self.add_widget(metin_label(
-            f"Şans: {self._gunluk['sansli_sayi']}",
+            f"{t('luck')}: {self._gunluk['sansli_sayi']}",
             font_size='11sp', bold=True, color=RENKLER['yesil_parlak'],
             halign='right', size_hint=(None, 1), width=dp(58),
         ))
@@ -246,42 +248,80 @@ class GunlukFalKarti(ButtonBehavior, BoxLayout):
             app.root.current = self._gunluk['hedef']
 
 
+class OranliBanner(BoxLayout):
+    """Banner PNG — en-boy oranı korunur, taşma yok."""
+    ORAN = 220 / 1080
+
+    def __init__(self, source, **kwargs):
+        super().__init__(orientation='vertical', size_hint_y=None, **kwargs)
+        self._clip = FloatLayout(size_hint=(1, None))
+        self._img = Image(
+            source=source, allow_stretch=True, keep_ratio=True, size_hint=(None, None),
+        )
+        with self._clip.canvas.before:
+            Color(0, 0, 0, 0.32)
+            self._golge = RoundedRectangle(radius=[dp(16)])
+        self._clip.add_widget(self._img)
+        self.add_widget(self._clip)
+        self.bind(width=self._genislik_guncelle)
+        self._clip.bind(pos=self._kapak, size=self._kapak)
+        self._img.bind(texture=self._kapak)
+        Clock.schedule_once(lambda *_: self._genislik_guncelle(), 0)
+
+    def _genislik_guncelle(self, *_):
+        if self.width < 1:
+            return
+        h = self.width * self.ORAN
+        self.height = h
+        self._clip.height = h
+        self._kapak()
+
+    def _kapak(self, *_):
+        if self._clip.width < 1 or self._clip.height < 1:
+            return
+        tex = self._img.texture
+        if not tex:
+            return
+        pw, ph = self._clip.width, self._clip.height
+        tw, th = tex.size
+        olcek = max(pw / tw, ph / th)
+        iw, ih = tw * olcek, th * olcek
+        self._img.size = (iw, ih)
+        self._img.pos = (
+            self._clip.x + (pw - iw) * 0.5,
+            self._clip.y + (ph - ih) * 0.5,
+        )
+        self._golge.pos = (self._clip.x + dp(2), self._clip.y - dp(2))
+        self._golge.size = (pw, ph)
+
+
 class BaslikKarti(BoxLayout):
     def __init__(self, **kwargs):
         super().__init__(orientation='vertical', size_hint_y=None, spacing=dp(6), **kwargs)
+        from dil import t
         banner_yol = asset_yolu('menu_banner.png')
         isim = kullanici_ismi()
 
         if os.path.isfile(banner_yol):
-            self.height = dp(118)
-            sarmal = BoxLayout(size_hint_y=None, height=dp(110))
-            with sarmal.canvas.before:
-                Color(0, 0, 0, 0.35)
-                sarmal._g = RoundedRectangle(radius=[dp(18)])
-            sarmal.bind(
-                pos=lambda *a, s=sarmal: self._banner_golge(s),
-                size=lambda *a, s=sarmal: self._banner_golge(s),
-            )
-            Clock.schedule_once(lambda *_: self._banner_golge(sarmal), 0)
-            sarmal.add_widget(Image(
-                source=banner_yol,
-                size_hint=(1, 1),
-                allow_stretch=True,
-                keep_ratio=False,
-            ))
-            self.add_widget(sarmal)
+            banner = OranliBanner(source=banner_yol)
+            self.add_widget(banner)
+            selam_lbl = None
             if isim:
-                self.height = dp(138)
-                self.add_widget(metin_label(
-                    f'✦ Merhaba, {isim}!',
+                selam_lbl = metin_label(
+                    f'✦ {t("hello", name=isim)}',
                     font_size='12sp', bold=True, color=RENKLER['altin_parlak'],
                     halign='left', size_hint_y=None, height=dp(18),
-                ))
-            return
+                )
+                self.add_widget(selam_lbl)
 
-    def _banner_golge(self, w, *_):
-        w._g.pos = (w.x + dp(2), w.y - dp(2))
-        w._g.size = w.size
+            def _yukseklik(*_):
+                ek = dp(24) if selam_lbl else 0
+                self.height = banner.height + ek + dp(6)
+
+            banner.bind(height=_yukseklik)
+            self.bind(width=_yukseklik)
+            Clock.schedule_once(lambda *_: _yukseklik(), 0)
+            return
 
         self.height = dp(140)
         self.padding = [dp(14), dp(12), dp(14), dp(10)]
@@ -294,7 +334,7 @@ class BaslikKarti(BoxLayout):
         self.bind(pos=self._baslik_ciz, size=self._baslik_ciz)
         Clock.schedule_once(lambda *_: self._baslik_ciz(), 0)
 
-        selam = f'Merhaba, {isim}!' if isim else 'Geleceğinizi Keşfedin'
+        selam = t('hello', name=isim) if isim else t('discover')
         ust = BoxLayout(orientation='horizontal', size_hint_y=None, height=dp(44), spacing=dp(8))
         ust.add_widget(emoji_label('🔮', font_size='34sp', size_hint=(None, 1), width=dp(40)))
         ust.add_widget(metin_label(
@@ -304,7 +344,7 @@ class BaslikKarti(BoxLayout):
         self.add_widget(ust)
         self.add_widget(metin_label(selam, font_size='13sp', color=RENKLER['beyaz'],
             halign='left', size_hint_y=None, height=dp(22)))
-        self.add_widget(metin_label(YORUM_BASLIK, font_size='11sp', color=RENKLER['gri_acik'],
+        self.add_widget(metin_label(yorum_baslik_metin(), font_size='11sp', color=RENKLER['gri_acik'],
             halign='left', size_hint_y=None, height=dp(18)))
 
     def _baslik_ciz(self, *_):
@@ -322,18 +362,20 @@ class SplashScreen(Screen):
         self._kur()
 
     def _kur(self):
+        from dil import t
         gradient_arka_plan_ekle(self)
         root = FloatLayout()
         banner_yol = asset_yolu('splash_banner.png')
         self._banner_var = os.path.isfile(banner_yol)
+        self._root = root
 
         if self._banner_var:
-            root.add_widget(Image(
-                source=banner_yol,
-                allow_stretch=True,
-                keep_ratio=False,
-                size_hint=(1, 1),
-            ))
+            self._splash_img = Image(
+                source=banner_yol, allow_stretch=True, keep_ratio=True, size_hint=(None, None),
+            )
+            root.add_widget(self._splash_img)
+            root.bind(size=self._splash_kapak, pos=self._splash_kapak)
+            self._splash_img.bind(texture=self._splash_kapak)
             self.logo = BoxLayout(size_hint=(0, 0))
         else:
             ikon_yol = asset_yolu('app_icon.png')
@@ -352,26 +394,25 @@ class SplashScreen(Screen):
                     pos_hint={'center_x': 0.5, 'center_y': 0.58}, size_hint=(None, None),
                     size=(logo_boyut, logo_boyut))
             root.add_widget(self.logo)
-
-        if not self._banner_var:
             root.add_widget(metin_label(
                 'FalımaBak', font_size='36sp', bold=True, color=RENKLER['altin'],
                 halign='center', pos_hint={'center_x': 0.5, 'center_y': 0.46},
                 size_hint=(0.9, None), height=dp(44),
             ))
             root.add_widget(metin_label(
-                YORUM_BASLIK, font_size='13sp', color=RENKLER['gri_acik'],
+                yorum_baslik_metin(), font_size='13sp', color=RENKLER['gri_acik'],
                 halign='center', pos_hint={'center_x': 0.5, 'center_y': 0.40},
                 size_hint=(0.9, None), height=dp(24),
             ))
 
         self.yukleniyor = metin_label(
-            'Yükleniyor...', font_size='13sp', color=RENKLER['altin_yumusak'],
+            t('loading'), font_size='13sp', color=RENKLER['altin_yumusak'],
             halign='center', pos_hint={'center_x': 0.5, 'y': 0.08},
             size_hint=(0.8, None), height=dp(28),
         )
         root.add_widget(self.yukleniyor)
         self.add_widget(root)
+        Clock.schedule_once(lambda *_: self._splash_kapak(), 0)
 
         if not _ANDROID and not self._banner_var:
             boyut = dp(96)
@@ -382,20 +423,32 @@ class SplashScreen(Screen):
             anim_logo.repeat = True
             self._anim_logo = anim_logo
             anim_logo.start(self.logo)
-            anim_txt = Animation(opacity=0.35, duration=0.6) + Animation(opacity=1, duration=0.6)
-            anim_txt.repeat = True
-            self._anim_txt = anim_txt
-            anim_txt.start(self.yukleniyor)
         else:
             self._anim_logo = None
-            self._anim_txt = None
-            if not self._banner_var:
-                anim_txt = Animation(opacity=0.35, duration=0.6) + Animation(opacity=1, duration=0.6)
-                anim_txt.repeat = True
-                self._anim_txt = anim_txt
-                anim_txt.start(self.yukleniyor)
+
+        anim_txt = Animation(opacity=0.35, duration=0.6) + Animation(opacity=1, duration=0.6)
+        anim_txt.repeat = True
+        self._anim_txt = anim_txt
+        anim_txt.start(self.yukleniyor)
 
         Clock.schedule_once(self._gec, 2.2)
+
+    def _splash_kapak(self, *_):
+        if not getattr(self, '_banner_var', False):
+            return
+        img = getattr(self, '_splash_img', None)
+        root = getattr(self, '_root', None)
+        if not img or not root or root.width < 1 or root.height < 1:
+            return
+        tex = img.texture
+        if not tex:
+            return
+        pw, ph = root.width, root.height
+        tw, th = tex.size
+        olcek = max(pw / tw, ph / th)
+        iw, ih = tw * olcek, th * olcek
+        img.size = (iw, ih)
+        img.pos = (root.x + (pw - iw) * 0.5, root.y + (ph - ih) * 0.5)
 
     def _gec(self, *_):
         if getattr(self, '_anim_logo', None):
@@ -478,9 +531,10 @@ class GecmisScreen(Screen):
         self._kur()
 
     def _kur(self):
+        from dil import t
         ana = BoxLayout(orientation='vertical', padding=[dp(12), SAFE_UST, dp(12), 0], spacing=dp(8))
 
-        ana.add_widget(baslik_satir('📜', 'Fal Geçmişi', font_size='22sp', height=dp(36)))
+        ana.add_widget(baslik_satir('📜', t('history_title'), font_size='22sp', height=dp(36)))
 
         kaydir = ScrollView(size_hint_y=1, do_scroll_x=False, bar_width=dp(3),
             bar_color=get_color_from_hex(RENKLER['mor_parlak']),
@@ -498,6 +552,7 @@ class GecmisScreen(Screen):
         self._yenile()
 
     def _yenile(self):
+        from dil import t
         if not hasattr(self, '_liste'):
             return
         self._liste.clear_widgets()
@@ -507,7 +562,7 @@ class GecmisScreen(Screen):
             kayitlar = []
         if not kayitlar:
             self._liste.add_widget(metin_label(
-                'Henüz kayıtlı fal yok.\nBir fal baktır, burada görünsün.',
+                t('history_empty'),
                 font_size='13sp', color=RENKLER['gri'], halign='center',
                 size_hint_y=None, height=dp(80),
             ))
@@ -550,28 +605,29 @@ class Anasayfa(Screen):
         self._kur()
 
     def _kur(self):
+        from dil import t
         ana = BoxLayout(orientation='vertical', padding=[dp(12), SAFE_UST, dp(12), 0], spacing=dp(8))
         ana.add_widget(BaslikKarti())
         ana.add_widget(GunlukFalKarti())
         ana.add_widget(metin_label(
-            '✦  Fallarınız  ✦',
+            t('menu_fortunes'),
             font_size='13sp', bold=True, color=RENKLER['altin_parlak'],
             halign='center', size_hint_y=None, height=dp(22),
         ))
 
         menu = BoxLayout(orientation='vertical', spacing=dp(10), size_hint_y=1)
         for baslik, aciklama, ikon, renk, hedef in [
-            ('Tarot Falı', '78 kartlık deste ile geleceğinizi görün', 'tarot', RENKLER['mor'], 'tarot'),
-            ('Kahve Falı', 'Fincanınızı fotoğraflayın, yorumlayalım', 'kahve', RENKLER['turuncu'], 'kahve'),
-            ('Yıldız Falı', 'Burcunuza özel astroloji yorumları', 'astroloji', RENKLER['mavi_acik'], 'astroloji'),
-            ('El Falı', 'Avuç içi çizgilerinizi okuyun', 'elfali', RENKLER['pembe'], 'elfali'),
-            ('Diğer Fallar', 'İskambil, çiçek, nazar ve daha fazlası', 'diger', RENKLER['yesil'], 'diger_fallar'),
+            (t('menu_tarot'), t('menu_tarot_desc'), 'tarot', RENKLER['mor'], 'tarot'),
+            (t('menu_kahve'), t('menu_kahve_desc'), 'kahve', RENKLER['turuncu'], 'kahve'),
+            (t('menu_astro'), t('menu_astro_desc'), 'astroloji', RENKLER['mavi_acik'], 'astroloji'),
+            (t('menu_el'), t('menu_el_desc'), 'elfali', RENKLER['pembe'], 'elfali'),
+            (t('menu_diger'), t('menu_diger_desc'), 'diger', RENKLER['yesil'], 'diger_fallar'),
         ]:
             menu.add_widget(DashboardKart(baslik=baslik, aciklama=aciklama,
                 ikon_anahtar=ikon, renk=renk, hedef=hedef))
         ana.add_widget(menu)
 
-        ana.add_widget(metin_label('FalımaBak v1.0.15', font_size='10sp', bold=True,
+        ana.add_widget(metin_label('FalımaBak v1.0.16', font_size='10sp', bold=True,
             color=RENKLER['altin_yumusak'], halign='center', size_hint_y=None, height=dp(18)))
         ana.add_widget(alt_nav_bar('anasayfa', on_sec=self._nav))
         ekran_icerik_sar(self, ana)
@@ -622,10 +678,27 @@ class FalimaBakApp(App):
         except Exception as e:
             print(f'AI mobil hazırlık: {e}', flush=True)
         try:
-            from kamera import uygulama_izinlerini_iste
-            Clock.schedule_once(lambda *_: uygulama_izinlerini_iste(), 1.5)
+            from kamera import kamera_hazirla
+            Clock.schedule_once(lambda *_: kamera_hazirla(), 0.8)
         except Exception:
             pass
+
+    def ekranlari_yenile_dil(self):
+        from ayarlar import AyarlarScreen
+        sm = self.root
+        if not sm:
+            return
+        cur = sm.current
+        for name, fab in [
+            ('anasayfa', lambda: Anasayfa(name='anasayfa')),
+            ('gecmis', lambda: GecmisScreen(name='gecmis')),
+            ('ayarlar', lambda: AyarlarScreen(name='ayarlar')),
+        ]:
+            if name in sm.screen_names:
+                sm.remove_widget(sm.get_screen(name))
+            sm.add_widget(fab())
+        if cur in sm.screen_names:
+            sm.current = cur
 
     def build(self):
         try:

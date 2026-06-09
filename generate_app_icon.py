@@ -112,8 +112,44 @@ def ikon_olustur():
     return yol
 
 
+def menu_banner_olustur():
+    """Ana menü üst banner — mobil genişliğe uygun oran."""
+    w, h = 1080, 220
+    img = Image.new('RGBA', (w, h), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(img)
+
+    for y in range(h):
+        t = y / max(h - 1, 1)
+        renk = (int(16 + 10 * t), int(12 + 8 * t), int(36 + 14 * t), 255)
+        draw.line([(0, y), (w, y)], fill=renk)
+
+    draw.rounded_rectangle([0, 0, w - 1, h - 1], radius=28, outline=(255, 215, 0, 200), width=3)
+    draw.rounded_rectangle([5, 5, w - 6, h - 6], radius=24, outline=(150, 110, 230, 80), width=2)
+    draw.rounded_rectangle([0, 0, 8, h], radius=4, fill=(255, 215, 0, 235))
+
+    f = _font(52, True)
+    f2 = _font(24, False)
+    f3 = _font(20, False)
+    _metin_golge(draw, (36, 42), 'FalımaBak', f, (255, 215, 0, 255), offset=2)
+    draw.text((36, 42), 'FalımaBak', font=f, fill=(255, 215, 0, 255))
+    draw.text((36, 108), 'Premium fal deneyimi', font=f2, fill=(225, 218, 245, 255))
+    draw.text((36, 148), 'Tarot · Kahve · El · Astroloji', font=f3, fill=(155, 147, 184, 255))
+
+    badge_w, badge_h = 168, 44
+    bx, by = w - badge_w - 28, 28
+    draw.rounded_rectangle([bx, by, bx + badge_w, by + badge_h], radius=22, fill=(255, 215, 0, 40))
+    draw.rounded_rectangle([bx, by, bx + badge_w, by + badge_h], radius=22, outline=(255, 215, 0, 210), width=2)
+    draw.text((bx + badge_w // 2, by + badge_h // 2), 'PREMIUM', font=_font(18, True), fill=(255, 215, 0), anchor='mm')
+
+    yol = os.path.join(BASE, 'menu_banner.png')
+    img.save(yol, 'PNG')
+    print(f'Menu banner: {yol}')
+    return yol
+
+
 def banner_olustur():
-    w, h = 1080, 1920
+    """Splash — 720x1280 optimize (APK boyutu)."""
+    w, h = 720, 1280
     img = _dikey_gradient(w, h, (8, 6, 18), (22, 14, 48)).convert('RGBA')
     draw = ImageDraw.Draw(img)
     _yildizlar(draw, w, h, adet=120)
@@ -141,60 +177,21 @@ def banner_olustur():
     draw.line([(cx - 120, cy), (cx + 120, cy)], fill=(255, 215, 0, 60), width=1)
     draw.line([(cx, cy - 120), (cx, cy + 120)], fill=(255, 215, 0, 60), width=1)
 
-    f1 = _font(88, True)
-    f2 = _font(36, False)
-    f3 = _font(28, False)
-    _metin_golge(draw, (cx, cy + 260), 'FalımaBak', f1, (255, 215, 0, 255), offset=4)
-    draw.text((cx, cy + 260), 'FalımaBak', font=f1, fill=(255, 215, 0), anchor='mm')
-    draw.text((cx, cy + 340), 'Geleceğinizi Keşfedin', font=f2, fill=(230, 222, 248), anchor='mm')
-    draw.text((cx, cy + 395), '✦  Premium Fal Deneyimi  ✦', font=f3, fill=(200, 175, 255), anchor='mm')
+    f1 = _font(58, True)
+    f2 = _font(24, False)
+    f3 = _font(18, False)
+    _metin_golge(draw, (cx, cy + 180), 'FalımaBak', f1, (255, 215, 0, 255), offset=3)
+    draw.text((cx, cy + 180), 'FalımaBak', font=f1, fill=(255, 215, 0), anchor='mm')
+    draw.text((cx, cy + 240), 'Geleceğinizi Keşfedin', font=f2, fill=(230, 222, 248), anchor='mm')
+    draw.text((cx, cy + 278), '✦  Premium Fal Deneyimi  ✦', font=f3, fill=(200, 175, 255), anchor='mm')
 
-    img = _isik_halkasi(img, cx, cy, 240, opak=110)
-    img = img.filter(ImageFilter.GaussianBlur(radius=0))
+    img = _isik_halkasi(img, cx, cy, 160, opak=110)
     yol = os.path.join(BASE, 'splash_banner.png')
-    img.convert('RGB').save(yol, 'PNG', quality=95)
+    img.convert('RGB').save(yol, 'PNG', optimize=True)
     print(f'Splash: {yol}')
     return yol
 
 
-def menu_banner_olustur():
-    w, h = 1080, 280
-    img = Image.new('RGBA', (w, h), (0, 0, 0, 0))
-    draw = ImageDraw.Draw(img)
-
-    for y in range(h):
-        t = y / max(h - 1, 1)
-        renk = (int(18 + 8 * t), int(14 + 6 * t), int(38 + 12 * t), 255)
-        draw.line([(0, y), (w, y)], fill=renk)
-
-    draw.rounded_rectangle([0, 0, w - 1, h - 1], radius=32, outline=(255, 215, 0, 180), width=3)
-    draw.rounded_rectangle([6, 6, w - 7, h - 7], radius=28, outline=(140, 100, 220, 70), width=2)
-    draw.rounded_rectangle([0, 0, 10, h], radius=5, fill=(255, 215, 0, 230))
-
-    for x in range(40, w - 40, 90):
-        draw.ellipse([x, 12, x + 4, 16], fill=(255, 236, 120, 180))
-
-    f = _font(58, True)
-    f2 = _font(28, False)
-    f3 = _font(24, False)
-    _metin_golge(draw, (48, 58), 'FalımaBak', f, (255, 215, 0, 255), offset=3)
-    draw.text((48, 58), 'FalımaBak', font=f, fill=(255, 215, 0, 255))
-    draw.text((48, 130), 'Premium fal deneyimi', font=f2, fill=(225, 218, 245, 255))
-    draw.text((48, 175), 'Tarot  ·  Kahve  ·  El  ·  Astroloji', font=f3, fill=(160, 150, 195, 255))
-
-    badge_w, badge_h = 200, 52
-    bx, by = w - badge_w - 36, 36
-    draw.rounded_rectangle([bx, by, bx + badge_w, by + badge_h], radius=26, fill=(255, 215, 0, 35))
-    draw.rounded_rectangle([bx, by, bx + badge_w, by + badge_h], radius=26, outline=(255, 215, 0, 200), width=2)
-    draw.text((bx + badge_w // 2, by + badge_h // 2), 'PREMIUM', font=_font(22, True), fill=(255, 215, 0), anchor='mm')
-
-    yol = os.path.join(BASE, 'menu_banner.png')
-    img.save(yol, 'PNG')
-    print(f'Menu banner: {yol}')
-    return yol
-
-
 if __name__ == '__main__':
-    ikon_olustur()
     banner_olustur()
     menu_banner_olustur()

@@ -1,0 +1,125 @@
+"""FalımaBak — çoklu dil (TR + popüler diller)."""
+
+from gecmis import dil_al as _dil_al, dil_kaydet
+
+DESTEKLENEN = {
+    'tr': 'Türkçe',
+    'en': 'English',
+    'de': 'Deutsch',
+    'fr': 'Français',
+    'es': 'Español',
+    'ar': 'العربية',
+    'ru': 'Русский',
+    'pt': 'Português',
+    'it': 'Italiano',
+    'hi': 'हिन्दी',
+    'id': 'Indonesia',
+    'zh': '中文',
+}
+
+_METINLER = {
+    'yorum_bekle': {
+        'tr': 'FalımaBak yorumluyor...',
+        'en': 'FalımaBak is reading...',
+        'de': 'FalımaBak deutet...',
+        'fr': 'FalımaBak interprète...',
+        'es': 'FalımaBak interpreta...',
+        'ar': 'FalımaBak يقرأ...',
+        'ru': 'FalımaBak толкует...',
+        'pt': 'FalımaBak interpreta...',
+        'it': 'FalımaBak interpreta...',
+        'hi': 'FalımaBak पढ़ रहा है...',
+        'id': 'FalımaBak membaca...',
+        'zh': 'FalımaBak 解读中...',
+    },
+    'yorum_baslik': {
+        'tr': 'FalımaBak Yorumluyor',
+        'en': 'FalımaBak Reading',
+        'de': 'FalımaBak Deutung',
+        'fr': 'Lecture FalımaBak',
+        'es': 'Lectura FalımaBak',
+        'ar': 'قراءة FalımaBak',
+        'ru': 'Толкование FalımaBak',
+        'pt': 'Leitura FalımaBak',
+        'it': 'Lettura FalımaBak',
+        'hi': 'FalımaBak पढ़ना',
+        'id': 'Pembacaan FalımaBak',
+        'zh': 'FalımaBak 解读',
+    },
+    'tus_geri': {'tr': '← Geri', 'en': '← Back', 'de': '← Zurück', 'fr': '← Retour', 'es': '← Atrás', 'ar': '← رجوع', 'ru': '← Назад', 'pt': '← Voltar', 'it': '← Indietro', 'hi': '← वापस', 'id': '← Kembali', 'zh': '← 返回'},
+    'tus_fal_ac': {'tr': 'Fal Aç', 'en': 'Draw Cards', 'de': 'Karten ziehen', 'fr': 'Tirer', 'es': 'Abrir', 'ar': 'افتح', 'ru': 'Открыть', 'pt': 'Abrir', 'it': 'Apri', 'hi': 'खोलें', 'id': 'Buka', 'zh': '开牌'},
+    'tus_tekrar': {'tr': 'Tekrar', 'en': 'Again', 'de': 'Nochmal', 'fr': 'Encore', 'es': 'Otra vez', 'ar': 'مرة أخرى', 'ru': 'Снова', 'pt': 'De novo', 'it': 'Ancora', 'hi': 'फिर', 'id': 'Lagi', 'zh': '再来'},
+    'tus_galeri': {'tr': 'Galeri', 'en': 'Gallery', 'de': 'Galerie', 'fr': 'Galerie', 'es': 'Galería', 'ar': 'المعرض', 'ru': 'Галерея', 'pt': 'Galeria', 'it': 'Galleria', 'hi': 'गैलरी', 'id': 'Galeri', 'zh': '相册'},
+    'tus_kamera': {'tr': 'Kamera', 'en': 'Camera', 'de': 'Kamera', 'fr': 'Caméra', 'es': 'Cámara', 'ar': 'الكamera', 'ru': 'Камера', 'pt': 'Câmera', 'it': 'Fotocamera', 'hi': 'कैमरा', 'id': 'Kamera', 'zh': '相机'},
+    'tus_yorumla': {'tr': 'Yorumla', 'en': 'Interpret', 'de': 'Deuten', 'fr': 'Interpréter', 'es': 'Interpretar', 'ar': 'فسّر', 'ru': 'Толковать', 'pt': 'Interpretar', 'it': 'Interpreta', 'hi': 'व्याख्या', 'id': 'Tafsirkan', 'zh': '解读'},
+    'tus_fal_bak': {'tr': 'Fala Bak', 'en': 'Read Fortune', 'de': 'Wahrsagen', 'fr': 'Lire', 'es': 'Leer fal', 'ar': 'اقرأ', 'ru': 'Гадать', 'pt': 'Ler', 'it': 'Leggi', 'hi': 'देखें', 'id': 'Baca', 'zh': '占卜'},
+    'tus_bekle': {'tr': 'Bekleyin', 'en': 'Please wait', 'de': 'Bitte warten', 'fr': 'Patientez', 'es': 'Espere', 'ar': 'انتظر', 'ru': 'Подождите', 'pt': 'Aguarde', 'it': 'Attendi', 'hi': 'प्रतीक्षा', 'id': 'Tunggu', 'zh': '请稍候'},
+    'tus_tamam': {'tr': 'Tamam', 'en': 'OK', 'de': 'OK', 'fr': 'OK', 'es': 'OK', 'ar': 'موافق', 'ru': 'ОК', 'pt': 'OK', 'it': 'OK', 'hi': 'ठीक', 'id': 'OK', 'zh': '确定'},
+    'nav_home': {'tr': 'Ana Sayfa', 'en': 'Home', 'de': 'Start', 'fr': 'Accueil', 'es': 'Inicio', 'ar': 'الرئيسية', 'ru': 'Главная', 'pt': 'Início', 'it': 'Home', 'hi': 'होम', 'id': 'Beranda', 'zh': '首页'},
+    'nav_history': {'tr': 'Geçmiş', 'en': 'History', 'de': 'Verlauf', 'fr': 'Historique', 'es': 'Historial', 'ar': 'السجل', 'ru': 'История', 'pt': 'Histórico', 'it': 'Cronologia', 'hi': 'इतिहास', 'id': 'Riwayat', 'zh': '历史'},
+    'nav_settings': {'tr': 'Ayarlar', 'en': 'Settings', 'de': 'Einstellungen', 'fr': 'Réglages', 'es': 'Ajustes', 'ar': 'الإعدادات', 'ru': 'Настройки', 'pt': 'Ajustes', 'it': 'Impostazioni', 'hi': 'सेटिंग', 'id': 'Pengaturan', 'zh': '设置'},
+    'settings_title': {'tr': 'Ayarlar', 'en': 'Settings', 'de': 'Einstellungen', 'fr': 'Réglages', 'es': 'Ajustes', 'ar': 'الإعدادات', 'ru': 'Настройки', 'pt': 'Ajustes', 'it': 'Impostazioni', 'hi': 'सेटिंग', 'id': 'Pengaturan', 'zh': '设置'},
+    'settings_lang': {'tr': 'Dil', 'en': 'Language', 'de': 'Sprache', 'fr': 'Langue', 'es': 'Idioma', 'ar': 'اللغة', 'ru': 'Язык', 'pt': 'Idioma', 'it': 'Lingua', 'hi': 'भाषा', 'id': 'Bahasa', 'zh': '语言'},
+    'settings_lang_hint': {'tr': 'Uygulama dili anında değişir', 'en': 'App language changes instantly', 'de': 'Sprache sofort ändern', 'fr': 'Langue instantanée', 'es': 'Cambio instantáneo', 'ar': 'تغيير فوري', 'ru': 'Мгновенная смена', 'pt': 'Mudança instantânea', 'it': 'Cambio immediato', 'hi': 'तुरंत बदलें', 'id': 'Langsung berubah', 'zh': '即时切换'},
+    'settings_profile': {'tr': 'Profil', 'en': 'Profile', 'de': 'Profil', 'fr': 'Profil', 'es': 'Perfil', 'ar': 'الملف', 'ru': 'Профиль', 'pt': 'Perfil', 'it': 'Profilo', 'hi': 'प्रोफ़ाइल', 'id': 'Profil', 'zh': '资料'},
+    'settings_profile_hint': {'tr': 'Adınız yorumlarda kullanılır', 'en': 'Name used in readings', 'de': 'Name in Deutungen', 'fr': 'Nom dans les lectures', 'es': 'Nombre en lecturas', 'ar': 'الاسم في القراءات', 'ru': 'Имя в толкованиях', 'pt': 'Nome nas leituras', 'it': 'Nome nelle letture', 'hi': 'नाम पढ़ाई में', 'id': 'Nama di bacaan', 'zh': '解读中显示姓名'},
+    'settings_name_hint': {'tr': 'İsteğe bağlı', 'en': 'Optional', 'de': 'Optional', 'fr': 'Optionnel', 'es': 'Opcional', 'ar': 'اختياري', 'ru': 'Необязательно', 'pt': 'Opcional', 'it': 'Opzionale', 'hi': 'वैकल्पिक', 'id': 'Opsional', 'zh': '可选'},
+    'settings_ai': {'tr': 'Gelişmiş — Yapay zeka', 'en': 'Advanced — AI', 'de': 'Erweitert — KI', 'fr': 'Avancé — IA', 'es': 'Avanzado — IA', 'ar': 'متقدم — ذكاء', 'ru': 'Дополнительно — ИИ', 'pt': 'Avançado — IA', 'it': 'Avanzate — IA', 'hi': 'उन्नत — AI', 'id': 'Lanjutan — AI', 'zh': '高级 — AI'},
+    'settings_ai_hint': {'tr': 'Boş bırakırsanız cihaz içi yorum kullanılır', 'en': 'Leave empty for on-device reading', 'de': 'Leer = Gerät', 'fr': 'Vide = appareil', 'es': 'Vacío = dispositivo', 'ar': 'فارغ = الجهاز', 'ru': 'Пусто = на устройстве', 'pt': 'Vazio = dispositivo', 'it': 'Vuoto = dispositivo', 'hi': 'खाली = डिवाइस', 'id': 'Kosong = perangkat', 'zh': '留空=本地'},
+    'settings_data': {'tr': 'Veri ve geçmiş', 'en': 'Data & history', 'de': 'Daten & Verlauf', 'fr': 'Données', 'es': 'Datos', 'ar': 'البيانات', 'ru': 'Данные', 'pt': 'Dados', 'it': 'Dati', 'hi': 'डेटा', 'id': 'Data', 'zh': '数据'},
+    'settings_save': {'tr': 'Ayarları kaydet', 'en': 'Save settings', 'de': 'Speichern', 'fr': 'Enregistrer', 'es': 'Guardar', 'ar': 'حفظ', 'ru': 'Сохранить', 'pt': 'Salvar', 'it': 'Salva', 'hi': 'सहेजें', 'id': 'Simpan', 'zh': '保存'},
+    'settings_clear': {'tr': 'Fal geçmişini temizle', 'en': 'Clear history', 'de': 'Verlauf löschen', 'fr': 'Effacer', 'es': 'Borrar historial', 'ar': 'مسح السجل', 'ru': 'Очişтить', 'pt': 'Limpar', 'it': 'Cancella', 'hi': 'साफ़ करें', 'id': 'Hapus riwayat', 'zh': '清除历史'},
+    'settings_saved': {'tr': 'Ayarlar kaydedildi', 'en': 'Settings saved', 'de': 'Gespeichert', 'fr': 'Enregistré', 'es': 'Guardado', 'ar': 'تم الحفظ', 'ru': 'Сохранено', 'pt': 'Salvo', 'it': 'Salvato', 'hi': 'सहेजा गया', 'id': 'Disimpan', 'zh': '已保存'},
+    'settings_cleared': {'tr': 'Fal geçmişi temizlendi', 'en': 'History cleared', 'de': 'Gelöscht', 'fr': 'Effacé', 'es': 'Borrado', 'ar': 'تم المسح', 'ru': 'Очищено', 'pt': 'Limpo', 'it': 'Cancellato', 'hi': 'साफ़', 'id': 'Dihapus', 'zh': '已清除'},
+    'settings_clear_fail': {'tr': 'Temizleme başarısız', 'en': 'Clear failed', 'de': 'Fehler', 'fr': 'Échec', 'es': 'Error', 'ar': 'فشل', 'ru': 'Ошибка', 'pt': 'Falhou', 'it': 'Errore', 'hi': 'विफल', 'id': 'Gagal', 'zh': '失败'},
+    'menu_fortunes': {'tr': '✦  Fallarınız  ✦', 'en': '✦  Your Fortunes  ✦', 'de': '✦  Ihre Fall  ✦', 'fr': '✦  Vos oracles  ✦', 'es': '✦  Tus lecturas  ✦', 'ar': '✦  قراءاتك  ✦', 'ru': '✦  Ваши гадания  ✦', 'pt': '✦  Suas leituras  ✦', 'it': '✦  I tuoi oracoli  ✦', 'hi': '✦  आपके फ़ाल  ✦', 'id': '✦  Ramalan Anda  ✦', 'zh': '✦  您的占卜  ✦'},
+    'menu_tarot': {'tr': 'Tarot Falı', 'en': 'Tarot Reading', 'de': 'Tarot', 'fr': 'Tarot', 'es': 'Tarot', 'ar': 'تاروت', 'ru': 'Таро', 'pt': 'Tarô', 'it': 'Tarocchi', 'hi': 'टैरो', 'id': 'Tarot', 'zh': '塔罗'},
+    'menu_tarot_desc': {'tr': '78 kartlık deste ile geleceğinizi görün', 'en': 'See your future with 78 cards', 'de': '78 Karten', 'fr': '78 cartes', 'es': '78 cartas', 'ar': '78 بطاقة', 'ru': '78 карт', 'pt': '78 cartas', 'it': '78 carte', 'hi': '78 कार्ड', 'id': '78 kartu', 'zh': '78张牌'},
+    'menu_kahve': {'tr': 'Kahve Falı', 'en': 'Coffee Reading', 'de': 'Kaffeesatz', 'fr': 'Café', 'es': 'Café', 'ar': 'فنجان', 'ru': 'Кофе', 'pt': 'Café', 'it': 'Caffè', 'hi': 'कॉफ़ी', 'id': 'Kopi', 'zh': '咖啡占卜'},
+    'menu_kahve_desc': {'tr': 'Fincanınızı fotoğraflayın, yorumlayalım', 'en': 'Photograph your cup', 'de': 'Tasse fotografieren', 'fr': 'Photographiez la tasse', 'es': 'Fotografía la taza', 'ar': 'صوّر الفنجان', 'ru': 'Сфотографируйте чашку', 'pt': 'Fotografe a xícara', 'it': 'Fotografa la tazza', 'hi': 'कप की फोटो', 'id': 'Foto cangkir', 'zh': '拍摄咖啡杯'},
+    'menu_astro': {'tr': 'Yıldız Falı', 'en': 'Astrology', 'de': 'Astrologie', 'fr': 'Astrologie', 'es': 'Astrología', 'ar': 'الأبراج', 'ru': 'Аstro', 'pt': 'Astrologia', 'it': 'Astrologia', 'hi': 'ज्योतिष', 'id': 'Astrologi', 'zh': '星座'},
+    'menu_astro_desc': {'tr': 'Burcunuza özel yorumlar', 'en': 'Sign-based readings', 'de': 'Nach Sternzeichen', 'fr': 'Par signe', 'es': 'Por signo', 'ar': 'حسب البرج', 'ru': 'По знаку', 'pt': 'Por signo', 'it': 'Per segno', 'hi': 'राशि अनुसार', 'id': 'Menurut zodiak', 'zh': '星座解读'},
+    'menu_el': {'tr': 'El Falı', 'en': 'Palm Reading', 'de': 'Handlesen', 'fr': 'Chiromancie', 'es': 'Quiromancia', 'ar': 'قراءة الكف', 'ru': 'Хиромантия', 'pt': 'Quiromancia', 'it': 'Chiromanzia', 'hi': 'हस्तरेखा', 'id': 'Palmistry', 'zh': '手相'},
+    'menu_el_desc': {'tr': 'Avuç içi çizgilerinizi okuyun', 'en': 'Read your palm lines', 'de': 'Handlinien', 'fr': 'Lignes de la main', 'es': 'Líneas de la mano', 'ar': 'خطوط الكف', 'ru': 'Линии ладони', 'pt': 'Linhas da mão', 'it': 'Linee del palmo', 'hi': 'हथेली की रेखाएँ', 'id': 'Garis telapak', 'zh': '掌纹解读'},
+    'menu_diger': {'tr': 'Diğer Fallar', 'en': 'More Readings', 'de': 'Weitere', 'fr': 'Autres', 'es': 'Más lecturas', 'ar': 'المزيد', 'ru': 'Другие', 'pt': 'Outros', 'it': 'Altri', 'hi': 'अन्य', 'id': 'Lainnya', 'zh': '更多'},
+    'menu_diger_desc': {'tr': 'İskambil, çiçek, nazar ve daha fazlası', 'en': 'Cards, flowers, evil eye & more', 'de': 'Karten, Blumen & mehr', 'fr': 'Cartes, fleurs & plus', 'es': 'Cartas, flores y más', 'ar': 'المزيد من الفال', 'ru': 'И многое другое', 'pt': 'Cartas, flores e mais', 'it': 'Carte, fiori e altro', 'hi': 'और भी', 'id': 'Dan lainnya', 'zh': '更多占卜'},
+    'hello': {'tr': 'Merhaba, {name}!', 'en': 'Hello, {name}!', 'de': 'Hallo, {name}!', 'fr': 'Bonjour, {name}!', 'es': 'Hola, {name}!', 'ar': 'مرحباً {name}!', 'ru': 'Привет, {name}!', 'pt': 'Olá, {name}!', 'it': 'Ciao, {name}!', 'hi': 'नमस्ते, {name}!', 'id': 'Halo, {name}!', 'zh': '你好，{name}！'},
+    'discover': {'tr': 'Geleceğinizi Keşfedin', 'en': 'Discover Your Future', 'de': 'Entdecken Sie Ihre Zukunft', 'fr': 'Découvrez votre avenir', 'es': 'Descubre tu futuro', 'ar': 'اكتشف مستقبلك', 'ru': 'Откройте будущее', 'pt': 'Descubra seu futuro', 'it': 'Scopri il futuro', 'hi': 'अपना भविष्य', 'id': 'Temukan masa depan', 'zh': '探索未来'},
+    'loading': {'tr': 'Yükleniyor...', 'en': 'Loading...', 'de': 'Laden...', 'fr': 'Chargement...', 'es': 'Cargando...', 'ar': 'جاري التحميل...', 'ru': 'Загрузка...', 'pt': 'Carregando...', 'it': 'Caricamento...', 'hi': 'लोड हो रहा...', 'id': 'Memuat...', 'zh': '加载中...'},
+    'history_title': {'tr': 'Fal Geçmişi', 'en': 'Reading History', 'de': 'Verlauf', 'fr': 'Historique', 'es': 'Historial', 'ar': 'السجل', 'ru': 'История', 'pt': 'Histórico', 'it': 'Cronologia', 'hi': 'इतिहास', 'id': 'Riwayat', 'zh': '历史'},
+    'history_empty': {'tr': 'Henüz kayıtlı fal yok.\nBir fal baktır, burada görünsün.', 'en': 'No readings yet.\nGet a reading to see it here.', 'de': 'Noch keine Einträge.', 'fr': 'Aucune lecture.', 'es': 'Sin lecturas aún.', 'ar': 'لا قراءات بعد.', 'ru': 'Пока пусто.', 'pt': 'Sem leituras.', 'it': 'Nessuna lettura.', 'hi': 'अभी खाली.', 'id': 'Belum ada.', 'zh': '暂无记录。'},
+    'daily_fal': {'tr': 'Günlük Fal', 'en': 'Daily Reading', 'de': 'Tagesorakel', 'fr': 'Oracle du jour', 'es': 'Lectura diaria', 'ar': 'قراءة اليوم', 'ru': 'На сегодня', 'pt': 'Leitura diária', 'it': 'Del giorno', 'hi': 'दैनिक', 'id': 'Harian', 'zh': '每日占卜'},
+    'luck': {'tr': 'Şans', 'en': 'Luck', 'de': 'Glück', 'fr': 'Chance', 'es': 'Suerte', 'ar': 'حظ', 'ru': 'Удача', 'pt': 'Sorte', 'it': 'Fortuna', 'hi': 'भाग्य', 'id': 'Keberuntungan', 'zh': '幸运'},
+    'cam_denied': {'tr': 'Kamera izni kapalı. Ayarlar > Uygulamalar > FalımaBak > İzinler', 'en': 'Camera permission denied. Enable in Settings > Apps > FalımaBak', 'de': 'Kamera verweigert.', 'fr': 'Caméra refusée.', 'es': 'Permiso denegado.', 'ar': 'تم رفض الكamera.', 'ru': 'Нет доступа к камере.', 'pt': 'Permissão negada.', 'it': 'Permesso negato.', 'hi': 'अनुमति नहीं.', 'id': 'Izin ditolak.', 'zh': '相机权限被拒绝。'},
+    'cam_fail': {'tr': 'Kamera hatası. Galeriden seçmeyi deneyin.', 'en': 'Camera error. Try gallery.', 'de': 'Kamerafehler.', 'fr': 'Erreur caméra.', 'es': 'Error de cámara.', 'ar': 'خطأ في الكamera.', 'ru': 'Ошибка камеры.', 'pt': 'Erro na câmera.', 'it': 'Errore fotocamera.', 'hi': 'कैमरा त्रुटि.', 'id': 'Error kamera.', 'zh': '相机错误。'},
+    'cam_no_app': {'tr': 'Kamera uygulaması bulunamadı', 'en': 'No camera app found', 'de': 'Keine Kamera-App', 'fr': 'Pas d\'appareil photo', 'es': 'Sin app de cámara', 'ar': 'لا تطبيق كamera', 'ru': 'Нет приложения', 'pt': 'Sem app', 'it': 'Nessuna app', 'hi': 'ऐप नहीं', 'id': 'Tidak ada app', 'zh': '无相机应用'},
+    'cam_cancel': {'tr': 'Fotoğraf çekilmedi', 'en': 'Photo not taken', 'de': 'Kein Foto', 'fr': 'Photo annulée', 'es': 'Sin foto', 'ar': 'لم تُلتقط', 'ru': 'Не снято', 'pt': 'Não capturada', 'it': 'Non scattata', 'hi': 'नहीं ली', 'id': 'Tidak diambil', 'zh': '未拍摄'},
+    'foto_el_yok': {'tr': '{baslik} fotoğrafında el görünmüyor. Avuç içi veya el dışını net çekin.', 'en': 'No hand visible in {baslik}. Photograph your palm clearly.', 'de': 'Keine Hand in {baslik}.', 'fr': 'Pas de main visible.', 'es': 'No se ve la mano.', 'ar': 'اليد غير ظاهرة.', 'ru': 'Рука не видна.', 'pt': 'Mão não visível.', 'it': 'Mano non visibile.', 'hi': 'हाथ नहीं दिख रहा.', 'id': 'Tangan tidak terlihat.', 'zh': '未检测到手掌。'},
+    'foto_kahve_yok': {'tr': '{baslik} fotoğrafında kahve fincanı görünmüyor. Fincanı yakından çekin.', 'en': 'No coffee cup in {baslik}. Photograph the cup closely.', 'de': 'Keine Tasse.', 'fr': 'Pas de tasse.', 'es': 'Sin taza.', 'ar': 'لا فنجان.', 'ru': 'Чашка не видна.', 'pt': 'Sem xícara.', 'it': 'Nessuna tazza.', 'hi': 'कप नहीं दिख रहा.', 'id': 'Cangkir tidak terlihat.', 'zh': '未检测到咖啡杯。'},
+    'premium_tag': {'tr': 'Premium', 'en': 'Premium', 'de': 'Premium', 'fr': 'Premium', 'es': 'Premium', 'ar': 'Premium', 'ru': 'Premium', 'pt': 'Premium', 'it': 'Premium', 'hi': 'Premium', 'id': 'Premium', 'zh': 'Premium'},
+}
+
+
+def t(anahtar, **kwargs):
+    lang = _dil_al()
+    sozluk = _METINLER.get(anahtar, {})
+    metin = sozluk.get(lang) or sozluk.get('en') or sozluk.get('tr') or anahtar
+    if kwargs:
+        try:
+            metin = metin.format(**kwargs)
+        except Exception:
+            pass
+    return metin
+
+
+def dil_listesi():
+    return list(DESTEKLENEN.items())
+
+
+def dil_etiket(kod):
+    return DESTEKLENEN.get(kod, kod)
+
+
+def dil_degistir(kod):
+    if kod in DESTEKLENEN:
+        dil_kaydet(kod)

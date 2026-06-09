@@ -21,7 +21,7 @@ from kivy.metrics import dp
 import random
 
 from theme import (
-    RENKLER, TUS, YORUM_BEKLE, fontlari_yukle, metin_label,
+    RENKLER, tus_metin, yorum_bekle_metin, fontlari_yukle, metin_label,
     tus_buton, baslik_satir, buton_metin_guncelle,
     kaydirici_metin, FotoKutucukPanel, yorum_bekle_markup, foto_fal_sonuc,
 )
@@ -324,12 +324,12 @@ class ElFaliScreen(Screen):
 
         self.sonuc_label.markup = True
         self.sonuc_label.text = yorum_bekle_markup()
-        buton_metin_guncelle(self.fal_bak_btn, YORUM_BEKLE)
+        buton_metin_guncelle(self.fal_bak_btn, yorum_bekle_metin())
         self.fal_bak_btn.disabled = True
 
         def _ai_bitir(metin, ai_kullanildi, hata, kaynak=None, fotograf=False):
             self.sonuc_label.text = foto_fal_sonuc(metin, hata)
-            buton_metin_guncelle(self.fal_bak_btn, TUS['tekrar'])
+            buton_metin_guncelle(self.fal_bak_btn, tus_metin('tekrar'))
             self.fal_bak_btn.disabled = False
 
         foto_veri = self.foto_panel.tum_veri()

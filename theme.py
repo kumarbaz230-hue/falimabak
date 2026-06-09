@@ -108,10 +108,25 @@ TUS_IKON = {
     'tamam':     '✅',
 }
 
-# Yorum markası — "AI" yerine FalımaBak
+# Yorum markası — dil destekli
 YORUM_BEKLE = 'FalımaBak yorumluyor...'
 YORUM_BASLIK = 'FalımaBak Yorumluyor'
 YORUM_EK = 'FalımaBak Önerisi'
+
+
+def tus_metin(k):
+    from dil import t
+    return t(f'tus_{k}')
+
+
+def yorum_bekle_metin():
+    from dil import t
+    return t('yorum_bekle')
+
+
+def yorum_baslik_metin():
+    from dil import t
+    return t('yorum_baslik')
 
 FAL_IKONLARI = {
     'tarot':     '🔮',
@@ -584,11 +599,11 @@ def emoji_temizle(metin):
 
 def yorum_baslik(ai_kullanildi=True, kaynak=None, fotograf=False):
     """Kullanıcıya her zaman aynı marka — AI/bulut/hazır ayrımı yok."""
-    return YORUM_BASLIK
+    return yorum_baslik_metin()
 
 
 def yorum_bekle_markup():
-    return f"[color={RENKLER['altin_yumusak']}]{YORUM_BEKLE}[/color]"
+    return f"[color={RENKLER['altin_yumusak']}]{yorum_bekle_metin()}[/color]"
 
 
 def yorum_durum_notu(hata=None, ai_kullanildi=True):
@@ -613,7 +628,7 @@ def foto_fal_sonuc(metin, hata=None):
         return f"[color={RENKLER['kirmizi']}]{emoji_temizle(hata)}[/color]"
     govde = emoji_temizle(metin or '')
     return (
-        f"[b][color={RENKLER['altin']}]» {YORUM_BASLIK}[/color][/b]\n\n"
+        f"[b][color={RENKLER['altin']}]» {yorum_baslik_metin()}[/color][/b]\n\n"
         f"[color={RENKLER['pembe_acik']}]{govde}[/color]"
     )
 
@@ -1003,7 +1018,7 @@ class YukleniyorAnimasyon(Label):
     def __init__(self, **kwargs):
         fontlari_yukle()
         super().__init__(
-            text=YORUM_BEKLE,
+            text=yorum_bekle_metin(),
             font_name=FON_ADI,
             font_size='14sp',
             bold=True,
@@ -1116,9 +1131,10 @@ def alt_nav_bar(aktif='anasayfa', on_sec=None):
     nav.bind(pos=_nav_ciz, size=_nav_ciz)
     Clock.schedule_once(lambda *_: _nav_ciz(), 0)
 
-    nav.add_widget(NavBtn('Ana Sayfa', 'anasayfa', secili=aktif == 'anasayfa', ikon='🏠'))
-    nav.add_widget(NavBtn('Geçmiş', 'gecmis', secili=aktif == 'gecmis', ikon='📜'))
-    nav.add_widget(NavBtn('Ayarlar', 'ayarlar', secili=aktif == 'ayarlar', ikon='⚙️'))
+    from dil import t
+    nav.add_widget(NavBtn(t('nav_home'), 'anasayfa', secili=aktif == 'anasayfa', ikon='🏠'))
+    nav.add_widget(NavBtn(t('nav_history'), 'gecmis', secili=aktif == 'gecmis', ikon='📜'))
+    nav.add_widget(NavBtn(t('nav_settings'), 'ayarlar', secili=aktif == 'ayarlar', ikon='⚙️'))
     return nav
 
 

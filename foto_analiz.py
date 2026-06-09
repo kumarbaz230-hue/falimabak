@@ -182,10 +182,8 @@ def _el_slot_gecerli(ozellik, baslik):
         return False, f'"{baslik}" okunamadı. Lütfen tekrar yükleyin.'
 
     if not _el_gorunuyor_mu(ozellik):
-        return False, (
-            f'"{baslik}" fotoğrafında el görünmüyor. '
-            'Avuç içi veya el dışını net, yakından çekip tekrar deneyin.'
-        )
+        from dil import t
+        return False, t('foto_el_yok', baslik=baslik)
     return True, dict(ozellik, _baslik=baslik)
 
 
@@ -195,17 +193,8 @@ def _kahve_slot_gecerli(ozellik, baslik):
 
     tabak_mi = 'tabak' in (baslik or '').lower()
     if not _fincan_gorunuyor_mu(ozellik, tabak_mi=tabak_mi):
-        if tabak_mi:
-            mesaj = (
-                f'"{baslik}" fotoğrafında kahve tabağı veya telve görünmüyor. '
-                'Fincanı tabağa ters çevirip tabağı net çekin.'
-            )
-        else:
-            mesaj = (
-                f'"{baslik}" fotoğrafında kahve fincanı görünmüyor. '
-                'Fincanın içindeki telveyi veya fincanı yakından çekin.'
-            )
-        return False, mesaj
+        from dil import t
+        return False, t('foto_kahve_yok', baslik=baslik)
     return True, dict(ozellik, _baslik=baslik)
 
 

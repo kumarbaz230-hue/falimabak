@@ -17,7 +17,7 @@ import random
 from datetime import date
 
 from ai_yorum import yorum_al
-from theme import TUS, YORUM_BEKLE, tus_buton, baslik_satir, buton_metin_guncelle, yorum_sonuc_metni
+from theme import tus_metin, yorum_bekle_metin, tus_buton, baslik_satir, buton_metin_guncelle, yorum_sonuc_metni
 
 RENKLER = {
     'arka_plan': '#0d0221',
@@ -381,14 +381,14 @@ class AstrolojiScreen(Screen):
             self.yorum_label.markup = True
             self.yorum_label.text = yorum
             self._son_astro_yorum = yorum
-            buton_metin_guncelle(self.fal_buton, YORUM_BEKLE)
+            buton_metin_guncelle(self.fal_buton, yorum_bekle_metin())
             self.fal_buton.disabled = True
 
             def _ai_bitir(metin, ai_kullanildi, hata, kaynak=None, fotograf=False):
                 self.yorum_label.text = yorum_sonuc_metni(
                     self._son_astro_yorum, metin, ai_kullanildi, hata, kaynak, fotograf,
                 )
-                buton_metin_guncelle(self.fal_buton, TUS['tekrar'])
+                buton_metin_guncelle(self.fal_buton, tus_metin('tekrar'))
                 self.fal_buton.disabled = False
 
             yorum_al('astroloji', {

@@ -24,7 +24,7 @@ import re
 import unicodedata
 
 from theme import (
-    RENKLER, FON_ADI, TUS, fontlari_yukle, metin_label, gradient_arka_plan_ekle, ASSETS_DIR,
+    RENKLER, FON_ADI, tus_metin, fontlari_yukle, metin_label, gradient_arka_plan_ekle, ASSETS_DIR,
     tus_buton, baslik_satir, buton_metin_guncelle, yorum_bekle_markup, yorum_sonuc_metni,
 )
 from ai_yorum import yorum_al
@@ -303,7 +303,7 @@ class TarotScreen(Screen):
     def fal_ac(self, instance):
         if self._calisiyor: return
         self._calisiyor = True
-        buton_metin_guncelle(self.fal_btn, TUS['bekle']); self.fal_btn.disabled = True
+        buton_metin_guncelle(self.fal_btn, tus_metin('bekle')); self.fal_btn.disabled = True
         cache_temizle()
 
         sec = random.sample(TUM_KARTLAR, self.kart_adet)
@@ -314,7 +314,7 @@ class TarotScreen(Screen):
         self._yorumu_goster()
         self._ai_tarot_yorum()
 
-        buton_metin_guncelle(self.fal_btn, TUS['tekrar']); self.fal_btn.disabled = False
+        buton_metin_guncelle(self.fal_btn, tus_metin('tekrar')); self.fal_btn.disabled = False
         self._calisiyor = False
 
     def _kartlari_goster(self):

@@ -15,7 +15,7 @@ from kivy.metrics import dp
 import random
 
 from theme import (
-    RENKLER, TUS, YORUM_BEKLE, fontlari_yukle, metin_label,
+    RENKLER, tus_metin, yorum_bekle_metin, fontlari_yukle, metin_label,
     tus_buton, baslik_satir, buton_metin_guncelle,
     kaydirici_metin, FotoKutucukPanel, yorum_bekle_markup, foto_fal_sonuc,
 )
@@ -279,12 +279,12 @@ class KahveScreen(Screen):
         self.sekiller_label.text = ''
         self.yorum_label.markup = True
         self.yorum_label.text = yorum_bekle_markup()
-        buton_metin_guncelle(self.fal_buton, YORUM_BEKLE)
+        buton_metin_guncelle(self.fal_buton, yorum_bekle_metin())
         self.fal_buton.disabled = True
 
         def _ai_bitir(metin, ai_kullanildi, hata, kaynak=None, fotograf=False):
             self.yorum_label.text = foto_fal_sonuc(metin, hata)
-            buton_metin_guncelle(self.fal_buton, TUS['tekrar'])
+            buton_metin_guncelle(self.fal_buton, tus_metin('tekrar'))
             self.fal_buton.disabled = False
 
         foto_veri = self.foto_panel.tum_veri()

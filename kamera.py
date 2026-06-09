@@ -1,6 +1,6 @@
 """
 FalımaBak - Fotoğraf seçme / kamera (Windows + Android).
-Android'de sistem kamera uygulaması (Intent) kullanılır — plyer çoğu cihazda çalışmaz.
+Android: sistem kamerası + FileProvider; izin sonrası ana thread gecikmesi.
 """
 
 import os
@@ -35,8 +35,8 @@ def _foto_dir():
     return _DEFAULT_FOTO_DIR
 
 
-def _ana_thread(fn):
-    Clock.schedule_once(lambda *_: fn(), 0)
+def _ana_thread(fn, gecikme=0):
+    Clock.schedule_once(lambda *_: fn(), gecikme)
 
 
 def _android_mi():
@@ -47,25 +47,47 @@ def _android_mi():
     )
 
 
+def _dil(k):
+    try:
+        from dil import t
+        return t(k)
+    except Exception:
+        return k
+
+
 def kamera_izni_iste(callback):
-    """Android runtime kamera izni."""
+    """Android runtime kamera izni — callback her zaman ana thread'de."""
     if not _android_mi():
-        callback(True)
+        _ana_thread(lambda: callback(True))
         return
     try:
         from android.permissions import request_permissions, Permission, check_permission
 
         if check_permission(Permission.CAMERA):
-            callback(True)
+            _ana_thread(lambda: callback(True), 0.05)
             return
 
         def _sonuc(permissions, grants):
-            callback(bool(grants and grants[0]))
+            def _bitir(*_):
+                ok = False
+                try:
+                    if grants is not None and len(grants) > 0:
+                        ok = all(bool(g) for g in grants)
+                    if not ok:
+                        ok = check_permission(Permission.CAMERA)
+                except Exception:
+                    try:
+                        ok = check_permission(Permission.CAMERA)
+                    except Exception:
+                        ok = False
+                callback(ok)
+
+            _ana_thread(_bitir, 0.25)
 
         request_permissions([Permission.CAMERA], _sonuc)
     except Exception as e:
         print(f'Kamera izni: {e}', flush=True)
-        callback(True)
+        _ana_thread(lambda: callback(False))
 
 
 def _activity_bagla():
@@ -104,7 +126,7 @@ def _on_activity_result(request_code, result_code, intent):
         from jnius import autoclass
         Activity = autoclass('android.app.Activity')
         if result_code != Activity.RESULT_OK:
-            _ana_thread(lambda: cb(None, 'Fotoğraf çekilmedi'))
+            _ana_thread(lambda: cb(None, _dil('cam_cancel')))
             return
 
         if yol and os.path.isfile(yol) and os.path.getsize(yol) > 0:
@@ -132,22 +154,21 @@ def _on_activity_result(request_code, result_code, intent):
                     except Exception as e:
                         print(f'Kamera bitmap kayıt: {e}', flush=True)
 
-        _ana_thread(lambda: cb(None, 'Kamera fotoğrafı alınamadı. Galeriden seçmeyi deneyin.'))
+        _ana_thread(lambda: cb(None, _dil('cam_fail')))
     except Exception:
         print(traceback.format_exc(), flush=True)
-        _ana_thread(lambda: cb(None, 'Kamera hatası'))
+        _ana_thread(lambda: cb(None, _dil('cam_fail')))
+
+
+def kamera_hazirla():
+    """Açılışta yalnızca activity callback bağla — izin diyaloğu burada açılmaz."""
+    if _android_mi():
+        _activity_bagla()
 
 
 def uygulama_izinlerini_iste():
-    """Açılışta kamera iznini önceden iste ve activity callback bağla."""
-    if not _android_mi():
-        return
-    _activity_bagla()
-
-    def _cb(ok):
-        print(f'Kamera izni: {"verildi" if ok else "reddedildi"}', flush=True)
-
-    kamera_izni_iste(_cb)
+    """Geriye uyumluluk."""
+    kamera_hazirla()
 
 
 def _kopyala(kaynak):
@@ -253,13 +274,12 @@ def _galeri_masaustu(callback):
 
 def galeriden_sec(callback):
     if _android_mi():
-        Clock.schedule_once(lambda *_: _galeri_plyer(callback), 0)
+        _ana_thread(lambda: _galeri_plyer(callback), 0.05)
     else:
         _galeri_masaustu(callback)
 
 
-def _kamera_android_intent(callback):
-    """Sistem kamera uygulamasını aç (Android Intent)."""
+def _intent_kamera_ac(callback):
     global _kamera_callback, _kamera_hedef
     _activity_bagla()
     _kamera_callback = callback
@@ -268,6 +288,8 @@ def _kamera_android_intent(callback):
         Intent = autoclass('android.content.Intent')
         MediaStore = autoclass('android.provider.MediaStore')
         PythonActivity = autoclass('org.kivy.android.PythonActivity')
+        File = autoclass('java.io.File')
+        FileProvider = autoclass('androidx.core.content.FileProvider')
         activity = PythonActivity.mActivity
 
         klasor = _foto_dir()
@@ -277,29 +299,36 @@ def _kamera_android_intent(callback):
             f'cam_{datetime.now().strftime("%Y%m%d_%H%M%S")}.jpg',
         )
 
-        intent = Intent(MediaStore.ACTION_IMAGE_CAPTURE)
+        photo_file = File(_kamera_hedef)
+        parent = photo_file.getParentFile()
+        if parent is not None:
+            parent.mkdirs()
 
-        try:
-            File = autoclass('java.io.File')
-            FileProvider = autoclass('androidx.core.content.FileProvider')
-            pkg = activity.getPackageName()
-            photo_file = File(_kamera_hedef)
-            parent = photo_file.getParentFile()
-            if parent is not None:
-                parent.mkdirs()
-            uri = FileProvider.getUriForFile(activity, pkg + '.fileprovider', photo_file)
-            intent.putExtra(MediaStore.EXTRA_OUTPUT, uri)
-            intent.addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
-            intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-        except Exception as e:
-            print(f'FileProvider atlandı (thumbnail modu): {e}', flush=True)
+        intent = Intent(MediaStore.ACTION_IMAGE_CAPTURE)
+        pkg = activity.getPackageName()
+        authority = pkg + '.fileprovider'
+        uri = FileProvider.getUriForFile(activity, authority, photo_file)
+
+        intent.putExtra(MediaStore.EXTRA_OUTPUT, uri)
+        intent.addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
+        intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
 
         pm = activity.getPackageManager()
-        if intent.resolveActivity(pm) is None:
+        PackageManager = autoclass('android.content.pm.PackageManager')
+        resolve_list = pm.queryIntentActivities(intent, PackageManager.MATCH_DEFAULT_ONLY)
+        if resolve_list is None or resolve_list.size() == 0:
             _kamera_callback = None
             _kamera_hedef = None
-            _ana_thread(lambda: callback(None, 'Bu cihazda kamera uygulaması bulunamadı'))
+            _ana_thread(lambda: callback(None, _dil('cam_no_app')))
             return
+
+        for i in range(resolve_list.size()):
+            ri = resolve_list.get(i)
+            pkg_name = ri.activityInfo.packageName
+            activity.grantUriPermission(
+                pkg_name, uri,
+                Intent.FLAG_GRANT_WRITE_URI_PERMISSION | Intent.FLAG_GRANT_READ_URI_PERMISSION,
+            )
 
         activity.startActivityForResult(intent, _KAMERA_ISTEK)
     except Exception as e:
@@ -308,6 +337,10 @@ def _kamera_android_intent(callback):
         _kamera_callback = None
         _kamera_hedef = None
         _kamera_plyer(callback)
+
+
+def _kamera_android_intent(callback):
+    _ana_thread(lambda: _intent_kamera_ac(callback), 0.15)
 
 
 def _kamera_plyer(callback):
@@ -327,14 +360,14 @@ def _kamera_plyer(callback):
                 if ok and os.path.isfile(yol) and os.path.getsize(yol) > 0:
                     _ana_thread(lambda: callback(os.path.normpath(yol), None))
                 else:
-                    _ana_thread(lambda: callback(None, 'Fotoğraf çekilmedi'))
+                    _ana_thread(lambda: callback(None, _dil('cam_cancel')))
             except Exception:
-                _ana_thread(lambda: callback(None, 'Kamera hatası'))
+                _ana_thread(lambda: callback(None, _dil('cam_fail')))
 
         camera.take_picture(filename=yol, on_complete=_bitti)
     except Exception as e:
         print(f'Kamera plyer: {e}', flush=True)
-        _ana_thread(lambda: callback(None, 'Kamera açılamadı. Galeriden seçmeyi deneyin.'))
+        _ana_thread(lambda: callback(None, _dil('cam_fail')))
 
 
 def _kamera_masaustu(callback):
@@ -382,12 +415,9 @@ def kameradan_cek(callback):
     if _android_mi():
         def _izinli(ok):
             if ok:
-                Clock.schedule_once(lambda *_: _kamera_android_intent(callback), 0)
+                _kamera_android_intent(callback)
             else:
-                _ana_thread(lambda: callback(
-                    None,
-                    'Kamera izni kapalı. Telefon Ayarları > Uygulamalar > FalımaBak > İzinler',
-                ))
+                _ana_thread(lambda: callback(None, _dil('cam_denied')))
 
         kamera_izni_iste(_izinli)
     else:

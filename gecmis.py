@@ -86,6 +86,17 @@ def kullanici_ismi():
     return _yukle().get('isim', '')
 
 
+def dil_al():
+    kod = _yukle().get('dil', 'tr')
+    return kod if kod else 'tr'
+
+
+def dil_kaydet(kod='tr'):
+    veri = _yukle()
+    veri['dil'] = (kod or 'tr').strip() or 'tr'
+    _kaydet(veri)
+
+
 def isim_guncelle(isim=''):
     veri = _yukle()
     isim = (isim or '').strip()
