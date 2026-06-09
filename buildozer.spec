@@ -10,9 +10,9 @@ source.main = main.py
 source.include_exts = py,png,jpg,jpeg,kv,json,webp,ttf,txt,html,wav,ogg,mp3
 source.include_patterns = assets/*,assets/muzik/*,config.ornek.json,store/*
 source.exclude_dirs = tests,bin,.git,__pycache__,.buildozer,.venv,venv,env,.idea,user_photos,.github,recipes,tools,images,keystore
-source.exclude_patterns = license,images/*/*.jpg,*.bat,config.json,kullanici_veri.json,.env,secrets.json,secrets.ornek.json
+source.exclude_patterns = license,images/*/*.jpg,*.bat,config.json,kullanici_veri.json,.env,secrets.json,secrets.ornek.json,assets/muzik/ambiyans.wav
 
-version = 1.2.3
+version = 1.2.4
 
 icon.filename = %(source.dir)s/assets/app_icon.png
 presplash.filename = %(source.dir)s/assets/splash_banner.png
@@ -35,6 +35,9 @@ android.allow_backup = True
 android.enable_androidx = True
 
 android.gradle_dependencies = androidx.appcompat:appcompat:1.6.1,com.google.android.gms:play-services-ads:22.6.0
+
+# Gradle bellek (CI packageDebug OOM önleme)
+android.gradle_arguments = -Dorg.gradle.jvmargs=-Xmx4096m,-Dorg.gradle.daemon=false,-Dorg.gradle.parallel=false,-Dorg.gradle.workers.max=2
 
 # Test AdMob App ID — yayın öncesi secrets.json + bu satırı gerçek ID ile güncelle
 android.meta_data = com.google.android.gms.ads.APPLICATION_ID=ca-app-pub-9430596197237392~1799758284
