@@ -80,7 +80,7 @@ class AyarlarScreen(Screen):
 
         ana.add_widget(BoxLayout(size_hint_y=1))
         ana.add_widget(metin_label(
-            'FalımaBak v1.0.5 · Bulut AI',
+            'FalımaBak v1.0.7 · Bulut AI',
             font_size='10sp', color=RENKLER['gri_koyu'],
             halign='center', size_hint_y=None, height=dp(18),
         ))

@@ -251,7 +251,11 @@ class SplashScreen(Screen):
         root = FloatLayout()
 
         ikon_yol = asset_yolu('app_icon.png')
-        if _ANDROID and os.path.isfile(ikon_yol):
+        if _ANDROID:
+            self.logo = emoji_label('◆', font_size='72sp',
+                pos_hint={'center_x': 0.5, 'center_y': 0.58}, size_hint=(None, None),
+                size=(dp(100), dp(100)))
+        elif os.path.isfile(ikon_yol):
             self.logo = Image(
                 source=ikon_yol,
                 pos_hint={'center_x': 0.5, 'center_y': 0.58},
@@ -285,21 +289,27 @@ class SplashScreen(Screen):
         root.add_widget(self.yukleniyor)
         self.add_widget(root)
 
-        # font_size string animasyonu Kivy'de çöker — boyut nabzı kullan
-        boyut = dp(100)
-        self.logo.size = (boyut, boyut)
-        anim_logo = (
-            Animation(size=(boyut * 1.1, boyut * 1.1), opacity=0.85, duration=1.0, t='in_out_sine')
-            + Animation(size=(boyut, boyut), opacity=1.0, duration=1.0, t='in_out_sine')
-        )
-        anim_logo.repeat = True
-        self._anim_logo = anim_logo
-        anim_logo.start(self.logo)
-
-        anim_txt = Animation(opacity=0.35, duration=0.6) + Animation(opacity=1, duration=0.6)
-        anim_txt.repeat = True
-        self._anim_txt = anim_txt
-        anim_txt.start(self.yukleniyor)
+        # Android'de Image/Label animasyonu native crash yapabiliyor — statik splash
+        if not _ANDROID:
+            boyut = dp(100)
+            self.logo.size = (boyut, boyut)
+            anim_logo = (
+                Animation(size=(boyut * 1.1, boyut * 1.1), opacity=0.85, duration=1.0, t='in_out_sine')
+                + Animation(size=(boyut, boyut), opacity=1.0, duration=1.0, t='in_out_sine')
+            )
+            anim_logo.repeat = True
+            self._anim_logo = anim_logo
+            anim_logo.start(self.logo)
+            anim_txt = Animation(opacity=0.35, duration=0.6) + Animation(opacity=1, duration=0.6)
+            anim_txt.repeat = True
+            self._anim_txt = anim_txt
+            anim_txt.start(self.yukleniyor)
+        else:
+            self._anim_logo = None
+            self._anim_txt = None
+            if hasattr(self.logo, 'size'):
+                s = dp(100)
+                self.logo.size = (s, s)
 
         Clock.schedule_once(self._gec, 2.2)
 
@@ -554,22 +564,24 @@ class FalimaBakApp(App):
             from elfali import ElFaliScreen
             from ayarlar import AyarlarScreen
 
-            for w in (
-                OnboardingScreen(name='onboarding'),
-                Anasayfa(name='anasayfa'),
-                GecmisScreen(name='gecmis'),
-                AyarlarScreen(name='ayarlar'),
-                TarotScreen(name='tarot'),
-                KahveScreen(name='kahve'),
-                AstrolojiScreen(name='astroloji'),
-                DigerFallarScreen(name='diger_fallar'),
-                ElFaliScreen(name='elfali'),
-            ):
-                sm.add_widget(w)
+            ekranlar = [
+                ('onboarding', lambda: OnboardingScreen(name='onboarding')),
+                ('anasayfa', lambda: Anasayfa(name='anasayfa')),
+                ('gecmis', lambda: GecmisScreen(name='gecmis')),
+                ('ayarlar', lambda: AyarlarScreen(name='ayarlar')),
+                ('tarot', lambda: TarotScreen(name='tarot')),
+                ('kahve', lambda: KahveScreen(name='kahve')),
+                ('astroloji', lambda: AstrolojiScreen(name='astroloji')),
+                ('diger_fallar', lambda: DigerFallarScreen(name='diger_fallar')),
+                ('elfali', lambda: ElFaliScreen(name='elfali')),
+            ]
+            for _, fab in ekranlar:
+                sm.add_widget(fab())
         except Exception:
             err = traceback.format_exc()
             print(err, flush=True)
-            sm.add_widget(HataScreen(mesaj=err, name='hata'))
+            if 'hata' not in sm.screen_names:
+                sm.add_widget(HataScreen(mesaj=err, name='hata'))
             sm.current = 'hata'
 
 
