@@ -62,19 +62,16 @@ def _reklam_ayar():
 
     if not _gecerli(app_id):
         app_id = TestIds.APP
+    if not _gecerli(banner_id):
+        banner_id = TestIds.BANNER
+    if not _gecerli(inter_id):
+        inter_id = TestIds.INTERSTITIAL
 
-    if not test_mod and _gecerli(banner_id) and _gecerli(inter_id):
-        return {
-            'test_mod': False,
-            'app_id': app_id,
-            'banner_id': banner_id,
-            'interstitial_id': inter_id,
-        }
     return {
-        'test_mod': True,
+        'test_mod': banner_id == TestIds.BANNER or inter_id == TestIds.INTERSTITIAL,
         'app_id': app_id,
-        'banner_id': TestIds.BANNER,
-        'interstitial_id': TestIds.INTERSTITIAL,
+        'banner_id': banner_id,
+        'interstitial_id': inter_id,
     }
 
 

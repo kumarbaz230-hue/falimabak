@@ -9,8 +9,8 @@
   "ollama_model": "llama3.1:8b",
   "ollama_masaustu": true,
 
-  "admob_test_mod": true,
-  "admob_app_id": "ca-app-pub-9430596197237392~1799758284",
-  "admob_banner_id": "ca-app-pub-XXXXXXXXXXXXXXXX/BBBBBBBBBB",
+  "admob_test_mod": false,
+  "admob_app_id": "ca-app-pub-9438596197237392~1799753284",
+  "admob_banner_id": "ca-app-pub-9438596197237392/2682788969",
   "admob_interstitial_id": "ca-app-pub-XXXXXXXXXXXXXXXX/IIIIIIIIII"
 }
