@@ -173,6 +173,7 @@ EMOJI_YEDEK = {
     '🔮': '◆', '📸': '◎', '✦': '✦', '🃏': '♠', '🔁': '↻', '🖼': '▣',
     '📷': '◎', '☕': '♨', '⏳': '…', '✅': '✓', '🌟': '★', '✋': '✋',
     '✨': '✦', '🏠': '⌂', '📜': '≡', '⚙️': '⚙', '⚙': '⚙',
+    '✦': '*',
 }
 
 FON_ADI = 'AppFont'
@@ -308,7 +309,7 @@ def menu_ikon_resmi(anahtar, renk_hex=None, font_size='26sp', **kwargs):
     yol = asset_yolu(dosya) if dosya else ''
     if yol and os.path.isfile(yol):
         defaults = {
-            'allow_stretch': True,
+            'allow_stretch': False,
             'keep_ratio': True,
             'size_hint': (None, None),
             'size': (dp(44), dp(44)),
@@ -1068,31 +1069,41 @@ def alt_nav_bar(aktif='anasayfa', on_sec=None):
             self.size_hint_x = 1 / 3
             self.size_hint_y = None
             self.height = dp(54)
-            self.padding = [0, dp(4), 0, dp(4)]
+            self.padding = [0, dp(4), 0, dp(2)]
+            self.spacing = dp(2)
             renk = RENKLER['altin'] if secili else RENKLER['gri']
-            ust = BoxLayout(orientation='horizontal', size_hint_y=None, height=dp(24), spacing=dp(4))
             nav_png = NAV_IKON_DOSYALARI.get(anahtar, '')
             nav_yol = asset_yolu(nav_png) if nav_png else ''
             if nav_yol and os.path.isfile(nav_yol):
                 from kivy.uix.image import Image
-                ust.add_widget(Image(
+                from kivy.uix.anchorlayout import AnchorLayout
+                ikon_k = AnchorLayout(size_hint_y=None, height=dp(26))
+                ikon_k.add_widget(Image(
                     source=nav_yol,
-                    size_hint=(None, 1),
-                    width=dp(22),
-                    allow_stretch=True,
+                    size_hint=(None, None),
+                    size=(dp(24), dp(24)),
+                    allow_stretch=False,
                     keep_ratio=True,
                 ))
-            elif ikon and (emoji_font_yolu() or not _android_mi()):
-                ust.add_widget(emoji_label(ikon, font_size='14sp', size_hint_x=None, width=dp(22)))
-            ust.add_widget(metin_label(
+                self.add_widget(ikon_k)
+            elif ikon:
+                from kivy.uix.anchorlayout import AnchorLayout
+                ikon_k = AnchorLayout(size_hint_y=None, height=dp(26))
+                ikon_k.add_widget(metin_label(
+                    EMOJI_YEDEK.get(ikon, ikon) if _android_mi() else ikon,
+                    font_size='16sp', color=renk, halign='center',
+                    size_hint=(None, None), size=(dp(24), dp(24)),
+                ))
+                self.add_widget(ikon_k)
+            self.add_widget(metin_label(
                 etiket,
-                font_size='13sp',
+                font_size='12sp',
                 bold=secili,
                 color=renk,
                 halign='center',
-                size_hint_x=1,
+                size_hint_y=None,
+                height=dp(18),
             ))
-            self.add_widget(ust)
             if secili:
                 gold = get_color_from_hex(RENKLER['altin'])
                 with self.canvas.after:

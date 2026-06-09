@@ -98,7 +98,7 @@ _METINLER = {
             'Entertainment only. Not for users under 13.'
         ),
     },
-    'menu_fortunes': {'tr': '✦  Fallarınız  ✦', 'en': '✦  Your Fortunes  ✦', 'de': '✦  Ihre Fall  ✦', 'fr': '✦  Vos oracles  ✦', 'es': '✦  Tus lecturas  ✦', 'ar': '✦  قراءاتك  ✦', 'ru': '✦  Ваши гадания  ✦', 'pt': '✦  Suas leituras  ✦', 'it': '✦  I tuoi oracoli  ✦', 'hi': '✦  आपके फ़ाल  ✦', 'id': '✦  Ramalan Anda  ✦', 'zh': '✦  您的占卜  ✦'},
+    'menu_fortunes': {'tr': 'Fallarınız', 'en': 'Your Fortunes', 'de': 'Ihre Fall', 'fr': 'Vos oracles', 'es': 'Tus lecturas', 'ar': 'قراءاتك', 'ru': 'Ваши гадания', 'pt': 'Suas leituras', 'it': 'I tuoi oracoli', 'hi': 'आपके फ़ाल', 'id': 'Ramalan Anda', 'zh': '您的占卜'},
     'menu_tarot': {'tr': 'Tarot Falı', 'en': 'Tarot Reading', 'de': 'Tarot', 'fr': 'Tarot', 'es': 'Tarot', 'ar': 'تاروت', 'ru': 'Таро', 'pt': 'Tarô', 'it': 'Tarocchi', 'hi': 'टैरो', 'id': 'Tarot', 'zh': '塔罗'},
     'menu_tarot_desc': {'tr': '78 kartlık deste ile geleceğinizi görün', 'en': 'See your future with 78 cards', 'de': '78 Karten', 'fr': '78 cartes', 'es': '78 cartas', 'ar': '78 بطاقة', 'ru': '78 карт', 'pt': '78 cartas', 'it': '78 carte', 'hi': '78 कार्ड', 'id': '78 kartu', 'zh': '78张牌'},
     'menu_kahve': {'tr': 'Kahve Falı', 'en': 'Coffee Reading', 'de': 'Kaffeesatz', 'fr': 'Café', 'es': 'Café', 'ar': 'فنجان', 'ru': 'Кофе', 'pt': 'Café', 'it': 'Caffè', 'hi': 'कॉफ़ी', 'id': 'Kopi', 'zh': '咖啡占卜'},
