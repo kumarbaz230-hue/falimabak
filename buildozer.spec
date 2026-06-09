@@ -37,7 +37,7 @@ android.enable_androidx = True
 android.gradle_dependencies = androidx.appcompat:appcompat:1.6.1,com.google.android.gms:play-services-ads:23.6.0
 
 # Test AdMob App ID — yayın öncesi secrets.json + bu satırı gerçek ID ile güncelle
-android.meta_data = com.google.android.gms.ads.APPLICATION_ID=ca-app-pub-3940256099942544~3347511713
+android.meta_data = com.google.android.gms.ads.APPLICATION_ID=ca-app-pub-9430596197237392~1799758284
 
 android.add_src = android_res
 android.add_application_xml = %(source.dir)s/android_res/application.xml

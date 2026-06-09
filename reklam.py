@@ -32,32 +32,47 @@ def _android_mi():
 
 
 def _reklam_ayar():
-    """secrets.json → AdMob birimleri. test_mod=true ise Google test ID."""
+    """AdMob birimleri — config.ornek.json APK içinde; secrets.json masaüstü geliştirme."""
     veri = {}
-    for yol in (SECRETS_YOLU, SECRETS_ORNEK):
-        if os.path.isfile(yol):
+    yollar = [SECRETS_YOLU, os.path.join(BASE_DIR, 'config.ornek.json')]
+    if _android_mi():
+        try:
+            from kivy.app import App
+            app = App.get_running_app()
+            if app and app.user_data_dir:
+                yollar.insert(0, os.path.join(app.user_data_dir, 'config.json'))
+        except Exception:
+            pass
+    for yol in yollar:
+        if yol and os.path.isfile(yol):
             try:
                 with open(yol, encoding='utf-8') as f:
                     veri.update(json.load(f))
             except Exception:
                 pass
     test_mod = bool(veri.get('admob_test_mod', True))
-    gercek = (
-        veri.get('admob_app_id', '').strip(),
-        veri.get('admob_banner_id', '').strip(),
-        veri.get('admob_interstitial_id', '').strip(),
-    )
-    if not test_mod and all(gercek):
+    app_id = veri.get('admob_app_id', '').strip()
+    banner_id = veri.get('admob_banner_id', '').strip()
+    inter_id = veri.get('admob_interstitial_id', '').strip()
+
+    from kivmob import TestIds
+
+    def _gecerli(unit_id):
+        return unit_id and 'XXXX' not in unit_id and unit_id.startswith('ca-app-pub-')
+
+    if not _gecerli(app_id):
+        app_id = TestIds.APP
+
+    if not test_mod and _gecerli(banner_id) and _gecerli(inter_id):
         return {
             'test_mod': False,
-            'app_id': gercek[0],
-            'banner_id': gercek[1],
-            'interstitial_id': gercek[2],
+            'app_id': app_id,
+            'banner_id': banner_id,
+            'interstitial_id': inter_id,
         }
-    from kivmob import TestIds
     return {
         'test_mod': True,
-        'app_id': TestIds.APP,
+        'app_id': app_id,
         'banner_id': TestIds.BANNER,
         'interstitial_id': TestIds.INTERSTITIAL,
     }

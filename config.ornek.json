@@ -7,5 +7,10 @@
   "gemini_yedek_modeller": ["gemini-2.0-flash", "gemini-2.0-flash-lite", "gemini-1.5-flash", "gemini-1.5-flash-8b"],
   "ollama_url": "http://127.0.0.1:11434/api/generate",
   "ollama_model": "llama3.1:8b",
-  "ollama_masaustu": true
+  "ollama_masaustu": true,
+
+  "admob_test_mod": true,
+  "admob_app_id": "ca-app-pub-9430596197237392~1799758284",
+  "admob_banner_id": "ca-app-pub-XXXXXXXXXXXXXXXX/BBBBBBBBBB",
+  "admob_interstitial_id": "ca-app-pub-XXXXXXXXXXXXXXXX/IIIIIIIIII"
 }
