@@ -308,7 +308,7 @@ def menu_ikon_resmi(anahtar, renk_hex=None, font_size='26sp', **kwargs):
             'allow_stretch': True,
             'keep_ratio': True,
             'size_hint': (None, None),
-            'size': (dp(36), dp(36)),
+            'size': (dp(44), dp(44)),
         }
         defaults.update(kwargs)
         return Image(source=yol, **defaults)

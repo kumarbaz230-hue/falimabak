@@ -1,5 +1,5 @@
 """
-🔮 FalımaBak - Premium Fal Uygulaması v1.1.2
+🔮 FalımaBak - Premium Fal Uygulaması v1.1.3
 Mystic Dark Dashboard — mobil odaklı
 """
 
@@ -110,7 +110,7 @@ class DashboardKart(ButtonBehavior, BoxLayout):
         ikon_kutu.add_widget(fal_ikon_widget(
             ikon_anahtar, renk,
             size_hint=(None, None),
-            size=(dp(40), dp(40)),
+            size=(dp(44), dp(44)),
         ))
         self.add_widget(ikon_kutu)
 
@@ -578,7 +578,7 @@ class Anasayfa(Screen):
                 ikon_anahtar=ikon, renk=renk, hedef=hedef))
         ana.add_widget(menu)
 
-        ana.add_widget(metin_label('FalımaBak v1.1.2', font_size='10sp', bold=True,
+        ana.add_widget(metin_label('FalımaBak v1.1.3', font_size='10sp', bold=True,
             color=RENKLER['altin_yumusak'], halign='center', size_hint_y=None, height=dp(18)))
         try:
             from reklam import reklam_alani_bosluk
