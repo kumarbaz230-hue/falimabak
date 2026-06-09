@@ -121,10 +121,17 @@ FAL_IKONLARI = {
     'ok':        '›',
 }
 
-# Mobil safe area (çentik / gesture bar)
+# Mobil safe area (çentik / gesture bar) — Android'de aşağıda genişletilir
 SAFE_UST = dp(8)
 SAFE_ALT = dp(10)
 BUTON_MIN_YUKSEK = dp(48)
+
+# Emoji yoksa Android'de gösterilecek yedek karakterler (Roboto uyumlu)
+EMOJI_YEDEK = {
+    '🔮': '◆', '📸': '◎', '✦': '✦', '🃏': '♠', '🔁': '↻', '🖼': '▣',
+    '📷': '◎', '☕': '♨', '⏳': '…', '✅': '✓', '🌟': '★', '✋': '✋',
+    '✨': '✦', '🏠': '⌂', '📜': '≡', '⚙️': '⚙', '⚙': '⚙',
+}
 
 FON_ADI = 'AppFont'
 _font_yuklendi = False
@@ -149,6 +156,17 @@ def _android_mi():
         or 'ANDROID_ROOT' in os.environ
         or 'ANDROID_BOOTLOGO' in os.environ
     )
+
+
+def _mobil_safe_alan_ayarla():
+    """Çentik ve gesture bar için Android safe area."""
+    global SAFE_UST, SAFE_ALT
+    if _android_mi():
+        SAFE_UST = dp(32)
+        SAFE_ALT = dp(24)
+
+
+_mobil_safe_alan_ayarla()
 
 
 def fontlari_yukle():
@@ -202,6 +220,21 @@ def emoji_font_yolu():
                 _emoji_font_yolu = yol
                 return yol
 
+    if _android_mi():
+        for yol in (
+            '/system/fonts/NotoColorEmoji.ttf',
+            '/system/fonts/NotoColorEmojiLegacy.ttf',
+            '/system/fonts/AndroidEmoji.ttf',
+            '/system/fonts/NotoEmoji-Regular.ttf',
+        ):
+            if os.path.isfile(yol):
+                _emoji_font_yolu = yol
+                return yol
+        bundled = os.path.join(ASSETS_DIR, 'NotoColorEmoji.ttf')
+        if os.path.isfile(bundled):
+            _emoji_font_yolu = bundled
+            return bundled
+
     _emoji_font_yolu = ''
     return ''
 
@@ -215,11 +248,64 @@ def emoji_label(text, font_size='28sp', **kwargs):
     """Kırık kutu (X) olmadan emoji gösteren Label."""
     fontlari_yukle()
     yol = emoji_font_yolu()
+    metin = text
+    if not yol:
+        metin = EMOJI_YEDEK.get(text, text)
     fon = yol if yol else FON_ADI
     kwargs.setdefault('halign', 'center')
     kwargs.setdefault('valign', 'middle')
     kwargs.setdefault('color', get_color_from_hex(RENKLER['beyaz']))
-    return Label(text=text, font_name=fon, font_size=font_size, **kwargs)
+    return Label(text=metin, font_name=fon, font_size=font_size, **kwargs)
+
+
+def fal_ikon_widget(anahtar, renk_hex, font_size='26sp', **kwargs):
+    """Menü kartı ikonu — emoji fontu yoksa harf yedeği."""
+    fontlari_yukle()
+    metin = FAL_IKONLARI.get(anahtar, '🔮')
+    yol = emoji_font_yolu()
+    if yol:
+        return emoji_label(metin, font_size=font_size, color=renk_hex, **kwargs)
+    harf = {
+        'tarot': 'T', 'kahve': 'K', 'astroloji': 'Y',
+        'elfali': 'E', 'diger': 'D',
+    }.get(anahtar, 'F')
+    return metin_label(
+        harf, font_size=font_size, bold=True, color=renk_hex,
+        halign='center', valign='middle', **kwargs,
+    )
+
+
+def guvenli_textinput(hint_text='', **kwargs):
+    """Android'de font_name ile TextInput çökmesini önler."""
+    from kivy.uix.textinput import TextInput
+
+    fontlari_yukle()
+    temel = {
+        'hint_text': hint_text,
+        'multiline': False,
+        'size_hint_y': None,
+        'height': dp(44),
+        'font_size': '15sp',
+    }
+    if _android_mi():
+        # font_name ve karmaşık renkler SDL2 TextInput'ta native crash yapabiliyor
+        temel.update({
+            'padding': [12, 10, 12, 10],
+            'background_normal': '',
+            'background_active': '',
+            'background_color': get_color_from_hex(RENKLER['kart_arka']),
+            'foreground_color': (1, 1, 1, 1),
+        })
+    else:
+        temel.update({
+            'font_name': FON_ADI,
+            'padding': [dp(12), dp(10)],
+            'background_color': get_color_from_hex(RENKLER['kart_arka']),
+            'foreground_color': get_color_from_hex(RENKLER['beyaz']),
+            'hint_text_color': get_color_from_hex(RENKLER['gri']),
+        })
+    temel.update(kwargs)
+    return TextInput(**temel)
 
 
 def siyah_buton(text='', ikon=None, vurgu=False, altin_yazi=False, **kwargs):
@@ -813,7 +899,7 @@ def alt_nav_bar(aktif='anasayfa', on_sec=None):
             self.padding = [0, dp(4), 0, dp(4)]
             renk = RENKLER['altin'] if secili else RENKLER['gri']
             ust = BoxLayout(orientation='horizontal', size_hint_y=None, height=dp(24), spacing=dp(4))
-            if ikon:
+            if ikon and (emoji_font_yolu() or not _android_mi()):
                 ust.add_widget(emoji_label(ikon, font_size='14sp', size_hint_x=None, width=dp(22)))
             ust.add_widget(metin_label(
                 etiket,

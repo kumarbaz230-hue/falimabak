@@ -40,9 +40,10 @@ from kivy.clock import Clock
 from kivy.metrics import dp
 
 from theme import (
-    RENKLER, FON_ADI, FAL_IKONLARI, KART_MENU_AR, YORUM_BASLIK,
+    RENKLER, KART_MENU_AR, YORUM_BASLIK,
     SAFE_UST, SAFE_ALT,
     fontlari_yukle, emoji_font_yukle, emoji_label,
+    fal_ikon_widget, guvenli_textinput,
     metin_label, gradient_arka_plan_ekle, asset_yolu,
     alt_nav_bar, ekran_icerik_sar, kart_zemin_bagla, baslik_satir,
 )
@@ -83,7 +84,6 @@ class DashboardKart(ButtonBehavior, BoxLayout):
         self.bind(pos=self._kart_ciz, size=self._kart_ciz)
         Clock.schedule_once(lambda *_: self._kart_ciz(), 0)
 
-        ikon_metin = FAL_IKONLARI.get(ikon_anahtar, '🔮')
         ikon_sarmal = BoxLayout(size_hint=(None, 1), width=dp(46))
         with ikon_sarmal.canvas.before:
             ikon_sarmal._daire_koyu = Color(*get_color_from_hex(RENKLER['kart_arka_cam']))
@@ -95,7 +95,7 @@ class DashboardKart(ButtonBehavior, BoxLayout):
             size=lambda *a, k=ikon_sarmal: self._ikon_daire_guncelle(k),
         )
         Clock.schedule_once(lambda *_: self._ikon_daire_guncelle(ikon_sarmal), 0)
-        ikon_sarmal.add_widget(emoji_label(ikon_metin, font_size='26sp', size_hint=(1, 1)))
+        ikon_sarmal.add_widget(fal_ikon_widget(ikon_anahtar, renk, font_size='26sp', size_hint=(1, 1)))
         self.add_widget(ikon_sarmal)
 
         metin_kutu = BoxLayout(orientation='vertical', size_hint=(1, 1), spacing=dp(2))
@@ -250,9 +250,20 @@ class SplashScreen(Screen):
         gradient_arka_plan_ekle(self)
         root = FloatLayout()
 
-        self.logo = emoji_label('🔮', font_size='72sp',
-            pos_hint={'center_x': 0.5, 'center_y': 0.58}, size_hint=(None, None),
-            size=(dp(100), dp(100)))
+        ikon_yol = asset_yolu('app_icon.png')
+        if _ANDROID and os.path.isfile(ikon_yol):
+            self.logo = Image(
+                source=ikon_yol,
+                pos_hint={'center_x': 0.5, 'center_y': 0.58},
+                size_hint=(None, None),
+                size=(dp(100), dp(100)),
+                allow_stretch=True,
+                keep_ratio=True,
+            )
+        else:
+            self.logo = emoji_label('🔮', font_size='72sp',
+                pos_hint={'center_x': 0.5, 'center_y': 0.58}, size_hint=(None, None),
+                size=(dp(100), dp(100)))
         root.add_widget(self.logo)
 
         root.add_widget(metin_label(
@@ -338,15 +349,7 @@ class OnboardingScreen(Screen):
             halign='center', size_hint_y=None, height=dp(60)))
 
         if self._adim == len(self.SLAYTLAR) - 1:
-            from kivy.uix.textinput import TextInput
-            self._isim = TextInput(
-                hint_text='Adınız (isteğe bağlı)',
-                font_name=FON_ADI, font_size='15sp', multiline=False,
-                size_hint_y=None, height=dp(44), padding=[dp(12), dp(10)],
-                background_color=get_color_from_hex(RENKLER['kart_arka']),
-                foreground_color=get_color_from_hex(RENKLER['beyaz']),
-                hint_text_color=get_color_from_hex(RENKLER['gri']),
-            )
+            self._isim = guvenli_textinput(hint_text='Adınız (isteğe bağlı)')
             self._ana.add_widget(self._isim)
 
         self._ana.add_widget(BoxLayout(size_hint_y=1))
@@ -368,11 +371,11 @@ class OnboardingScreen(Screen):
         if self._adim < len(self.SLAYTLAR) - 1:
             self._adim += 1
             self._goster()
-        else:
-            isim = getattr(self, '_isim', None)
-            onboarding_tamamla(isim.text if isim else '')
-            if self.manager:
-                self.manager.current = 'anasayfa'
+            return
+        isim = getattr(self, '_isim', None)
+        onboarding_tamamla(isim.text if isim else '')
+        if self.manager and 'anasayfa' in self.manager.screen_names:
+            self.manager.current = 'anasayfa'
 
 
 class GecmisScreen(Screen):
