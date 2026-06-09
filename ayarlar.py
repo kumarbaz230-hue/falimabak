@@ -11,6 +11,7 @@ from theme import (
     guvenli_textinput,
 )
 from gecmis import kullanici_ismi, isim_guncelle, gecmis_temizle
+from ai_yorum import config_kaydet, _ayar_yukle, gemini_key_kisa
 
 
 class AyarlarScreen(Screen):
@@ -30,6 +31,22 @@ class AyarlarScreen(Screen):
         self._isim_input = guvenli_textinput(hint_text='İsteğe bağlı — yorumlarda kullanılır')
         ana.add_widget(self._isim_input)
 
+        ana.add_widget(metin_label(
+            'Yapay zeka anahtarı (isteğe bağlı)',
+            font_size='15sp', bold=True, color=RENKLER['altin'],
+            size_hint_y=None, height=dp(24),
+        ))
+        self._api_input = guvenli_textinput(
+            hint_text='Boş bırakılırsa uygulama anahtarı kullanılır',
+            password=True,
+        )
+        ana.add_widget(self._api_input)
+        ana.add_widget(metin_label(
+            'AI çalışmazsa aistudio.google.com/apikey adresinden AIzaSy ile başlayan key alıp buraya yapıştırın.',
+            font_size='11sp', color=RENKLER['gri_acik'],
+            size_hint_y=None, height=dp(36),
+        ))
+
         kaydet_btn = siyah_buton('Kaydet', vurgu=True, font_size='15sp')
         kaydet_btn.bind(on_press=self._kaydet)
         ana.add_widget(kaydet_btn)
@@ -46,7 +63,7 @@ class AyarlarScreen(Screen):
 
         ana.add_widget(BoxLayout(size_hint_y=1))
         ana.add_widget(metin_label(
-            'FalımaBak v1.0.9',
+            'FalımaBak v1.0.12',
             font_size='10sp', color=RENKLER['gri_koyu'],
             halign='center', size_hint_y=None, height=dp(18),
         ))
@@ -58,11 +75,19 @@ class AyarlarScreen(Screen):
 
     def _yukle(self):
         self._isim_input.text = kullanici_ismi()
+        ayar = _ayar_yukle()
+        mevcut = (ayar.get('gemini_api_key') or '').strip()
+        self._api_input.text = mevcut
+        kisa = gemini_key_kisa(ayar)
+        if kisa and not mevcut:
+            self._api_input.hint_text = f'Uygulama anahtarı aktif ({kisa})'
         self._mesaj.text = ''
 
     def _kaydet(self, *_):
         isim = self._isim_input.text.strip()
         isim_guncelle(isim)
+        api = self._api_input.text.strip()
+        config_kaydet({'gemini_api_key': api})
         self._mesaj.text = 'Ayarlar kaydedildi'
         self._mesaj.color = get_color_from_hex(RENKLER['yesil'])
 

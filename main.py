@@ -17,6 +17,13 @@ _ANDROID = (
     or 'ANDROID_BOOTLOGO' in os.environ
 )
 
+if _ANDROID:
+    try:
+        from ai_yorum import ssl_hazirla
+        ssl_hazirla()
+    except Exception:
+        pass
+
 if not _ANDROID:
     Config.set('graphics', 'width', '400')
     Config.set('graphics', 'height', '780')

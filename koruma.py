@@ -1,24 +1,22 @@
 """
-FalımaBak — API anahtarı (XOR). Uygulamayı kapatmaz; sadece anahtarı gizler.
+FalımaBak — gömülü Gemini anahtarı (base64). Uygulamayı kapatmaz.
 """
 
-import os
+import base64
 
-_ENC = (
-    29, 57, 118, 29, 62, 116, 14, 38, 110, 24, 111, 6, 33, 52, 57, 93,
-    29, 66, 14, 35, 23, 62, 116, 38, 30, 37, 40, 30, 14, 110, 9, 67,
-    88, 38, 57, 62, 40, 59, 78, 78, 33, 37, 62, 11, 9, 59, 73, 37,
-    62, 14, 61, 79,
+# API anahtarı — APK içinde; dağıtımda rotate edin
+_B64 = (
+    'QVEuQWliOFJONkEzWk1YUTFBekJPS2JFOE5GSURGQjZVd2RIcWJE'
+    'Zl92dk1JYldVX3VJYkJhZw=='
 )
-_MASK = 0x5C
 
 _anahtar_cache = None
 
 
 def _coz_ham():
     try:
-        metin = ''.join(chr(b ^ _MASK) for b in _ENC)
-        if metin.startswith('AQ.') and len(metin) >= 20:
+        metin = base64.b64decode(_B64).decode('utf-8').strip()
+        if (metin.startswith('AQ.') or metin.startswith('AIza')) and len(metin) >= 20:
             return metin
     except Exception:
         pass

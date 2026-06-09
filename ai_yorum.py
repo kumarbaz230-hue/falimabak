@@ -11,6 +11,7 @@ import random
 import threading
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 from io import BytesIO
 
@@ -44,8 +45,9 @@ _varsayilan = {
     # Google Gemini — mobil + Play Store için (ücretsiz API key)
     # https://aistudio.google.com/apikey
     'gemini_api_key': '',
-    'gemini_model': 'gemini-2.0-flash',
+    'gemini_model': 'gemini-2.5-flash',
     'gemini_yedek_modeller': [
+        'gemini-2.0-flash',
         'gemini-2.0-flash-lite',
         'gemini-1.5-flash',
         'gemini-1.5-flash-8b',
@@ -93,8 +95,9 @@ def mobil_ai_hazirla():
     """Uygulama açılışında mobil AI yapılandırması."""
     if not _android_mi():
         return
+    ssl_hazirla()
     _gomulu_anahtar_yukle()
-    anahtar_var = bool(_gomulu_anahtar)
+    anahtar_var = bool(_gemini_anahtar(_ayar_yukle()))
     print(f'AI mobil: anahtar {"hazır" if anahtar_var else "YOK"}', flush=True)
     config_kaydet({
         'ai_aktif': True,
@@ -190,9 +193,11 @@ def _gomulu_anahtar_yukle():
 
 def _gemini_anahtar(ayar=None):
     ayar = ayar or _ayar_yukle()
+    # Ayarlara kullanıcı key girdiyse öncelik (AIza formatı için)
+    cfg_key = (ayar.get('gemini_api_key') or '').strip()
     anahtar = (
-        _gomulu_anahtar_yukle()
-        or (ayar.get('gemini_api_key') or '').strip()
+        cfg_key
+        or _gomulu_anahtar_yukle()
         or os.environ.get('GEMINI_API_KEY', '').strip()
     )
     if not anahtar:
@@ -246,7 +251,7 @@ def ai_kaynak():
             return 'bulut'
         if kaynak == 'ollama' and ollama_aktif_mi():
             return 'ollama'
-    return 'offline'
+    return 'cihaz'
 
 
 def ai_durum_metni():
@@ -281,18 +286,33 @@ def _ana_thread(fn):
     Clock.schedule_once(lambda *_: fn(), 0)
 
 
+def ssl_hazirla():
+    """Android/Python SSL — certifi CA paketi (mobilde kritik)."""
+    try:
+        import certifi
+        yol = certifi.where()
+        os.environ['SSL_CERT_FILE'] = yol
+        os.environ['REQUESTS_CA_BUNDLE'] = yol
+        return yol
+    except ImportError:
+        return None
+
+
+def _ssl_context():
+    import ssl
+    ca = ssl_hazirla()
+    if ca and os.path.isfile(ca):
+        return ssl.create_default_context(cafile=ca)
+    return ssl.create_default_context()
+
+
 def _http_post(url, body_dict, headers=None, timeout=45):
     body = json.dumps(body_dict).encode('utf-8')
-    hdrs = {'Content-Type': 'application/json'}
+    hdrs = {'Content-Type': 'application/json', 'User-Agent': 'Falimabak/1.0'}
     if headers:
         hdrs.update(headers)
     req = urllib.request.Request(url, data=body, headers=hdrs, method='POST')
-    ctx = None
-    try:
-        import ssl
-        ctx = ssl.create_default_context()
-    except Exception:
-        pass
+    ctx = _ssl_context()
     with urllib.request.urlopen(req, timeout=timeout, context=ctx) as yanit:
         return json.loads(yanit.read().decode('utf-8'))
 
@@ -420,15 +440,11 @@ def _gemini_istek(prompt, ayar, model=None, gorsel=None):
     anahtar = _gemini_anahtar(ayar)
     if not anahtar:
         return None
-    model = model or ayar.get('gemini_model', 'gemini-2.0-flash')
-    url = (
+    model = model or ayar.get('gemini_model', 'gemini-2.5-flash')
+    base_url = (
         f'https://generativelanguage.googleapis.com/v1beta/models/'
         f'{model}:generateContent'
     )
-    headers = {
-        'Content-Type': 'application/json',
-        'x-goog-api-key': anahtar,
-    }
 
     parcalar = []
     for g in _gorseller_listesi(gorsel):
@@ -443,51 +459,70 @@ def _gemini_istek(prompt, ayar, model=None, gorsel=None):
     gorsel_sayisi = len(_gorseller_listesi(gorsel))
     zaman_asimi = int(ayar.get('ai_timeout', 45))
     if gorsel_sayisi:
-        zaman_asimi = max(zaman_asimi, 60 + gorsel_sayisi * 15)
+        zaman_asimi = max(zaman_asimi, 75 + gorsel_sayisi * 12)
 
-    veri = None
-    try:
-        veri = _http_post(
-            url,
-            {
-                'contents': [{'parts': parcalar}],
-                'generationConfig': {
-                    'temperature': 0.88,
-                    'maxOutputTokens': 1100 if gorsel_sayisi > 1 else 900,
-                },
-            },
-            headers=headers,
-            timeout=zaman_asimi,
-        )
-    except urllib.error.HTTPError as e:
-        if e.code in (401, 403) and anahtar.startswith('AIza'):
-            url_key = f'{url}?key={anahtar}'
-            veri = _http_post(
-                url_key,
-                {
-                    'contents': [{'parts': parcalar}],
-                    'generationConfig': {
-                        'temperature': 0.88,
-                        'maxOutputTokens': 1100 if gorsel_sayisi > 1 else 900,
-                    },
-                },
-                headers={'Content-Type': 'application/json'},
-                timeout=zaman_asimi,
+    govde = {
+        'contents': [{'parts': parcalar}],
+        'generationConfig': {
+            'temperature': 0.88,
+            'maxOutputTokens': 1100 if gorsel_sayisi > 1 else 900,
+        },
+    }
+
+    denemeler = [
+        (base_url, {'Content-Type': 'application/json', 'x-goog-api-key': anahtar}),
+        (
+            f'{base_url}?key={urllib.parse.quote(anahtar, safe="")}',
+            {'Content-Type': 'application/json'},
+        ),
+    ]
+
+    son_hata = None
+    for url, hdrs in denemeler:
+        try:
+            veri = _http_post(url, govde, headers=hdrs, timeout=zaman_asimi)
+            adaylar = veri.get('candidates') or []
+            if not adaylar:
+                blok = veri.get('promptFeedback') or veri.get('error')
+                if blok:
+                    print(f'AI: Gemini boş yanıt ({model}): {str(blok)[:200]}', flush=True)
+                continue
+            yanit_parcalar = adaylar[0].get('content', {}).get('parts') or []
+            metinler = [p.get('text', '') for p in yanit_parcalar if p.get('text')]
+            metin = '\n'.join(metinler).strip()
+            if metin:
+                return metin
+        except urllib.error.HTTPError as e:
+            son_hata = e
+            detay = ''
+            try:
+                detay = e.read().decode('utf-8', errors='replace')[:280]
+            except Exception:
+                pass
+            print(
+                f'AI HTTP (gemini/{model}): {e.code} {e.reason}'
+                + (f' — {detay}' if detay else ''),
+                flush=True,
             )
-        else:
+            _ai_log(f'http {model} {e.code} {detay[:120]}')
+            if e.code not in (400, 401, 403):
+                raise
+        except (urllib.error.URLError, TimeoutError, OSError) as e:
+            son_hata = e
+            print(f'AI ağ hatası (gemini/{model}): {e}', flush=True)
+            _ai_log(f'net {model} {e}')
             raise
-    adaylar = veri.get('candidates') or []
-    if not adaylar:
-        return None
-    parcalar = adaylar[0].get('content', {}).get('parts') or []
-    metinler = [p.get('text', '') for p in parcalar if p.get('text')]
-    return '\n'.join(metinler).strip() or None
+
+    if son_hata and isinstance(son_hata, urllib.error.HTTPError):
+        raise son_hata
+    return None
 
 
 def _gemini_modeller(ayar):
-    primary = ayar.get('gemini_model', 'gemini-2.0-flash')
+    primary = ayar.get('gemini_model', 'gemini-2.5-flash')
     modeller = [primary]
     for yedek in ayar.get('gemini_yedek_modeller') or (
+        'gemini-2.0-flash',
         'gemini-2.0-flash-lite',
         'gemini-1.5-flash',
         'gemini-1.5-flash-8b',
@@ -503,7 +538,7 @@ def _gemini_dene(prompt, ayar, gorsel=None):
     if not anahtar:
         return None, None
 
-    primary = ayar.get('gemini_model', 'gemini-2.0-flash')
+    primary = ayar.get('gemini_model', 'gemini-2.5-flash')
     modeller = _gemini_modeller(ayar)
 
     son_kod = None
@@ -556,6 +591,23 @@ def _kullanici_hata_mesaji(hatalar):
     if any(k in ('401', '403', '400') for k in kodlar):
         return 'Yapay zeka servisi yanıt vermedi; hazır yorum gösteriliyor.'
     return 'AI bağlantısı kurulamadı; hazır yorum gösteriliyor.'
+
+
+def _gecersiz_foto_yaniti(metin, tip):
+    if not metin:
+        return None
+    u = metin.upper().replace('İ', 'I').replace('Ş', 'S').replace('Ğ', 'G')
+    if 'GECERSIZ FOTOGRAF' in u or 'GEÇERSİZ FOTOĞRAF' in metin.upper():
+        if tip == 'elfali':
+            return (
+                'Bu fotoğraflar el falı için uygun değil. '
+                'Gerçek avuç içi ve el dışı fotoğrafı yükleyin.'
+            )
+        return (
+            'Bu fotoğraflar kahve falı için uygun değil. '
+            'Fincan içi ve tabak fotoğrafı yükleyin.'
+        )
+    return None
 
 
 def _ollama_istek(prompt, ayar):
@@ -612,7 +664,11 @@ def _prompt_olustur(tip, veri, gorsel_var=False):
                 'Sen deneyimli bir Türk kahve falı yorumcususun. Eğlence amaçlı, samimi Türkçe yaz.\n'
                 f'{kullanici}'
                 f'Ekte {len(aciklamalar) or "birkaç"} fotoğraf var:\n{foto_metin}\n'
-                'Tüm fotoğrafları birlikte incele. Fincan içi telveleri ve tabaktaki izleri değerlendir.\n'
+                'ÖNEMLİ: Fotoğraflarda kahve fincanı/telve/tabağı yoksa (manzara, yüz, hayvan, '
+                'rastgele nesne vb.) SADECE şunu yaz: '
+                '"GEÇERSİZ FOTOĞRAF: Bu görüntüler kahve falı için uygun değil."\n'
+                'Geçerli fincan fotoğraflarıysa tümünü birlikte incele. Fincan içi telveleri ve '
+                'tabaktaki izleri değerlendir.\n'
                 'Önce gördüğün 3-6 sembolü madde madde listele, sonra 3-5 paragraf yorum yaz: '
                 'aşk, para, sağlık ve genel mesaj. Olumlu ama gerçekçi ol. '
                 'Korkutucu veya kesin gelecek iddiası kullanma.'
@@ -638,7 +694,11 @@ def _prompt_olustur(tip, veri, gorsel_var=False):
                 'Sen deneyimli bir el falı yorumcususun. Eğlence amaçlı, samimi Türkçe yaz.\n'
                 f'{kullanici}'
                 f'Ekte {len(aciklamalar) or 2} fotoğraf var:\n{foto_metin}\n'
-                'Avuç içi çizgileri ile elin dış/üst görünümünü birlikte değerlendir.\n'
+                'ÖNEMLİ: Fotoğraflarda gerçek el/avuç yoksa (manzara, yüz, hayvan, yemek, '
+                'rastgele nesne vb.) SADECE şunu yaz: '
+                '"GEÇERSİZ FOTOĞRAF: Bu görüntüler el falı için uygun değil."\n'
+                'Geçerli el fotoğraflarıysa avuç içi çizgileri ile elin dış/üst görünümünü '
+                'birlikte değerlendir.\n'
                 'Önce gözlemlerini kısaca özetle, sonra 3-5 paragraf yaz: karakter, aşk, kariyer, şans.\n'
                 'Olumlu ama gerçekçi ol. Kesin gelecek iddiası kullanma.'
             )
@@ -760,11 +820,6 @@ def yorum_al(tip, veri, callback):
 
     def _calistir():
         ayar = _ayar_yukle()
-        if not ayar.get('ai_aktif', True):
-            yedek = _yedek_yorum(tip, veri)
-            _ana_thread(lambda y=yedek: _sonuc(y, False, None, None))
-            return
-
         foto_yollari = list(veri.get('foto_yollari') or [])
         if not foto_yollari:
             tek = veri.get('foto_yolu') or veri.get('foto')
@@ -773,26 +828,29 @@ def yorum_al(tip, veri, callback):
         aciklamalar = list(veri.get('foto_aciklamalari') or [])
         gorsel = None
         fotograf_fal = bool(foto_yollari and tip in ('kahve', 'elfali'))
+        foto_ozellikleri = []
 
         if fotograf_fal:
-            if not _gemini_anahtar(ayar):
-                _ana_thread(lambda: _sonuc(
-                    None, False,
-                    'Yapay zeka servisi hazır değil. Uygulamayı güncelleyip tekrar deneyin.',
-                    None,
-                ))
-                return
-            ok, hata = _foto_dogrula(tip, foto_yollari, aciklamalar, ayar)
+            from foto_analiz import fotolar_dogrula
+            ok, hata, foto_ozellikleri = fotolar_dogrula(tip, foto_yollari, aciklamalar)
             if not ok:
                 _ana_thread(lambda h=hata: _sonuc(None, False, h, None))
                 return
+
+        if not ayar.get('ai_aktif', True):
+            from offline_yorum import offline_yorum_uret
+            metin = offline_yorum_uret(
+                tip, {**veri, 'foto_aciklamalari': aciklamalar}, foto_ozellikleri,
+            )
+            _ana_thread(lambda m=metin: _sonuc(m, True, None, 'cihaz', fotograf_fal))
+            return
 
         if foto_yollari and tip in ('kahve', 'elfali') and _gemini_anahtar(ayar):
             gorseller = _fotolar_hazirla(foto_yollari)
             if gorseller:
                 gorsel = gorseller if len(gorseller) > 1 else gorseller[0]
                 print(
-                    f'AI: {len(gorseller)} fotoğraf Gemini Vision ile gönderiliyor',
+                    f'AI: {len(gorseller)} fotoğraf Gemini Vision ile deneniyor',
                     flush=True,
                 )
 
@@ -805,25 +863,27 @@ def yorum_al(tip, veri, callback):
             text_prompt, ayar, gorsel=gorsel, vision_prompt=vision_prompt,
         )
         if metin:
-            _ana_thread(
-                lambda m=metin, k=kaynak, f=fotograf_ai and k == 'gemini':
-                _sonuc(m, True, None, k, f),
-            )
-            return
-
-        if fotograf_fal:
-            hata = _kullanici_hata_mesaji(hatalar)
-            if _android_mi():
-                hata = (
-                    'Yapay zeka yorumu alınamadı. İnternet bağlantınızı kontrol edip '
-                    'birkaç dakika sonra tekrar deneyin.'
+            foto_hata = _gecersiz_foto_yaniti(metin, tip) if fotograf_fal else None
+            if foto_hata:
+                print('AI: bulut geçersiz foto dedi — cihaz yorumu kullanılacak', flush=True)
+            else:
+                _ana_thread(
+                    lambda m=metin, k=kaynak, f=fotograf_ai and k == 'gemini':
+                    _sonuc(m, True, None, k, f),
                 )
-            _ai_log(f'yorum fail tip={tip} hatalar={hatalar}')
-            _ana_thread(lambda h=hata: _sonuc(None, False, h, None))
-            return
+                return
 
-        yedek = _yedek_yorum(tip, veri)
-        print('AI: yedek yorum kullanıldı', flush=True)
-        _ana_thread(lambda y=yedek: _sonuc(y, False, None, None))
+        from offline_yorum import offline_yorum_uret
+        offline_metin = offline_yorum_uret(
+            tip, {**veri, 'foto_aciklamalari': aciklamalar}, foto_ozellikleri,
+        )
+        if hatalar:
+            print(f'AI: bulut başarısız ({", ".join(hatalar)}), cihaz yorumu', flush=True)
+        else:
+            print('AI kaynak: Cihaz içi', flush=True)
+        _ai_log(f'cihaz tip={tip} bulut_hata={hatalar}')
+        _ana_thread(
+            lambda m=offline_metin: _sonuc(m, True, None, 'cihaz', fotograf_fal),
+        )
 
     threading.Thread(target=_calistir, daemon=True).start()
