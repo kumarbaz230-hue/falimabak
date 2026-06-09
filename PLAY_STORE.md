@@ -23,6 +23,8 @@
 
 Test için `admob_test_mod: true` bırak — Google test reklamları gösterilir.
 
+**Önemli:** APK içine `secrets.json` girmez. Gerçek AdMob ID'lerini `config.ornek.json` dosyasına yaz (reklam birim ID'leri gizli değildir).
+
 ---
 
 ## 2. Gizlilik politikası URL
@@ -34,8 +36,32 @@ https://kumarbaz230-hue.github.io/falimabak/gizlilik.html
 ```
 
 GitHub Pages etkinleştir:
-- Repo → Settings → Pages → Source: **main** → Folder: `/store` veya `docs`
-- `store/gizlilik.html` dosyasını root'a kopyala veya Pages klasörünü ayarla
+- Repo → Settings → Pages → Source: **GitHub Actions**
+- Push sonrası otomatik deploy olur
+
+**Gizlilik:** `https://kumarbaz230-hue.github.io/falimabak/gizlilik.html`
+
+**app-ads.txt (AdMob):** `https://kumarbaz230-hue.github.io/falimabak/app-ads.txt`
+
+---
+
+## 2b. app-ads.txt (AdMob doğrulama)
+
+Dosya repoda hazır: `store/app-ads.txt`
+
+Play Console'da uygulama yayınlanırken **Geliştirici web sitesi** alanına şunu yaz:
+```
+https://kumarbaz230-hue.github.io/falimabak
+```
+
+AdMob dosyayı şu adresten arar (7 güne kadar sürebilir):
+```
+https://kumarbaz230-hue.github.io/falimabak/app-ads.txt
+```
+
+AdMob → Uygulamalar → app-ads.txt sekmesinde **"app-ads.txt dosyasını ayarlama"** → talimatları takip et.
+
+Uygulama henüz Play'de yoksa "henüz istek yok" uyarısı normaldir; mağazaya yükledikten sonra düzelir.
 
 ---
 
