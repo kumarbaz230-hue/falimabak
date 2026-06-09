@@ -5,8 +5,9 @@ on:
   push:
     branches: [main]
     paths:
-      - 'store/gizlilik.html'
-      - 'store/app-ads.txt'
+      - 'store/**'
+      - 'docs/**'
+      - '.github/workflows/pages.yml'
   workflow_dispatch:
 
 permissions:
@@ -35,7 +36,15 @@ jobs:
           mkdir -p _site
           cp store/gizlilik.html _site/index.html
           cp store/gizlilik.html _site/gizlilik.html
-          cp store/app-ads.txt _site/app-ads.txt
+          if [ -f docs/app-ads.txt ]; then
+            cp docs/app-ads.txt _site/app-ads.txt
+          else
+            cp store/app-ads.txt _site/app-ads.txt
+          fi
+          touch _site/.nojekyll
+          echo "--- site ---"
+          ls -la _site/
+          cat _site/app-ads.txt
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
