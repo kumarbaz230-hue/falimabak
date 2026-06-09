@@ -1,54 +1,64 @@
-"""Kullanıcı ikonlarını assets/user_icons/ → menu_*.png olarak uygular."""
+"""Kullanıcı ikonlarını menu_*.png olarak işler (kahve+tarot birleşik görseli ayırır)."""
 
 import os
-from PIL import Image, ImageDraw, ImageFilter
+from PIL import Image
 
 BASE = os.path.join(os.path.dirname(__file__), '..', 'assets')
-SRC = os.path.join(BASE, 'user_icons')
+USER = os.path.join(BASE, 'user_icons')
 S = 256
 
-MAP = {
-    'tarot': 'menu_tarot.png',
-    'kahve': 'menu_kahve.png',
-    'astroloji': 'menu_astroloji.png',
-    'elfali': 'menu_elfali.png',
-    'diger': 'menu_diger.png',
+# Cursor workspace'teki kaynak görseller (bir kez kopyalandı)
+SRC = {
+    'kahve_tarot': os.path.join(
+        USER,
+        '_src_kahve_tarot.png',
+    ),
+    'astroloji': os.path.join(USER, '_src_astroloji.png'),
+    'elfali': os.path.join(USER, '_src_elfali.png'),
+    'diger': os.path.join(USER, '_src_diger.png'),
 }
 
 
-def _islem(yol):
-    img = Image.open(yol).convert('RGBA')
+def _kare_kirp(img):
+    w, h = img.size
+    side = min(w, h)
+    left = (w - side) // 2
+    top = (h - side) // 2
+    return img.crop((left, top, left + side, top + side))
+
+
+def _kaydet(img, hedef):
+    img = _kare_kirp(img.convert('RGBA'))
     img = img.resize((S, S), Image.Resampling.LANCZOS)
-    mask = Image.new('L', (S, S), 0)
-    ImageDraw.Draw(mask).ellipse([4, 4, S - 4, S - 4], fill=255)
-    out = Image.new('RGBA', (S, S), (0, 0, 0, 0))
-    out.paste(img, (0, 0), mask)
-    d = ImageDraw.Draw(out)
-    d.ellipse([2, 2, S - 2, S - 2], outline=(255, 215, 0, 220), width=3)
-    sh = out.filter(ImageFilter.GaussianBlur(4))
-    canvas = Image.new('RGBA', (S + 10, S + 10), (0, 0, 0, 0))
-    canvas.paste(sh, (5, 5), sh)
-    canvas.paste(out, (0, 0), out)
-    return canvas
+    img.save(os.path.join(BASE, hedef), 'PNG')
+    print(f'OK -> {hedef} ({S}x{S})', flush=True)
+
+
+def _kahve_tarot_ayir(yol):
+    img = Image.open(yol).convert('RGBA')
+    w, h = img.size
+    yarim = w // 2
+    side = min(yarim, h)
+    top = (h - side) // 2
+    kahve = img.crop((0, top, yarim, top + side))
+    # Sağ yarım — tarot (ortalanmış kare)
+    left = yarim + (yarim - side) // 2
+    tarot = img.crop((left, top, left + side, top + side))
+    _kaydet(kahve, 'menu_kahve.png')
+    _kaydet(tarot, 'menu_tarot.png')
 
 
 def main():
-    if not os.path.isdir(SRC):
-        print('user_icons klasoru yok')
+    os.makedirs(USER, exist_ok=True)
+    kt = SRC['kahve_tarot']
+    if not os.path.isfile(kt):
+        print(f'Eksik: {kt}')
         return 1
-    n = 0
-    for anahtar, hedef in MAP.items():
-        for ad in (f'{anahtar}.png', f'{anahtar}.jpg', f'{anahtar}.webp'):
-            yol = os.path.join(SRC, ad)
-            if os.path.isfile(yol):
-                _islem(yol).save(os.path.join(BASE, hedef), 'PNG')
-                print(f'OK {ad} -> {hedef}')
-                n += 1
-                break
-    if not n:
-        print('user_icons icinde tarot.png vb. bulunamadi')
-        return 1
-    print(f'{n} ikon uygulandi.')
+    _kahve_tarot_ayir(kt)
+    _kaydet(Image.open(SRC['astroloji']), 'menu_astroloji.png')
+    _kaydet(Image.open(SRC['elfali']), 'menu_elfali.png')
+    _kaydet(Image.open(SRC['diger']), 'menu_diger.png')
+    print('Tum menu ikonlari hazir.', flush=True)
     return 0
 
 
