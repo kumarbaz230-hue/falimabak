@@ -7,12 +7,12 @@ package.domain = org.kumar.falimabak
 source.dir = .
 source.main = main.py
 
-source.include_exts = py,png,jpg,jpeg,kv,json,webp,ttf,txt,html
-source.include_patterns = assets/*,config.ornek.json,store/*
+source.include_exts = py,png,jpg,jpeg,kv,json,webp,ttf,txt,html,wav,ogg,mp3
+source.include_patterns = assets/*,assets/muzik/*,config.ornek.json,store/*
 source.exclude_dirs = tests,bin,.git,__pycache__,.buildozer,.venv,venv,env,.idea,user_photos,.github,recipes,tools,images,keystore
 source.exclude_patterns = license,images/*/*.jpg,*.bat,config.json,kullanici_veri.json,.env,secrets.json,secrets.ornek.json
 
-version = 1.2.1
+version = 1.2.3
 
 icon.filename = %(source.dir)s/assets/app_icon.png
 presplash.filename = %(source.dir)s/assets/splash_banner.png

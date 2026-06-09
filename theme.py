@@ -14,6 +14,7 @@ from kivy.metrics import dp
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 ASSETS_DIR = os.path.join(BASE_DIR, 'assets')
+APP_SURUM = '1.2.3'
 
 # ============================================================
 #  PROFESYONEL RENK PALETİ
@@ -949,6 +950,26 @@ def gradient_arka_plan_ekle(widget):
     Window.bind(size=lambda *_: _guncelle())
     Clock.schedule_once(lambda *_: _guncelle(), 0)
     return kat1, kat2, kat3
+
+
+def gorsel_arkaplan_ekle(widget, dosya, opak=0.92):
+    """PNG arka plan (menü alanı vb.)."""
+    from kivy.graphics import Color, Rectangle
+
+    yol = asset_yolu(dosya) if not os.path.isabs(dosya) else dosya
+    if not yol or not os.path.isfile(yol):
+        return None
+    with widget.canvas.before:
+        Color(1, 1, 1, opak)
+        rect = Rectangle(source=yol)
+
+    def _guncelle(*_):
+        rect.pos = widget.pos
+        rect.size = widget.size
+
+    widget.bind(pos=_guncelle, size=_guncelle)
+    Clock.schedule_once(lambda *_: _guncelle(), 0)
+    return rect
 
 
 def ekran_icerik_sar(screen, icerik):

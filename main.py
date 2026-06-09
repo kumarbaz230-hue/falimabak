@@ -1,5 +1,5 @@
 """
-🔮 FalımaBak - Premium Fal Uygulaması v1.2.1
+🔮 FalımaBak - Premium Fal Uygulaması v1.2.3
 Mystic Dark Dashboard — mobil odaklı
 """
 
@@ -53,11 +53,11 @@ from theme import (
     fal_ikon_widget, guvenli_textinput,
     metin_label, gradient_arka_plan_ekle, asset_yolu,
     alt_nav_bar, ekran_icerik_sar, kart_zemin_bagla, baslik_satir,
-    yorum_baslik_metin,
+    yorum_baslik_metin, gorsel_arkaplan_ekle, siyah_buton,
 )
 from gecmis import (
     onboarding_gerekli, onboarding_tamamla, kullanici_ismi,
-    gunluk_fal, gecmis_listesi,
+    gunluk_fal, gecmis_listesi, kurabiye_ac, kurabiye_bugun_acildi_mi,
 )
 
 _ikon = asset_yolu('app_icon.png')
@@ -225,81 +225,116 @@ class GunlukFalKarti(ButtonBehavior, BoxLayout):
             app.root.current = self._gunluk['hedef']
 
 
-class BannerGorsel(Image):
-    ORAN = 240 / 1080
+class SansKurabiyesiKarti(ButtonBehavior, BoxLayout):
+    """Günlük şans kurabiyesi — günde bir kez açılır."""
 
-    def __init__(self, source, **kwargs):
-        super().__init__(
-            source=source,
-            allow_stretch=True,
-            keep_ratio=False,
-            size_hint=(1, None),
-            **kwargs,
-        )
-        self.bind(width=self._boyut)
-        Clock.schedule_once(lambda *_: self._boyut(), 0)
-
-    def _boyut(self, *_):
-        if self.width > 1:
-            self.height = self.width * self.ORAN
-
-
-class BaslikKarti(BoxLayout):
     def __init__(self, **kwargs):
-        super().__init__(orientation='vertical', size_hint_y=None, spacing=dp(6), **kwargs)
         from dil import t
-        banner_yol = asset_yolu('menu_banner.png')
-        isim = kullanici_ismi()
+        super().__init__(orientation='horizontal', **kwargs)
+        self.size_hint_y = None
+        self.height = dp(92)
+        self.padding = [dp(14), dp(10), dp(14), dp(10)]
+        self.spacing = dp(12)
 
-        if os.path.isfile(banner_yol):
-            banner = BannerGorsel(source=banner_yol)
-            self.add_widget(banner)
-            if isim:
-                self.add_widget(metin_label(
-                    t('hello', name=isim),
-                    font_size='12sp', bold=True, color=RENKLER['altin_parlak'],
-                    halign='left', size_hint_y=None, height=dp(18),
-                ))
-
-            def _yukseklik(*_):
-                ek = dp(22) if isim else 0
-                self.height = banner.height + ek + dp(4)
-
-            banner.bind(height=_yukseklik)
-            Clock.schedule_once(lambda *_: _yukseklik(), 0)
-            return
-
-        self.height = dp(140)
-        self.padding = [dp(14), dp(12), dp(14), dp(10)]
-        self.spacing = dp(4)
         with self.canvas.before:
-            Color(*get_color_from_hex(RENKLER['kart_arka']))
-            self._panel = RoundedRectangle(radius=[dp(16)])
+            Color(*get_color_from_hex('#1A1238'))
+            self._bg = RoundedRectangle(radius=[dp(16)])
             Color(*get_color_from_hex(RENKLER['altin']))
-            self._cizgi = RoundedRectangle(radius=[dp(2)])
-        self.bind(pos=self._baslik_ciz, size=self._baslik_ciz)
-        Clock.schedule_once(lambda *_: self._baslik_ciz(), 0)
+            self._serit = RoundedRectangle(radius=[dp(2)])
 
-        selam = t('hello', name=isim) if isim else t('discover')
-        ust = BoxLayout(orientation='horizontal', size_hint_y=None, height=dp(44), spacing=dp(8))
-        ust.add_widget(emoji_label('🔮', font_size='34sp', size_hint=(None, 1), width=dp(40)))
-        ust.add_widget(metin_label(
-            'FalımaBak', font_size='30sp', bold=True, color=RENKLER['altin'],
-            halign='left', valign='middle',
+        self.bind(pos=self._cizim, size=self._cizim)
+        Clock.schedule_once(lambda *_: self._cizim(), 0)
+
+        from kivy.uix.anchorlayout import AnchorLayout
+        ikon_kutu = AnchorLayout(
+            size_hint=(None, 1), width=dp(64),
+            anchor_x='center', anchor_y='center',
+        )
+        ikon_kutu.add_widget(emoji_label(
+            '🥠', font_size='44sp', size_hint=(None, None), size=(dp(56), dp(56)),
         ))
-        self.add_widget(ust)
-        self.add_widget(metin_label(selam, font_size='13sp', color=RENKLER['beyaz'],
-            halign='left', size_hint_y=None, height=dp(22)))
-        self.add_widget(metin_label(yorum_baslik_metin(), font_size='11sp', color=RENKLER['gri_acik'],
-            halign='left', size_hint_y=None, height=dp(18)))
+        self.add_widget(ikon_kutu)
 
-    def _baslik_ciz(self, *_):
-        if not hasattr(self, '_panel'):
+        metin = BoxLayout(orientation='vertical', size_hint=(1, 1), spacing=dp(3))
+        isim = kullanici_ismi()
+        if isim:
+            metin.add_widget(metin_label(
+                t('hello', name=isim),
+                font_size='11sp', bold=True, color=RENKLER['altin_parlak'],
+                halign='left', size_hint_y=None, height=dp(16),
+            ))
+        metin.add_widget(metin_label(
+            t('cookie_title'), font_size='15sp', bold=True, color=RENKLER['altin'],
+            halign='left', size_hint_y=None, height=dp(22),
+        ))
+        self._ipucu = metin_label(
+            '', font_size='11sp', color=RENKLER['gri_acik'],
+            halign='left', size_hint_y=None, height=dp(32),
+        )
+        metin.add_widget(self._ipucu)
+        self.add_widget(metin)
+        self.add_widget(metin_label(
+            '›', font_size='24sp', bold=True, color=RENKLER['altin'],
+            halign='center', size_hint=(None, 1), width=dp(20),
+        ))
+        self.yenile()
+
+    def _cizim(self, *_):
+        x, y = self.pos
+        w, h = self.size
+        if w < 1 or h < 1:
             return
-        self._panel.pos = self.pos
-        self._panel.size = self.size
-        self._cizgi.pos = (self.x, self.y)
-        self._cizgi.size = (dp(4), self.height)
+        self._bg.pos = (x, y)
+        self._bg.size = (w, h)
+        self._serit.pos = (x + dp(4), y + dp(10))
+        self._serit.size = (dp(4), max(h - dp(20), dp(12)))
+
+    def yenile(self):
+        from dil import t
+        if kurabiye_bugun_acildi_mi():
+            self._ipucu.text = t('cookie_hint_opened')
+            self._ipucu.color = get_color_from_hex(RENKLER['yesil_parlak'])
+        else:
+            self._ipucu.text = t('cookie_hint')
+            self._ipucu.color = get_color_from_hex(RENKLER['gri_acik'])
+
+    def on_press(self):
+        Animation(opacity=0.88, duration=0.06).start(self)
+
+    def on_release(self):
+        from dil import t
+        from kivy.uix.popup import Popup
+        Animation(opacity=1, duration=0.1).start(self)
+        sonuc = kurabiye_ac()
+        self.yenile()
+
+        icerik = BoxLayout(orientation='vertical', padding=dp(16), spacing=dp(10))
+        icerik.add_widget(emoji_label(
+            '🥠', font_size='52sp', halign='center',
+            size_hint_y=None, height=dp(56),
+        ))
+        icerik.add_widget(metin_label(
+            sonuc['mesaj'], font_size='14sp', color=RENKLER['beyaz'],
+            halign='center', size_hint_y=None, height=dp(90),
+        ))
+        if not sonuc['yeni']:
+            icerik.add_widget(metin_label(
+                t('cookie_already'), font_size='11sp', color=RENKLER['gri_acik'],
+                halign='center', size_hint_y=None, height=dp(36),
+            ))
+        kapat = siyah_buton(t('cookie_close'), font_size='14sp')
+        icerik.add_widget(kapat)
+
+        popup = Popup(
+            title=t('cookie_fortune_title'),
+            content=icerik,
+            size_hint=(0.88, None),
+            height=dp(300),
+            separator_color=get_color_from_hex(RENKLER['altin']),
+            title_color=get_color_from_hex(RENKLER['altin']),
+        )
+        kapat.bind(on_press=lambda *_: popup.dismiss())
+        popup.open()
 
 
 class SplashScreen(Screen):
@@ -558,7 +593,8 @@ class Anasayfa(Screen):
     def _kur(self):
         from dil import t
         ana = BoxLayout(orientation='vertical', padding=[dp(12), SAFE_UST, dp(12), 0], spacing=dp(8))
-        ana.add_widget(BaslikKarti())
+        self._kurabiye = SansKurabiyesiKarti()
+        ana.add_widget(self._kurabiye)
         ana.add_widget(GunlukFalKarti())
         ana.add_widget(metin_label(
             t('menu_fortunes'),
@@ -566,8 +602,10 @@ class Anasayfa(Screen):
             halign='center', size_hint_y=None, height=dp(22),
         ))
 
+        menu_wrap = BoxLayout(orientation='vertical', size_hint_y=1)
+        gorsel_arkaplan_ekle(menu_wrap, 'menu_bg.png', opak=0.88)
         menu_kaydir = ScrollView(size_hint_y=1, do_scroll_x=False, bar_width=dp(3))
-        menu = BoxLayout(orientation='vertical', spacing=dp(10), size_hint_y=None)
+        menu = BoxLayout(orientation='vertical', spacing=dp(10), size_hint_y=None, padding=[dp(6), dp(8), dp(6), dp(8)])
         menu.bind(minimum_height=menu.setter('height'))
         for baslik, aciklama, ikon, renk, hedef in [
             (t('menu_tarot'), t('menu_tarot_desc'), 'tarot', RENKLER['mor'], 'tarot'),
@@ -580,10 +618,9 @@ class Anasayfa(Screen):
             menu.add_widget(DashboardKart(baslik=baslik, aciklama=aciklama,
                 ikon_anahtar=ikon, renk=renk, hedef=hedef))
         menu_kaydir.add_widget(menu)
-        ana.add_widget(menu_kaydir)
+        menu_wrap.add_widget(menu_kaydir)
+        ana.add_widget(menu_wrap)
 
-        ana.add_widget(metin_label('FalımaBak v1.2.1', font_size='10sp', bold=True,
-            color=RENKLER['altin_yumusak'], halign='center', size_hint_y=None, height=dp(18)))
         try:
             from reklam import reklam_alani_bosluk
             ana.add_widget(reklam_alani_bosluk())
@@ -593,10 +630,17 @@ class Anasayfa(Screen):
         ekran_icerik_sar(self, ana)
 
     def on_enter(self, *_):
+        if hasattr(self, '_kurabiye'):
+            self._kurabiye.yenile()
         try:
             from reklam import reklam_hazirla, ekran_reklam_guncelle
             reklam_hazirla()
             ekran_reklam_guncelle('anasayfa')
+        except Exception:
+            pass
+        try:
+            from muzik import muzik_uygula
+            muzik_uygula()
         except Exception:
             pass
 
@@ -653,6 +697,12 @@ class FalimaBakApp(App):
         try:
             from reklam import reklam_hazirla
             Clock.schedule_once(lambda *_: reklam_hazirla(), 1.2)
+        except Exception:
+            pass
+        try:
+            from muzik import muzik_hazirla, muzik_uygula
+            muzik_hazirla()
+            Clock.schedule_once(lambda *_: muzik_uygula(), 1.5)
         except Exception:
             pass
 

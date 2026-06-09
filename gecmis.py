@@ -50,6 +50,49 @@ GUNLUK_FALLAR = [
     ('Diğer', 'diger_fallar', '✨'),
 ]
 
+KURABIYE_MESAJLARI = [
+    'Bugün beklenmedik bir haber yüzünü güldürecek.',
+    'Cesur bir adım attığında kapılar sana açılacak.',
+    'Kalbinin sesini dinle; doğru yolu gösterecek.',
+    'Küçük bir jest, büyük bir mutluluğa dönüşecek.',
+    'Sabırlı olduğun bir konuda müjdeli haber yakın.',
+    'Yeni tanışacağın biri hayatına taze bir soluk getirecek.',
+    'Geçmişte bıraktığın bir umut yeniden yeşerecek.',
+    'Sezgilerin bugün son derece güçlü — onlara güven.',
+    'Maddi konularda şanslı bir döneme giriyorsun.',
+    'Yaratıcı fikirlerin takdir görecek; çekinme.',
+    'Ailenle paylaşacağın bir anı kalbinde sıcaklık bırakacak.',
+    'Bugün vereceğin bir karar geleceğini şekillendirecek.',
+    'Eski bir hayal yeniden uyanıyor; peşinden git.',
+    'Nazik sözlerin birinin gününü aydınlatacak.',
+    'Bir sürpriz seni bekliyor — gözlerini açık tut.',
+    'İç huzurun artacak; stres yerini dinginliğe bırakacak.',
+    'Doğru zamanda doğru kişiyle karşılaşabilirsin.',
+    'Emek verdiğin bir iş meyvesini vermeye başlayacak.',
+    'Bugün şanslı rengin altın tonları — gülümse.',
+    'Kalbinden geçen bir dilek evrene ulaşıyor.',
+    'Cömertliğin sana kat kat geri dönecek.',
+    'Yolculuk veya kısa bir kaçamak ruhuna iyi gelecek.',
+    'Bir kitap, film ya da şarkı sana ilham verecek.',
+    'Geçmişten gelen bir mesaj seni rahatlatacak.',
+    'Bugün kendine zaman ayır; en büyük hediye bu.',
+    'Bir kapı kapanırken daha güzel biri aralanıyor.',
+    'Sevdiklerinle geçireceğin anlar kalıcı olacak.',
+    'Finansal bir endişen hafifleyecek; nefes al.',
+    'Hayal gücün sınırsız — onu kullan.',
+    'Bugün şans kurabiyen sana gülümsedi; inan.',
+    'Merak ettiğin bir sorunun cevabı yakında gelecek.',
+    'Enerjin yüksek; bunu olumlu yönde kullan.',
+    'Bir fırsat kapısı çalacak — cesaretini topla.',
+    'Geçmişteki bir hata seni daha bilge yaptı.',
+    'Bugün minnettarlık duyduğunda şansın artacak.',
+    'Kalbindeki umut hiç sönmesin; yıldızlar seninle.',
+    'Beklemediğin bir yerden destek göreceksin.',
+    'Hayat sana güzel bir sürpriz hazırlıyor.',
+    'İç sesin “evet” dediğinde tereddüt etme.',
+    'Bugün gülümsemen bir zincirleme mutluluk başlatacak.',
+]
+
 
 def _yukle():
     yol = _veri_yolu()
@@ -94,6 +137,29 @@ def dil_al():
 def dil_kaydet(kod='tr'):
     veri = _yukle()
     veri['dil'] = (kod or 'tr').strip() or 'tr'
+    _kaydet(veri)
+
+
+def muzik_acik_al():
+    return bool(_yukle().get('muzik_acik', False))
+
+
+def muzik_acik_kaydet(acik=True):
+    veri = _yukle()
+    veri['muzik_acik'] = bool(acik)
+    _kaydet(veri)
+
+
+def muzik_seviye_al():
+    try:
+        return float(_yukle().get('muzik_seviye', 0.35))
+    except (TypeError, ValueError):
+        return 0.35
+
+
+def muzik_seviye_kaydet(seviye=0.35):
+    veri = _yukle()
+    veri['muzik_seviye'] = max(0.0, min(1.0, float(seviye)))
     _kaydet(veri)
 
 
@@ -167,6 +233,31 @@ def gunluk_fal():
         'sansli_sayi': sans,
         'tarih': date.today().strftime('%d.%m.%Y'),
     }
+
+
+def kurabiye_bugun_acildi_mi():
+    return _yukle().get('kurabiye_tarih') == date.today().isoformat()
+
+
+def kurabiye_mesaji_al():
+    veri = _yukle()
+    if veri.get('kurabiye_tarih') == date.today().isoformat():
+        return veri.get('kurabiye_mesaj', '')
+    return ''
+
+
+def kurabiye_ac():
+    """Günde bir kez şans kurabiyesi aç. {'yeni': bool, 'mesaj': str}"""
+    bugun = date.today().isoformat()
+    veri = _yukle()
+    if veri.get('kurabiye_tarih') == bugun:
+        return {'yeni': False, 'mesaj': veri.get('kurabiye_mesaj', '')}
+    tohum = bugun + (veri.get('isim') or '') + str(len(KURABIYE_MESAJLARI))
+    mesaj = random.Random(tohum).choice(KURABIYE_MESAJLARI)
+    veri['kurabiye_tarih'] = bugun
+    veri['kurabiye_mesaj'] = mesaj
+    _kaydet(veri)
+    return {'yeni': True, 'mesaj': mesaj}
 
 
 def baslik_olustur(tip, veri=None):

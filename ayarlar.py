@@ -3,19 +3,20 @@
 from kivy.app import App
 from kivy.uix.screenmanager import Screen
 from kivy.uix.boxlayout import BoxLayout
+from kivy.uix.scrollview import ScrollView
 from kivy.uix.spinner import Spinner
 from kivy.utils import get_color_from_hex
 from kivy.metrics import dp
 
 from theme import (
-    RENKLER, SAFE_UST,
+    RENKLER, SAFE_UST, APP_SURUM,
     metin_label, baslik_satir, siyah_buton, alt_nav_bar, ekran_icerik_sar,
     guvenli_textinput, kart_zemin_bagla,
 )
-from gecmis import kullanici_ismi, isim_guncelle, gecmis_temizle, dil_al
+from gecmis import kullanici_ismi, isim_guncelle, gecmis_temizle, dil_al, muzik_acik_al, muzik_seviye_al
 from dil import t, dil_listesi, dil_etiket, dil_degistir
 
-_SURUM = '1.1.1'
+_SURUM = APP_SURUM
 
 
 def _ayar_karti(baslik, alt_baslik=None):
@@ -23,18 +24,27 @@ def _ayar_karti(baslik, alt_baslik=None):
         orientation='vertical',
         size_hint_y=None,
         spacing=dp(10),
-        padding=[dp(16), dp(14), dp(16), dp(14)],
+        padding=[dp(16), dp(16), dp(16), dp(16)],
     )
     kart_zemin_bagla(kart, radius=16)
     kart.add_widget(metin_label(
         baslik, font_size='16sp', bold=True, color=RENKLER['altin'],
-        halign='left', size_hint_y=None, height=dp(22),
+        halign='left', size_hint_y=None, height=dp(24),
     ))
     if alt_baslik:
-        kart.add_widget(metin_label(
+        alt = metin_label(
             alt_baslik, font_size='11sp', color=RENKLER['gri_acik'],
-            halign='left', size_hint_y=None, height=dp(32),
-        ))
+            halign='left', size_hint_y=None, height=dp(36),
+        )
+
+        def _alt_yukseklik(inst, *_):
+            if inst.width > dp(8):
+                inst.text_size = (inst.width, None)
+                inst.height = max(inst.texture_size[1], dp(18))
+
+        alt.bind(width=_alt_yukseklik, texture_size=_alt_yukseklik)
+        kart.add_widget(alt)
+    kart.bind(minimum_height=kart.setter('height'))
     return kart
 
 
@@ -44,8 +54,24 @@ class AyarlarScreen(Screen):
         self._kur()
 
     def _kur(self):
-        ana = BoxLayout(orientation='vertical', padding=[dp(12), SAFE_UST, dp(12), 0], spacing=dp(12))
-        ana.add_widget(baslik_satir('', t('settings_title'), font_size='22sp', height=dp(40)))
+        ana = BoxLayout(orientation='vertical', padding=[dp(12), SAFE_UST, dp(12), 0], spacing=dp(8))
+
+        kaydir = ScrollView(
+            size_hint_y=1,
+            do_scroll_x=False,
+            bar_width=dp(3),
+            bar_color=get_color_from_hex(RENKLER['mor_parlak']),
+            bar_inactive_color=get_color_from_hex(RENKLER['kart_kenar']),
+        )
+        icerik = BoxLayout(
+            orientation='vertical',
+            spacing=dp(16),
+            size_hint_y=None,
+            padding=[0, 0, 0, dp(16)],
+        )
+        icerik.bind(minimum_height=icerik.setter('height'))
+
+        icerik.add_widget(baslik_satir('', t('settings_title'), font_size='22sp', height=dp(40)))
 
         dil_kart = _ayar_karti(t('settings_lang'), t('settings_lang_hint'))
         self._dil_spinner = Spinner(
@@ -57,14 +83,12 @@ class AyarlarScreen(Screen):
             color=get_color_from_hex(RENKLER['beyaz']),
         )
         dil_kart.add_widget(self._dil_spinner)
-        dil_kart.height = dp(130)
-        ana.add_widget(dil_kart)
+        icerik.add_widget(dil_kart)
 
         profil = _ayar_karti(t('settings_profile'), t('settings_profile_hint'))
         self._isim_input = guvenli_textinput(hint_text=t('settings_name_hint'))
         profil.add_widget(self._isim_input)
-        profil.height = dp(130)
-        ana.add_widget(profil)
+        icerik.add_widget(profil)
 
         islem = _ayar_karti(t('settings_data'))
         kaydet_btn = siyah_buton(t('settings_save'), vurgu=True, font_size='15sp')
@@ -73,33 +97,72 @@ class AyarlarScreen(Screen):
         temizle_btn = siyah_buton(t('settings_clear'), font_size='14sp')
         temizle_btn.bind(on_press=self._gecmis_temizle)
         islem.add_widget(temizle_btn)
-        islem.height = dp(148)
-        ana.add_widget(islem)
+        icerik.add_widget(islem)
 
         hukuk = _ayar_karti(t('settings_legal'), t('settings_legal_hint'))
         gizlilik_btn = siyah_buton(t('settings_privacy'), font_size='14sp')
         gizlilik_btn.bind(on_press=self._gizlilik_ac)
         hukuk.add_widget(gizlilik_btn)
-        hukuk.height = dp(118)
-        ana.add_widget(hukuk)
+        icerik.add_widget(hukuk)
+
+        muzik_kart = _ayar_karti(t('settings_music'), t('settings_music_hint'))
+        self._muzik_btn = siyah_buton(t('settings_music_off'), font_size='14sp')
+        self._muzik_btn.bind(on_press=self._muzik_toggle)
+        muzik_kart.add_widget(self._muzik_btn)
+
+        from kivy.uix.slider import Slider
+        self._muzik_slider = Slider(
+            min=0, max=100,
+            value=int(muzik_seviye_al() * 100),
+            size_hint_y=None, height=dp(36),
+        )
+        self._muzik_slider.bind(on_value=self._muzik_seviye_degisti)
+
+        ses_satir = BoxLayout(size_hint_y=None, height=dp(44), spacing=dp(8))
+        azalt = siyah_buton('−', font_size='20sp')
+        azalt.size_hint_x = None
+        azalt.width = dp(52)
+        azalt.bind(on_press=self._muzik_seviye_azalt)
+        artir = siyah_buton('+', font_size='20sp')
+        artir.size_hint_x = None
+        artir.width = dp(52)
+        artir.bind(on_press=self._muzik_seviye_artir)
+        self._muzik_yuzde = metin_label(
+            '', font_size='12sp', bold=True, color=RENKLER['altin'],
+            halign='center', valign='middle',
+        )
+        ses_satir.add_widget(azalt)
+        ses_satir.add_widget(self._muzik_yuzde)
+        ses_satir.add_widget(artir)
+
+        muzik_kart.add_widget(metin_label(
+            t('settings_volume'), font_size='11sp', color=RENKLER['gri_acik'],
+            halign='left', size_hint_y=None, height=dp(18),
+        ))
+        muzik_kart.add_widget(self._muzik_slider)
+        muzik_kart.add_widget(ses_satir)
+        icerik.add_widget(muzik_kart)
 
         self._mesaj = metin_label(
             '', font_size='13sp', color=RENKLER['yesil'],
             halign='center', size_hint_y=None, height=dp(28),
         )
-        ana.add_widget(self._mesaj)
+        icerik.add_widget(self._mesaj)
 
-        ana.add_widget(BoxLayout(size_hint_y=1))
+        icerik.add_widget(metin_label(
+            f'FalımaBak v{_SURUM}',
+            font_size='10sp', color=RENKLER['gri_koyu'],
+            halign='center', size_hint_y=None, height=dp(18),
+        ))
+
+        kaydir.add_widget(icerik)
+        ana.add_widget(kaydir)
+
         try:
             from reklam import reklam_alani_bosluk
             ana.add_widget(reklam_alani_bosluk())
         except Exception:
             pass
-        ana.add_widget(metin_label(
-            f'FalımaBak v{_SURUM}',
-            font_size='10sp', color=RENKLER['gri_koyu'],
-            halign='center', size_hint_y=None, height=dp(18),
-        ))
         ana.add_widget(alt_nav_bar('ayarlar', on_sec=self._nav))
         ekran_icerik_sar(self, ana)
 
@@ -110,6 +173,42 @@ class AyarlarScreen(Screen):
         self._isim_input.text = kullanici_ismi()
         self._dil_spinner.text = dil_etiket(dil_al())
         self._mesaj.text = ''
+        self._slider_guncelle(muzik_seviye_al() * 100, ses_uygula=False)
+        self._muzik_btn_guncelle()
+        try:
+            from muzik import muzik_acik_mi, muzik_uygula
+            if muzik_acik_mi():
+                muzik_uygula()
+        except Exception:
+            pass
+
+    def _slider_guncelle(self, deger, ses_uygula=True):
+        self._muzik_slider.unbind(on_value=self._muzik_seviye_degisti)
+        deger = max(0, min(100, int(deger)))
+        self._muzik_slider.value = deger
+        self._muzik_yuzde.text = f'%{deger}'
+        self._muzik_slider.bind(on_value=self._muzik_seviye_degisti)
+        if ses_uygula:
+            from muzik import muzik_seviye_ayarla
+            muzik_seviye_ayarla(deger / 100.0)
+
+    def _muzik_btn_guncelle(self):
+        acik = muzik_acik_al()
+        self._muzik_btn.text = t('settings_music_on') if acik else t('settings_music_off')
+
+    def _muzik_toggle(self, *_):
+        from muzik import muzik_ac_kapat, muzik_acik_mi
+        muzik_ac_kapat(not muzik_acik_mi())
+        self._muzik_btn_guncelle()
+
+    def _muzik_seviye_degisti(self, _, deger):
+        self._slider_guncelle(deger)
+
+    def _muzik_seviye_azalt(self, *_):
+        self._slider_guncelle(self._muzik_slider.value - 10)
+
+    def _muzik_seviye_artir(self, *_):
+        self._slider_guncelle(self._muzik_slider.value + 10)
 
     def _secili_dil_kodu(self):
         etik = self._dil_spinner.text
