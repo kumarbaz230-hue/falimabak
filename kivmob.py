@@ -1,4 +1,4 @@
-"""KivMob — AdMob bridge (vendored, FalımaBak)."""
+"""KivMob — AdMob bridge (FalımaBak, banner + interstitial)."""
 
 from kivy.utils import platform
 from kivy.logger import Logger
@@ -11,27 +11,37 @@ if platform == 'android':
         from android.runnable import run_on_ui_thread
 
         PythonActivity = autoclass('org.kivy.android.PythonActivity')
-        AdMobAdapter = autoclass('com.google.ads.mediation.admob.AdMobAdapter')
         AdRequestBuilder = autoclass('com.google.android.gms.ads.AdRequest$Builder')
         AdSize = autoclass('com.google.android.gms.ads.AdSize')
         AdView = autoclass('com.google.android.gms.ads.AdView')
-        Bundle = autoclass('android.os.Bundle')
         Gravity = autoclass('android.view.Gravity')
-        InterstitialAd = autoclass('com.google.android.gms.ads.InterstitialAd')
         LayoutParams = autoclass('android.view.ViewGroup$LayoutParams')
         LinearLayout = autoclass('android.widget.LinearLayout')
         MobileAds = autoclass('com.google.android.gms.ads.MobileAds')
         View = autoclass('android.view.View')
+
+        try:
+            InterstitialAd = autoclass('com.google.android.gms.ads.InterstitialAd')
+            _INTERSTITIAL_OK = True
+        except Exception:
+            InterstitialAd = None
+            _INTERSTITIAL_OK = False
 
         class AndroidBridge:
             @run_on_ui_thread
             def __init__(self, appID):
                 self._loaded = False
                 self._activity = PythonActivity.mActivity
-                MobileAds.initialize(self._activity, appID)
-                self._adview = AdView(self._activity)
-                self._interstitial = InterstitialAd(self._activity)
+                self._interstitial = None
                 self._test_devices = []
+                try:
+                    MobileAds.initialize(self._activity)
+                except Exception:
+                    try:
+                        MobileAds.initialize(self._activity, appID)
+                    except Exception as e:
+                        Logger.error(f'KivMob MobileAds: {e}')
+                self._adview = AdView(self._activity)
 
             @run_on_ui_thread
             def add_test_device(self, testID):
@@ -41,7 +51,10 @@ if platform == 'android':
             def new_banner(self, unitID, top_pos=True):
                 self._adview = AdView(self._activity)
                 self._adview.setAdUnitId(unitID)
-                self._adview.setAdSize(AdSize.SMART_BANNER)
+                try:
+                    self._adview.setAdSize(AdSize.BANNER)
+                except Exception:
+                    self._adview.setAdSize(AdSize.SMART_BANNER)
                 self._adview.setVisibility(View.GONE)
                 ad_lp = LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT)
                 self._adview.setLayoutParams(ad_lp)
@@ -67,15 +80,22 @@ if platform == 'android':
 
             @run_on_ui_thread
             def new_interstitial(self, unitID):
+                if not _INTERSTITIAL_OK:
+                    return
                 self._interstitial = InterstitialAd(self._activity)
                 self._interstitial.setAdUnitId(unitID)
 
             @run_on_ui_thread
             def request_interstitial(self, options=None):
+                if self._interstitial is None:
+                    return
                 self._interstitial.loadAd(self._get_builder(options).build())
 
             @run_on_ui_thread
             def _is_interstitial_loaded(self):
+                if self._interstitial is None:
+                    self._loaded = False
+                    return
                 self._loaded = self._interstitial.isLoaded()
 
             def is_interstitial_loaded(self):
@@ -84,20 +104,16 @@ if platform == 'android':
 
             @run_on_ui_thread
             def show_interstitial(self):
-                if self.is_interstitial_loaded():
+                if self._interstitial is not None and self.is_interstitial_loaded():
                     self._interstitial.show()
 
             def _get_builder(self, options):
                 builder = AdRequestBuilder()
-                if options:
-                    if 'children' in options:
-                        builder.tagForChildDirectedTreatment(options['children'])
-                    if 'family' in options:
-                        extras = Bundle()
-                        extras.putBoolean('is_designed_for_families', options['family'])
-                        builder.addNetworkExtrasBundle(AdMobAdapter, extras)
                 for test_device in self._test_devices:
-                    builder.addTestDevice(test_device)
+                    try:
+                        builder.addTestDevice(test_device)
+                    except Exception:
+                        pass
                 return builder
 
     except BaseException as exc:

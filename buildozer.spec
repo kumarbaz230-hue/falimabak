@@ -12,7 +12,7 @@ source.include_patterns = assets/*,config.ornek.json,store/*
 source.exclude_dirs = tests,bin,.git,__pycache__,.buildozer,.venv,venv,env,.idea,user_photos,.github,recipes,tools,images,keystore
 source.exclude_patterns = license,images/*/*.jpg,*.bat,config.json,kullanici_veri.json,.env,secrets.json,secrets.ornek.json
 
-version = 1.1.1
+version = 1.1.2
 
 icon.filename = %(source.dir)s/assets/app_icon.png
 presplash.filename = %(source.dir)s/assets/splash_banner.png
@@ -34,7 +34,7 @@ android.accept_sdk_license = True
 android.allow_backup = True
 android.enable_androidx = True
 
-android.gradle_dependencies = androidx.appcompat:appcompat:1.6.1,com.google.android.gms:play-services-ads:23.6.0
+android.gradle_dependencies = androidx.appcompat:appcompat:1.6.1,com.google.android.gms:play-services-ads:22.6.0
 
 # Test AdMob App ID — yayın öncesi secrets.json + bu satırı gerçek ID ile güncelle
 android.meta_data = com.google.android.gms.ads.APPLICATION_ID=ca-app-pub-9430596197237392~1799758284

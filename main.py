@@ -1,5 +1,5 @@
 """
-🔮 FalımaBak - Premium Fal Uygulaması v1.1.1
+🔮 FalımaBak - Premium Fal Uygulaması v1.1.2
 Mystic Dark Dashboard — mobil odaklı
 """
 
@@ -578,7 +578,7 @@ class Anasayfa(Screen):
                 ikon_anahtar=ikon, renk=renk, hedef=hedef))
         ana.add_widget(menu)
 
-        ana.add_widget(metin_label('FalımaBak v1.1.1', font_size='10sp', bold=True,
+        ana.add_widget(metin_label('FalımaBak v1.1.2', font_size='10sp', bold=True,
             color=RENKLER['altin_yumusak'], halign='center', size_hint_y=None, height=dp(18)))
         try:
             from reklam import reklam_alani_bosluk
@@ -587,6 +587,14 @@ class Anasayfa(Screen):
             pass
         ana.add_widget(alt_nav_bar('anasayfa', on_sec=self._nav))
         ekran_icerik_sar(self, ana)
+
+    def on_enter(self, *_):
+        try:
+            from reklam import reklam_hazirla, ekran_reklam_guncelle
+            reklam_hazirla()
+            ekran_reklam_guncelle('anasayfa')
+        except Exception:
+            pass
 
     def _nav(self, hedef):
         if not self.manager:
@@ -646,6 +654,7 @@ class FalimaBakApp(App):
 
     def ekranlari_yenile_dil(self):
         from ayarlar import AyarlarScreen
+        from gizlilik import GizlilikScreen
         sm = self.root
         if not sm:
             return
@@ -654,6 +663,7 @@ class FalimaBakApp(App):
             ('anasayfa', lambda: Anasayfa(name='anasayfa')),
             ('gecmis', lambda: GecmisScreen(name='gecmis')),
             ('ayarlar', lambda: AyarlarScreen(name='ayarlar')),
+            ('gizlilik', lambda: GizlilikScreen(name='gizlilik')),
         ]:
             if name in sm.screen_names:
                 sm.remove_widget(sm.get_screen(name))
@@ -702,12 +712,14 @@ class FalimaBakApp(App):
             from diger_fallar import DigerFallarScreen
             from elfali import ElFaliScreen
             from ayarlar import AyarlarScreen
+            from gizlilik import GizlilikScreen
 
             ekranlar = [
                 ('onboarding', lambda: OnboardingScreen(name='onboarding')),
                 ('anasayfa', lambda: Anasayfa(name='anasayfa')),
                 ('gecmis', lambda: GecmisScreen(name='gecmis')),
                 ('ayarlar', lambda: AyarlarScreen(name='ayarlar')),
+                ('gizlilik', lambda: GizlilikScreen(name='gizlilik')),
                 ('tarot', lambda: TarotScreen(name='tarot')),
                 ('kahve', lambda: KahveScreen(name='kahve')),
                 ('astroloji', lambda: AstrolojiScreen(name='astroloji')),

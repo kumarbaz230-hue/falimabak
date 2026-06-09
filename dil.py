@@ -75,6 +75,28 @@ _METINLER = {
     'settings_legal': {'tr': 'Yasal', 'en': 'Legal', 'de': 'Rechtliches', 'fr': 'Mentions légales', 'es': 'Legal', 'ar': 'قانوني', 'ru': 'Правовая информация', 'pt': 'Legal', 'it': 'Legale', 'hi': 'कानूनी', 'id': 'Legal', 'zh': '法律'},
     'settings_legal_hint': {'tr': 'Gizlilik politikası ve veri kullanımı', 'en': 'Privacy policy and data use', 'de': 'Datenschutz', 'fr': 'Confidentialité', 'es': 'Privacidad', 'ar': 'الخصوصية', 'ru': 'Конфиденциальность', 'pt': 'Privacidade', 'it': 'Privacy', 'hi': 'गोपनीयता', 'id': 'Privasi', 'zh': '隐私'},
     'settings_privacy': {'tr': 'Gizlilik Politikasını Aç', 'en': 'Open Privacy Policy', 'de': 'Datenschutz öffnen', 'fr': 'Politique de confidentialité', 'es': 'Política de privacidad', 'ar': 'سياسة الخصوصية', 'ru': 'Политика конфиденциальности', 'pt': 'Política de privacidade', 'it': 'Informativa privacy', 'hi': 'गोपनीयता नीति', 'id': 'Kebijakan privasi', 'zh': '隐私政策'},
+    'privacy_title': {'tr': 'Gizlilik Politikası', 'en': 'Privacy Policy', 'de': 'Datenschutz', 'fr': 'Confidentialité', 'es': 'Privacidad', 'ar': 'الخصوصية', 'ru': 'Конфиденциальность', 'pt': 'Privacidade', 'it': 'Privacy', 'hi': 'गोपनीयता', 'id': 'Privasi', 'zh': '隐私政策'},
+    'privacy_body': {
+        'tr': (
+            'FalımaBak tarot, kahve, el, astroloji ve benzeri fal yorumları sunar.\n\n'
+            'Toplanan veriler:\n'
+            '• İsteğe bağlı profil adı (cihazınızda)\n'
+            '• Fal geçmişi (cihazınızda, ayarlardan silinebilir)\n'
+            '• Kahve/el falı fotoğrafları (yorum için işlenir)\n'
+            '• Dil tercihi\n'
+            '• Reklam kimliği (Google AdMob)\n\n'
+            'Üçüncü taraf: Google AdMob (reklamlar), Google Gemini AI (fal yorumu, internet gerekir).\n\n'
+            'İzinler: Kamera, galeri, internet.\n\n'
+            'Uygulama 13 yaş altına yönelik değildir. Fal yorumları eğlence amaçlıdır.\n\n'
+            'İletişim: github.com/kumarbaz230-hue/falimabak'
+        ),
+        'en': (
+            'FalımaBak offers fortune readings (tarot, coffee, palm, astrology).\n\n'
+            'Data: optional name, reading history (on device), photos for readings, language, ad ID (AdMob).\n'
+            'Third parties: Google AdMob, Google Gemini AI.\n'
+            'Entertainment only. Not for users under 13.'
+        ),
+    },
     'menu_fortunes': {'tr': '✦  Fallarınız  ✦', 'en': '✦  Your Fortunes  ✦', 'de': '✦  Ihre Fall  ✦', 'fr': '✦  Vos oracles  ✦', 'es': '✦  Tus lecturas  ✦', 'ar': '✦  قراءاتك  ✦', 'ru': '✦  Ваши гадания  ✦', 'pt': '✦  Suas leituras  ✦', 'it': '✦  I tuoi oracoli  ✦', 'hi': '✦  आपके फ़ाल  ✦', 'id': '✦  Ramalan Anda  ✦', 'zh': '✦  您的占卜  ✦'},
     'menu_tarot': {'tr': 'Tarot Falı', 'en': 'Tarot Reading', 'de': 'Tarot', 'fr': 'Tarot', 'es': 'Tarot', 'ar': 'تاروت', 'ru': 'Таро', 'pt': 'Tarô', 'it': 'Tarocchi', 'hi': 'टैरो', 'id': 'Tarot', 'zh': '塔罗'},
     'menu_tarot_desc': {'tr': '78 kartlık deste ile geleceğinizi görün', 'en': 'See your future with 78 cards', 'de': '78 Karten', 'fr': '78 cartes', 'es': '78 cartas', 'ar': '78 بطاقة', 'ru': '78 карт', 'pt': '78 cartas', 'it': '78 carte', 'hi': '78 कार्ड', 'id': '78 kartu', 'zh': '78张牌'},

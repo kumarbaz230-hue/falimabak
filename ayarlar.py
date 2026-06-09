@@ -132,10 +132,11 @@ class AyarlarScreen(Screen):
 
     def _gizlilik_ac(self, *_):
         try:
-            from reklam import gizlilik_url, url_ac
-            url_ac(gizlilik_url())
+            from reklam import gizlilik_ac
+            gizlilik_ac(self.manager)
         except Exception:
-            pass
+            if self.manager and 'gizlilik' in self.manager.screen_names:
+                self.manager.current = 'gizlilik'
 
     def _gecmis_temizle(self, *_):
         if gecmis_temizle():
