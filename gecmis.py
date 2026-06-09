@@ -86,6 +86,26 @@ def kullanici_ismi():
     return _yukle().get('isim', '')
 
 
+def isim_guncelle(isim=''):
+    veri = _yukle()
+    isim = (isim or '').strip()
+    if isim:
+        veri['isim'] = isim
+    elif 'isim' in veri:
+        del veri['isim']
+    _kaydet(veri)
+
+
+def gecmis_temizle():
+    veri = _yukle()
+    veri['gecmis'] = []
+    try:
+        _kaydet(veri)
+        return True
+    except Exception:
+        return False
+
+
 def fal_kaydet(tip, baslik, yorum):
     if not yorum or not str(yorum).strip():
         return

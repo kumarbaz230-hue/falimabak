@@ -9,13 +9,13 @@ source.main = main.py
 
 source.include_exts = py,png,jpg,jpeg,kv,json,webp,ttf,txt
 source.include_patterns = assets/*,config.ornek.json
-source.exclude_dirs = tests,bin,.git,__pycache__,.buildozer,.venv,venv,env,.idea,user_photos,.github,recipes
-source.exclude_patterns = license,images/*/*.jpg,*.bat,*.md,config.json,kullanici_veri.json,.env
+source.exclude_dirs = tests,bin,.git,__pycache__,.buildozer,.venv,venv,env,.idea,user_photos,.github,recipes,tools
+source.exclude_patterns = license,images/*/*.jpg,*.bat,*.md,config.json,kullanici_veri.json,.env,secrets.json,secrets.ornek.json
 
-version = 1.0.3
+version = 1.0.5
 
 # Novfensec örnek projesiyle aynı çizgi: develop p4a + kivy 2.3.1
-requirements = python3,kivy==2.3.1,pillow,android
+requirements = python3,kivy==2.3.1,pillow,android,plyer
 
 orientation = portrait
 fullscreen = 0
@@ -25,7 +25,7 @@ android.minapi = 24
 android.ndk = 25b
 android.ndk_api = 24
 
-android.permissions = INTERNET,WRITE_EXTERNAL_STORAGE,READ_EXTERNAL_STORAGE,CAMERA
+android.permissions = INTERNET,WRITE_EXTERNAL_STORAGE,READ_EXTERNAL_STORAGE,READ_MEDIA_IMAGES,CAMERA
 
 android.archs = arm64-v8a
 android.accept_sdk_license = True

@@ -519,6 +519,11 @@ class FalimaBakApp(App):
             print(f'Config kopyalama: {e}', flush=True)
 
     def build(self):
+        try:
+            from koruma import koruma_baslat
+            koruma_baslat()
+        except Exception:
+            pass
         fontlari_yukle()
         emoji_font_yukle()
         self.title = 'FalımaBak'

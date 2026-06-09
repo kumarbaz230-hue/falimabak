@@ -18,6 +18,9 @@ from kivy.clock import Clock
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 CONFIG_ORNEK_YOLU = os.path.join(BASE_DIR, 'config.ornek.json')
+SECRETS_YOLU = os.path.join(BASE_DIR, 'secrets.json')
+SECRETS_ORNEK_YOLU = os.path.join(BASE_DIR, 'secrets.ornek.json')
+_gomulu_anahtar = None
 
 
 def _config_yolu():
@@ -44,7 +47,8 @@ _varsayilan = {
     'gemini_model': 'gemini-2.5-flash-lite',
     'gemini_yedek_modeller': [
         'gemini-2.5-flash',
-        'gemini-3.5-flash',
+        'gemini-2.0-flash',
+        'gemini-1.5-flash',
     ],
     # Masaüstü Ollama (mobilde atlanır)
     'ollama_url': 'http://127.0.0.1:11434/api/generate',
@@ -98,9 +102,41 @@ def gemini_key_kisa(ayar=None):
     return f'{key[:4]}…{key[-4:]}'
 
 
+def _gomulu_anahtar_yukle():
+    """Şifreli koruma modülü → secrets.json yedeği."""
+    global _gomulu_anahtar
+    if _gomulu_anahtar is not None:
+        return _gomulu_anahtar
+    try:
+        from koruma import gomulu_api_anahtar
+        ham = (gomulu_api_anahtar() or '').strip()
+        if ham:
+            _gomulu_anahtar = ham
+            return ham
+    except Exception:
+        pass
+    for yol in (SECRETS_YOLU,):
+        if not os.path.isfile(yol):
+            continue
+        try:
+            with open(yol, encoding='utf-8') as f:
+                ham = (json.load(f).get('gemini_api_key') or '').strip()
+            if ham and ham != 'BURAYA_GOOGLE_AI_STUDIO_KEY':
+                _gomulu_anahtar = ham
+                return ham
+        except Exception:
+            pass
+    _gomulu_anahtar = ''
+    return ''
+
+
 def _gemini_anahtar(ayar=None):
     ayar = ayar or _ayar_yukle()
-    anahtar = (ayar.get('gemini_api_key') or os.environ.get('GEMINI_API_KEY') or '').strip()
+    anahtar = (
+        _gomulu_anahtar_yukle()
+        or (ayar.get('gemini_api_key') or '').strip()
+        or os.environ.get('GEMINI_API_KEY', '').strip()
+    )
     if not anahtar:
         return ''
     # Yanlışlıkla AIzaSy + AQ. birleştirilmişse düzelt
@@ -354,7 +390,7 @@ def _kullanici_hata_mesaji(hatalar):
     if '429' in kodlar:
         return 'Bulut kotası dolu; biraz bekleyip tekrar deneyin. Şimdilik hazır yorum.'
     if any(k in ('401', '403', '400') for k in kodlar):
-        return 'API anahtarı geçersiz; config.json kontrol edin. Hazır yorum gösteriliyor.'
+        return 'Yapay zeka servisi yanıt vermedi; hazır yorum gösteriliyor.'
     return 'AI bağlantısı kurulamadı; hazır yorum gösteriliyor.'
 
 

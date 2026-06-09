@@ -1,5 +1,6 @@
 # API key ve kullanıcı verisi — asla commit etme
 config.json
+secrets.json
 kullanici_veri.json
 .env
 *.env

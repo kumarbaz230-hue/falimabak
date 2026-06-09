@@ -121,6 +121,21 @@ FAL_IKONLARI = {
     'ok':        '›',
 }
 
+# Menü PNG ikonları (assets/ klasörü)
+MENU_IKON_DOSYALARI = {
+    'tarot':     'menu_tarot.png',
+    'kahve':     'menu_kahve.png',
+    'astroloji': 'menu_astroloji.png',
+    'elfali':    'menu_elfali.png',
+    'diger':     'menu_diger.png',
+}
+
+NAV_IKON_DOSYALARI = {
+    'anasayfa': 'nav_anasayfa.png',
+    'gecmis':   'nav_gecmis.png',
+    'ayarlar':  'nav_ayarlar.png',
+}
+
 # Mobil safe area (çentik / gesture bar) — Android'de aşağıda genişletilir
 SAFE_UST = dp(8)
 SAFE_ALT = dp(10)
@@ -258,8 +273,28 @@ def emoji_label(text, font_size='28sp', **kwargs):
     return Label(text=metin, font_name=fon, font_size=font_size, **kwargs)
 
 
-def fal_ikon_widget(anahtar, renk_hex, font_size='26sp', **kwargs):
-    """Menü kartı ikonu — emoji fontu yoksa harf yedeği."""
+def menu_ikon_resmi(anahtar, renk_hex=None, font_size='26sp', **kwargs):
+    """Menü kartı için PNG ikon (yoksa emoji/harf yedeği)."""
+    from kivy.uix.image import Image
+
+    dosya = MENU_IKON_DOSYALARI.get(anahtar, '')
+    yol = asset_yolu(dosya) if dosya else ''
+    if yol and os.path.isfile(yol):
+        defaults = {
+            'allow_stretch': True,
+            'keep_ratio': True,
+            'size_hint': (None, None),
+            'size': (dp(36), dp(36)),
+        }
+        defaults.update(kwargs)
+        return Image(source=yol, **defaults)
+    return fal_ikon_widget_yedek(
+        anahtar, renk_hex or RENKLER['altin'], font_size=font_size, **kwargs,
+    )
+
+
+def fal_ikon_widget_yedek(anahtar, renk_hex, font_size='26sp', **kwargs):
+    """PNG yoksa emoji veya harf."""
     fontlari_yukle()
     metin = FAL_IKONLARI.get(anahtar, '🔮')
     yol = emoji_font_yolu()
@@ -273,6 +308,11 @@ def fal_ikon_widget(anahtar, renk_hex, font_size='26sp', **kwargs):
         harf, font_size=font_size, bold=True, color=renk_hex,
         halign='center', valign='middle', **kwargs,
     )
+
+
+def fal_ikon_widget(anahtar, renk_hex, font_size='26sp', **kwargs):
+    """Menü kartı ikonu — önce PNG."""
+    return menu_ikon_resmi(anahtar, renk_hex=renk_hex, font_size=font_size, **kwargs)
 
 
 def guvenli_textinput(hint_text='', **kwargs):
@@ -399,6 +439,8 @@ def tus_buton(anahtar, vurgu=False, altin_yazi=False, **kwargs):
     """TUS + TUS_IKON ile standart uygulama butonu."""
     metin = TUS.get(anahtar, anahtar)
     ikon = TUS_IKON.get(anahtar, '')
+    if _android_mi() and not emoji_font_yolu():
+        ikon = ''
     if anahtar == 'geri':
         return siyah_buton(metin, vurgu=vurgu, altin_yazi=altin_yazi, **kwargs)
     return siyah_buton(metin, ikon=ikon, vurgu=vurgu, altin_yazi=altin_yazi, **kwargs)
@@ -899,7 +941,18 @@ def alt_nav_bar(aktif='anasayfa', on_sec=None):
             self.padding = [0, dp(4), 0, dp(4)]
             renk = RENKLER['altin'] if secili else RENKLER['gri']
             ust = BoxLayout(orientation='horizontal', size_hint_y=None, height=dp(24), spacing=dp(4))
-            if ikon and (emoji_font_yolu() or not _android_mi()):
+            nav_png = NAV_IKON_DOSYALARI.get(anahtar, '')
+            nav_yol = asset_yolu(nav_png) if nav_png else ''
+            if nav_yol and os.path.isfile(nav_yol):
+                from kivy.uix.image import Image
+                ust.add_widget(Image(
+                    source=nav_yol,
+                    size_hint=(None, 1),
+                    width=dp(22),
+                    allow_stretch=True,
+                    keep_ratio=True,
+                ))
+            elif ikon and (emoji_font_yolu() or not _android_mi()):
                 ust.add_widget(emoji_label(ikon, font_size='14sp', size_hint_x=None, width=dp(22)))
             ust.add_widget(metin_label(
                 etiket,
