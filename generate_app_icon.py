@@ -168,5 +168,14 @@ def ikon_olustur():
 
 if __name__ == '__main__':
     menu_banner_olustur()
-    menu_kartlari_olustur()
     banner_olustur()
+    # Menü ikonları: tools/generate_assets.py
+    import importlib.util
+    tools = os.path.join(os.path.dirname(__file__), 'tools', 'generate_assets.py')
+    if os.path.isfile(tools):
+        spec = importlib.util.spec_from_file_location('gen_assets', tools)
+        mod = importlib.util.module_from_spec(spec)
+        try:
+            spec.loader.exec_module(mod)
+        except Exception as e:
+            print(f'İkon: {e}', flush=True)

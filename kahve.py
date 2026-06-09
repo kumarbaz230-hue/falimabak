@@ -248,7 +248,7 @@ class KahveScreen(Screen):
     def _foto_sonuc(self, yol, hata):
         if hata:
             self.yorum_label.markup = True
-            self.yorum_label.text = f"[color={RENKLER['kirmizi']}]❌ {hata}[/color]"
+            self.yorum_label.text = f"[color={RENKLER['kirmizi']}]{hata}[/color]"
             return
 
         self.foto_panel.fotograf_ekle(yol)

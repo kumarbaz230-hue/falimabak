@@ -84,7 +84,7 @@ KART_MENU_AR = {
 
 # Tuş metinleri (Segoe UI) + ayrı emoji ikonları
 TUS = {
-    'geri':      '← Geri',
+    'geri':      'Geri',
     'fal_ac':    'Fal Aç',
     'tekrar':    'Tekrar',
     'galeri':    'Galeri',
@@ -525,13 +525,15 @@ def buton_metin_guncelle(btn, metin):
 
 
 def tus_buton(anahtar, vurgu=False, altin_yazi=False, **kwargs):
-    """TUS + TUS_IKON ile standart uygulama butonu."""
-    metin = TUS.get(anahtar, anahtar)
+    """Dil destekli standart buton."""
+    try:
+        from dil import t
+        metin = t(f'tus_{anahtar}')
+    except Exception:
+        metin = TUS.get(anahtar, anahtar)
     ikon = TUS_IKON.get(anahtar, '')
     if _android_mi():
         ikon = ''
-    if anahtar == 'geri':
-        return siyah_buton(metin, vurgu=vurgu, altin_yazi=altin_yazi, **kwargs)
     return siyah_buton(metin, ikon=ikon, vurgu=vurgu, altin_yazi=altin_yazi, **kwargs)
 
 
@@ -852,16 +854,21 @@ def metin_label(text, font_size='16sp', bold=False, color=None, halign='left', v
         **kwargs,
     )
 
-    def _text_size_guncelle(inst, _val):
-        genislik = max(inst.width, dp(80))
-        yukseklik = max(inst.height, dp(16))
-        if halign in ('left', 'right', 'center'):
+    def _text_size_guncelle(inst, *_):
+        genislik = max(inst.width, dp(1))
+        if genislik < dp(8):
+            return
+        sabit_y = inst.size_hint_y is None and inst.height > dp(10)
+        if sabit_y:
+            inst.text_size = (genislik, inst.height)
+        elif halign in ('left', 'right', 'center'):
             inst.text_size = (genislik, None)
         else:
-            inst.text_size = (genislik, yukseklik)
+            inst.text_size = (genislik, max(inst.height, dp(16)))
 
-    lbl.bind(size=_text_size_guncelle, texture_size=_text_size_guncelle)
-    Clock.schedule_once(lambda *_: _text_size_guncelle(lbl, None), 0)
+    lbl.bind(size=_text_size_guncelle, pos=_text_size_guncelle)
+    Clock.schedule_once(lambda *_: _text_size_guncelle(lbl), 0)
+    Clock.schedule_once(lambda *_: _text_size_guncelle(lbl), 0.05)
     return lbl
 
 

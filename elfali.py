@@ -294,7 +294,7 @@ class ElFaliScreen(Screen):
     def _foto_sonuc(self, yol, hata):
         if hata:
             self.sonuc_label.markup = True
-            self.sonuc_label.text = f"[color={RENKLER['kirmizi']}]❌ {hata}[/color]"
+            self.sonuc_label.text = f"[color={RENKLER['kirmizi']}]{hata}[/color]"
             return
 
         self.foto_panel.fotograf_ekle(yol)

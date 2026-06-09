@@ -46,7 +46,7 @@ _METINLER = {
         'id': 'Pembacaan FalımaBak',
         'zh': 'FalımaBak 解读',
     },
-    'tus_geri': {'tr': '← Geri', 'en': '← Back', 'de': '← Zurück', 'fr': '← Retour', 'es': '← Atrás', 'ar': '← رجوع', 'ru': '← Назад', 'pt': '← Voltar', 'it': '← Indietro', 'hi': '← वापस', 'id': '← Kembali', 'zh': '← 返回'},
+    'tus_geri': {'tr': 'Geri', 'en': 'Back', 'de': 'Zurück', 'fr': 'Retour', 'es': 'Atrás', 'ar': 'رجوع', 'ru': 'Назад', 'pt': 'Voltar', 'it': 'Indietro', 'hi': 'वापस', 'id': 'Kembali', 'zh': '返回'},
     'tus_fal_ac': {'tr': 'Fal Aç', 'en': 'Draw Cards', 'de': 'Karten ziehen', 'fr': 'Tirer', 'es': 'Abrir', 'ar': 'افتح', 'ru': 'Открыть', 'pt': 'Abrir', 'it': 'Apri', 'hi': 'खोलें', 'id': 'Buka', 'zh': '开牌'},
     'tus_tekrar': {'tr': 'Tekrar', 'en': 'Again', 'de': 'Nochmal', 'fr': 'Encore', 'es': 'Otra vez', 'ar': 'مرة أخرى', 'ru': 'Снова', 'pt': 'De novo', 'it': 'Ancora', 'hi': 'फिर', 'id': 'Lagi', 'zh': '再来'},
     'tus_galeri': {'tr': 'Galeri', 'en': 'Gallery', 'de': 'Galerie', 'fr': 'Galerie', 'es': 'Galería', 'ar': 'المعرض', 'ru': 'Галерея', 'pt': 'Galeria', 'it': 'Galleria', 'hi': 'गैलरी', 'id': 'Galeri', 'zh': '相册'},

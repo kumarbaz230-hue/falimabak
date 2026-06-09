@@ -326,7 +326,7 @@ class AstrolojiScreen(Screen):
             
             if not gun_text or not ay_text or not yil_text:
                 self.sonuc_label.markup = True
-                self.sonuc_label.text = f"[color={RENKLER['kirmizi']}]❌ Lütfen tüm alanları doldurun![/color]"
+                self.sonuc_label.text = f"[color={RENKLER['kirmizi']}]Lütfen tüm alanları doldurun![/color]"
                 self.yorum_label.text = ''
                 return
             
@@ -336,7 +336,7 @@ class AstrolojiScreen(Screen):
             
             if not self.tarih_kontrol(gun, ay, yil):
                 self.sonuc_label.markup = True
-                self.sonuc_label.text = f"[color={RENKLER['kirmizi']}]❌ Geçersiz tarih! Lütfen\ngeçerli bir tarih girin.[/color]"
+                self.sonuc_label.text = f"[color={RENKLER['kirmizi']}]Geçersiz tarih! Lütfen\ngeçerli bir tarih girin.[/color]"
                 self.yorum_label.text = ''
                 return
             
@@ -398,9 +398,9 @@ class AstrolojiScreen(Screen):
             
         except ValueError:
             self.sonuc_label.markup = True
-            self.sonuc_label.text = f"[color={RENKLER['kirmizi']}]❌ Lütfen sayısal değerler girin![/color]"
+            self.sonuc_label.text = f"[color={RENKLER['kirmizi']}]Lütfen sayısal değerler girin![/color]"
             self.yorum_label.text = ''
         except Exception as e:
             self.sonuc_label.markup = True
-            self.sonuc_label.text = f"[color={RENKLER['kirmizi']}]❌ Hata: {str(e)}[/color]"
+            self.sonuc_label.text = f"[color={RENKLER['kirmizi']}]Hata: {str(e)}[/color]"
             self.yorum_label.text = ''

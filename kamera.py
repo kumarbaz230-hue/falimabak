@@ -1,6 +1,6 @@
 """
 FalımaBak - Fotoğraf seçme / kamera (Windows + Android).
-Android: sistem kamerası + FileProvider; izin sonrası ana thread gecikmesi.
+Android: FileProvider + basit kamera yedek + plyer son çare.
 """
 
 import os
@@ -17,11 +17,23 @@ _DEFAULT_FOTO_DIR = os.path.join(BASE_DIR, 'user_photos')
 _KAMERA_ISTEK = 9001
 _kamera_callback = None
 _kamera_hedef = None
+_kamera_mod = 'uri'
 _activity_baglandi = False
 
 
 def _foto_dir():
     if _android_mi():
+        try:
+            from jnius import autoclass
+            PythonActivity = autoclass('org.kivy.android.PythonActivity')
+            activity = PythonActivity.mActivity
+            if activity is not None:
+                files_dir = str(activity.getFilesDir().getAbsolutePath())
+                d = os.path.join(files_dir, 'user_photos')
+                os.makedirs(d, exist_ok=True)
+                return d
+        except Exception:
+            pass
         try:
             from kivy.app import App
             app = App.get_running_app()
@@ -56,7 +68,6 @@ def _dil(k):
 
 
 def kamera_izni_iste(callback):
-    """Android runtime kamera izni — callback her zaman ana thread'de."""
     if not _android_mi():
         _ana_thread(lambda: callback(True))
         return
@@ -76,18 +87,15 @@ def kamera_izni_iste(callback):
                     if not ok:
                         ok = check_permission(Permission.CAMERA)
                 except Exception:
-                    try:
-                        ok = check_permission(Permission.CAMERA)
-                    except Exception:
-                        ok = False
+                    ok = check_permission(Permission.CAMERA)
                 callback(ok)
 
-            _ana_thread(_bitir, 0.25)
+            _ana_thread(_bitir, 0.2)
 
         request_permissions([Permission.CAMERA], _sonuc)
     except Exception as e:
         print(f'Kamera izni: {e}', flush=True)
-        _ana_thread(lambda: callback(False))
+        _ana_thread(lambda: callback(True))
 
 
 def _activity_bagla():
@@ -106,68 +114,93 @@ def _bitmap_kaydet(bitmap, yol):
     from jnius import autoclass
     CompressFormat = autoclass('android.graphics.Bitmap$CompressFormat')
     FileOutputStream = autoclass('java.io.FileOutputStream')
+    os.makedirs(os.path.dirname(yol), exist_ok=True)
     fos = FileOutputStream(yol)
-    bitmap.compress(CompressFormat.JPEG, 92, fos)
+    bitmap.compress(CompressFormat.JPEG, 90, fos)
     fos.flush()
     fos.close()
 
 
+def _sonuc_gonder(cb, yol, hata=None):
+    if yol and os.path.isfile(yol) and os.path.getsize(yol) > 0:
+        _ana_thread(lambda p=yol: cb(os.path.normpath(p), None))
+    elif hata:
+        _ana_thread(lambda h=hata: cb(None, h))
+    else:
+        _ana_thread(lambda: cb(None, _dil('cam_fail')))
+
+
+def _dosya_bekle(cb, yol, deneme=0):
+    if yol and os.path.isfile(yol) and os.path.getsize(yol) > 0:
+        _sonuc_gonder(cb, yol)
+        return
+    if deneme < 8:
+        Clock.schedule_once(lambda *_: _dosya_bekle(cb, yol, deneme + 1), 0.25)
+    else:
+        _sonuc_gonder(cb, None)
+
+
 def _on_activity_result(request_code, result_code, intent):
-    global _kamera_callback, _kamera_hedef
+    global _kamera_callback, _kamera_hedef, _kamera_mod
     if request_code != _KAMERA_ISTEK or not _kamera_callback:
         return
 
     cb = _kamera_callback
     _kamera_callback = None
     yol = _kamera_hedef
+    mod = _kamera_mod
     _kamera_hedef = None
 
     try:
         from jnius import autoclass
         Activity = autoclass('android.app.Activity')
         if result_code != Activity.RESULT_OK:
-            _ana_thread(lambda: cb(None, _dil('cam_cancel')))
+            _sonuc_gonder(cb, None, _dil('cam_cancel'))
             return
 
-        if yol and os.path.isfile(yol) and os.path.getsize(yol) > 0:
-            _ana_thread(lambda p=yol: cb(os.path.normpath(p), None))
+        if mod == 'uri' and yol:
+            if os.path.isfile(yol) and os.path.getsize(yol) > 0:
+                _sonuc_gonder(cb, yol)
+                return
+            _dosya_bekle(cb, yol)
             return
 
         if intent is not None:
+            extras = intent.getExtras()
+            if extras is not None:
+                bitmap = extras.get('data')
+                if bitmap is not None:
+                    hedef = yol or os.path.join(
+                        _foto_dir(),
+                        f'cam_{datetime.now().strftime("%Y%m%d_%H%M%S")}.jpg',
+                    )
+                    try:
+                        _bitmap_kaydet(bitmap, hedef)
+                        if os.path.getsize(hedef) > 0:
+                            _sonuc_gonder(cb, hedef)
+                            return
+                    except Exception as e:
+                        print(f'Bitmap kayıt: {e}', flush=True)
+
             uri = intent.getData()
             if uri is not None:
                 kayit = _kopyala(str(uri.toString()))
                 if kayit:
-                    _ana_thread(lambda p=kayit: cb(p, None))
+                    _sonuc_gonder(cb, kayit)
                     return
 
-            extras = intent.getExtras()
-            if extras is not None:
-                bitmap = extras.get('data')
-                if bitmap is not None and yol:
-                    try:
-                        os.makedirs(os.path.dirname(yol), exist_ok=True)
-                        _bitmap_kaydet(bitmap, yol)
-                        if os.path.getsize(yol) > 0:
-                            _ana_thread(lambda p=yol: cb(os.path.normpath(p), None))
-                            return
-                    except Exception as e:
-                        print(f'Kamera bitmap kayıt: {e}', flush=True)
-
-        _ana_thread(lambda: cb(None, _dil('cam_fail')))
+        _sonuc_gonder(cb, None)
     except Exception:
         print(traceback.format_exc(), flush=True)
-        _ana_thread(lambda: cb(None, _dil('cam_fail')))
+        _sonuc_gonder(cb, None)
 
 
 def kamera_hazirla():
-    """Açılışta yalnızca activity callback bağla — izin diyaloğu burada açılmaz."""
     if _android_mi():
         _activity_bagla()
 
 
 def uygulama_izinlerini_iste():
-    """Geriye uyumluluk."""
     kamera_hazirla()
 
 
@@ -233,15 +266,11 @@ def _galeri_plyer(callback):
                 else:
                     _ana_thread(lambda: callback(None, 'Fotoğraf kopyalanamadı'))
             except Exception:
-                print(traceback.format_exc(), flush=True)
                 _ana_thread(lambda: callback(None, 'Galeri hatası'))
 
-        filechooser.open_file(
-            on_selection=_secildi,
-            filters=['*.png', '*.jpg', '*.jpeg', '*.webp', '*.bmp'],
-        )
+        filechooser.open_file(on_selection=_secildi, filters=['*.png', '*.jpg', '*.jpeg', '*.webp'])
     except Exception as e:
-        print(f'Galeri plyer: {e}', flush=True)
+        print(f'Galeri: {e}', flush=True)
         _ana_thread(lambda: callback(None, 'Galeri açılamadı'))
 
 
@@ -249,23 +278,19 @@ def _galeri_masaustu(callback):
     def _islem():
         try:
             from tkinter import Tk, filedialog
-
             root = Tk()
             root.withdraw()
             root.attributes('-topmost', True)
             yol = filedialog.askopenfilename(
                 title='Fotoğraf Seç',
-                filetypes=[
-                    ('Resimler', '*.png *.jpg *.jpeg *.webp *.bmp'),
-                    ('Tüm dosyalar', '*.*'),
-                ],
+                filetypes=[('Resimler', '*.png *.jpg *.jpeg *.webp'), ('Tüm', '*.*')],
             )
             root.destroy()
             if not yol:
                 _ana_thread(lambda: callback(None, 'Dosya seçilmedi'))
                 return
             kayit = _kopyala(yol)
-            _ana_thread(lambda: callback(kayit, None) if kayit else callback(None, 'Fotoğraf kopyalanamadı'))
+            _ana_thread(lambda: callback(kayit, None) if kayit else callback(None, 'Kopyalanamadı'))
         except Exception as e:
             _ana_thread(lambda: callback(None, str(e)))
 
@@ -279,132 +304,135 @@ def galeriden_sec(callback):
         _galeri_masaustu(callback)
 
 
-def _intent_kamera_ac(callback):
-    global _kamera_callback, _kamera_hedef
+def _intent_uri_kamera(callback):
+    """FileProvider ile tam çözünürlük."""
+    global _kamera_callback, _kamera_hedef, _kamera_mod
     _activity_bagla()
     _kamera_callback = callback
-    try:
-        from jnius import autoclass
-        Intent = autoclass('android.content.Intent')
-        MediaStore = autoclass('android.provider.MediaStore')
-        PythonActivity = autoclass('org.kivy.android.PythonActivity')
-        File = autoclass('java.io.File')
-        FileProvider = autoclass('androidx.core.content.FileProvider')
-        activity = PythonActivity.mActivity
+    _kamera_mod = 'uri'
 
-        klasor = _foto_dir()
-        os.makedirs(klasor, exist_ok=True)
-        _kamera_hedef = os.path.join(
-            klasor,
-            f'cam_{datetime.now().strftime("%Y%m%d_%H%M%S")}.jpg',
+    from jnius import autoclass
+    Intent = autoclass('android.content.Intent')
+    MediaStore = autoclass('android.provider.MediaStore')
+    PythonActivity = autoclass('org.kivy.android.PythonActivity')
+    File = autoclass('java.io.File')
+    FileProvider = autoclass('androidx.core.content.FileProvider')
+    activity = PythonActivity.mActivity
+
+    fname = f'cam_{datetime.now().strftime("%Y%m%d_%H%M%S")}.jpg'
+    files_dir = activity.getFilesDir()
+    photo_dir = File(files_dir, 'user_photos')
+    photo_dir.mkdirs()
+    photo_file = File(photo_dir, fname)
+    _kamera_hedef = str(photo_file.getAbsolutePath())
+
+    intent = Intent(MediaStore.ACTION_IMAGE_CAPTURE)
+    pkg = activity.getPackageName()
+    uri = FileProvider.getUriForFile(activity, pkg + '.fileprovider', photo_file)
+    intent.putExtra(MediaStore.EXTRA_OUTPUT, uri)
+    intent.addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
+    intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+
+    pm = activity.getPackageManager()
+    PackageManager = autoclass('android.content.pm.PackageManager')
+    liste = pm.queryIntentActivities(intent, PackageManager.MATCH_DEFAULT_ONLY)
+    if liste is None or liste.size() == 0:
+        raise RuntimeError('Kamera uygulaması yok')
+
+    for i in range(liste.size()):
+        ri = liste.get(i)
+        activity.grantUriPermission(
+            ri.activityInfo.packageName, uri,
+            Intent.FLAG_GRANT_WRITE_URI_PERMISSION | Intent.FLAG_GRANT_READ_URI_PERMISSION,
         )
 
-        photo_file = File(_kamera_hedef)
-        parent = photo_file.getParentFile()
-        if parent is not None:
-            parent.mkdirs()
-
-        intent = Intent(MediaStore.ACTION_IMAGE_CAPTURE)
-        pkg = activity.getPackageName()
-        authority = pkg + '.fileprovider'
-        uri = FileProvider.getUriForFile(activity, authority, photo_file)
-
-        intent.putExtra(MediaStore.EXTRA_OUTPUT, uri)
-        intent.addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
-        intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-
-        pm = activity.getPackageManager()
-        PackageManager = autoclass('android.content.pm.PackageManager')
-        resolve_list = pm.queryIntentActivities(intent, PackageManager.MATCH_DEFAULT_ONLY)
-        if resolve_list is None or resolve_list.size() == 0:
-            _kamera_callback = None
-            _kamera_hedef = None
-            _ana_thread(lambda: callback(None, _dil('cam_no_app')))
-            return
-
-        for i in range(resolve_list.size()):
-            ri = resolve_list.get(i)
-            pkg_name = ri.activityInfo.packageName
-            activity.grantUriPermission(
-                pkg_name, uri,
-                Intent.FLAG_GRANT_WRITE_URI_PERMISSION | Intent.FLAG_GRANT_READ_URI_PERMISSION,
-            )
-
-        activity.startActivityForResult(intent, _KAMERA_ISTEK)
-    except Exception as e:
-        print(f'Kamera intent: {e}', flush=True)
-        print(traceback.format_exc(), flush=True)
-        _kamera_callback = None
-        _kamera_hedef = None
-        _kamera_plyer(callback)
+    activity.startActivityForResult(intent, _KAMERA_ISTEK)
 
 
-def _kamera_android_intent(callback):
-    _ana_thread(lambda: _intent_kamera_ac(callback), 0.15)
+def _intent_basit_kamera(callback):
+    """Thumbnail modu — FileProvider gerektirmez."""
+    global _kamera_callback, _kamera_hedef, _kamera_mod
+    _activity_bagla()
+    _kamera_callback = callback
+    _kamera_mod = 'thumb'
+    _kamera_hedef = os.path.join(
+        _foto_dir(),
+        f'cam_{datetime.now().strftime("%Y%m%d_%H%M%S")}.jpg',
+    )
+
+    from jnius import autoclass
+    Intent = autoclass('android.content.Intent')
+    MediaStore = autoclass('android.provider.MediaStore')
+    PythonActivity = autoclass('org.kivy.android.PythonActivity')
+    activity = PythonActivity.mActivity
+
+    intent = Intent(MediaStore.ACTION_IMAGE_CAPTURE)
+    pm = activity.getPackageManager()
+    PackageManager = autoclass('android.content.pm.PackageManager')
+    if intent.resolveActivity(pm) is None:
+        raise RuntimeError('Kamera yok')
+
+    activity.startActivityForResult(intent, _KAMERA_ISTEK)
 
 
 def _kamera_plyer(callback):
     try:
         from plyer import camera
-
         klasor = _foto_dir()
-        os.makedirs(klasor, exist_ok=True)
-        yol = os.path.join(
-            klasor,
-            f'cam_{datetime.now().strftime("%Y%m%d_%H%M%S")}.jpg',
-        )
+        yol = os.path.join(klasor, f'cam_{datetime.now().strftime("%Y%m%d_%H%M%S")}.jpg')
         open(yol, 'ab').close()
 
         def _bitti(ok):
-            try:
-                if ok and os.path.isfile(yol) and os.path.getsize(yol) > 0:
-                    _ana_thread(lambda: callback(os.path.normpath(yol), None))
-                else:
-                    _ana_thread(lambda: callback(None, _dil('cam_cancel')))
-            except Exception:
+            if ok and os.path.isfile(yol) and os.path.getsize(yol) > 0:
+                _ana_thread(lambda: callback(os.path.normpath(yol), None))
+            else:
                 _ana_thread(lambda: callback(None, _dil('cam_fail')))
 
         camera.take_picture(filename=yol, on_complete=_bitti)
     except Exception as e:
-        print(f'Kamera plyer: {e}', flush=True)
+        print(f'Plyer kamera: {e}', flush=True)
         _ana_thread(lambda: callback(None, _dil('cam_fail')))
+
+
+def _android_kamera_ac(callback):
+    global _kamera_callback, _kamera_hedef
+    try:
+        _intent_uri_kamera(callback)
+    except Exception as e1:
+        print(f'URI kamera: {e1}', flush=True)
+        _kamera_callback = None
+        _kamera_hedef = None
+        try:
+            _intent_basit_kamera(callback)
+        except Exception as e2:
+            print(f'Basit kamera: {e2}', flush=True)
+            _kamera_callback = None
+            _kamera_hedef = None
+            _kamera_plyer(callback)
 
 
 def _kamera_masaustu(callback):
     def _islem():
         try:
             import cv2
-
             cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
             if not cap.isOpened():
                 cap = cv2.VideoCapture(0)
             if not cap.isOpened():
-                _ana_thread(lambda: callback(None, 'Kamera bulunamadı. Galeriden seçmeyi deneyin.'))
+                _ana_thread(lambda: callback(None, 'Kamera bulunamadı'))
                 return
-
-            for _ in range(8):
+            for _ in range(6):
                 cap.read()
-
             ok, frame = cap.read()
             cap.release()
-
             if not ok or frame is None:
                 _ana_thread(lambda: callback(None, 'Fotoğraf çekilemedi'))
                 return
-
-            yol = os.path.join(
-                _foto_dir(),
-                f'cam_{datetime.now().strftime("%Y%m%d_%H%M%S")}.jpg',
-            )
+            yol = os.path.join(_foto_dir(), f'cam_{datetime.now().strftime("%Y%m%d_%H%M%S")}.jpg')
             cv2.imwrite(yol, frame)
             _ana_thread(lambda: callback(os.path.normpath(yol), None))
         except ImportError:
-            _ana_thread(
-                lambda: callback(
-                    None,
-                    'Kamera için: py -3 -m pip install opencv-python',
-                )
-            )
+            _ana_thread(lambda: callback(None, 'opencv-python gerekli'))
         except Exception as e:
             _ana_thread(lambda: callback(None, str(e)))
 
@@ -415,7 +443,7 @@ def kameradan_cek(callback):
     if _android_mi():
         def _izinli(ok):
             if ok:
-                _kamera_android_intent(callback)
+                _ana_thread(lambda: _android_kamera_ac(callback), 0.1)
             else:
                 _ana_thread(lambda: callback(None, _dil('cam_denied')))
 
