@@ -1,5 +1,6 @@
 """
 FalımaBak - Fotoğraf seçme / kamera (Windows + Android).
+Android'de sistem kamera uygulaması (Intent) kullanılır — plyer çoğu cihazda çalışmaz.
 """
 
 import os
@@ -12,6 +13,11 @@ from kivy.clock import Clock
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 _DEFAULT_FOTO_DIR = os.path.join(BASE_DIR, 'user_photos')
+
+_KAMERA_ISTEK = 9001
+_kamera_callback = None
+_kamera_hedef = None
+_activity_baglandi = False
 
 
 def _foto_dir():
@@ -62,10 +68,81 @@ def kamera_izni_iste(callback):
         callback(True)
 
 
+def _activity_bagla():
+    global _activity_baglandi
+    if _activity_baglandi or not _android_mi():
+        return
+    try:
+        from android import activity as android_activity
+        android_activity.bind(on_activity_result=_on_activity_result)
+        _activity_baglandi = True
+    except Exception as e:
+        print(f'Kamera activity bind: {e}', flush=True)
+
+
+def _bitmap_kaydet(bitmap, yol):
+    from jnius import autoclass
+    CompressFormat = autoclass('android.graphics.Bitmap$CompressFormat')
+    FileOutputStream = autoclass('java.io.FileOutputStream')
+    fos = FileOutputStream(yol)
+    bitmap.compress(CompressFormat.JPEG, 92, fos)
+    fos.flush()
+    fos.close()
+
+
+def _on_activity_result(request_code, result_code, intent):
+    global _kamera_callback, _kamera_hedef
+    if request_code != _KAMERA_ISTEK or not _kamera_callback:
+        return
+
+    cb = _kamera_callback
+    _kamera_callback = None
+    yol = _kamera_hedef
+    _kamera_hedef = None
+
+    try:
+        from jnius import autoclass
+        Activity = autoclass('android.app.Activity')
+        if result_code != Activity.RESULT_OK:
+            _ana_thread(lambda: cb(None, 'Fotoğraf çekilmedi'))
+            return
+
+        if yol and os.path.isfile(yol) and os.path.getsize(yol) > 0:
+            _ana_thread(lambda p=yol: cb(os.path.normpath(p), None))
+            return
+
+        if intent is not None:
+            uri = intent.getData()
+            if uri is not None:
+                kayit = _kopyala(str(uri.toString()))
+                if kayit:
+                    _ana_thread(lambda p=kayit: cb(p, None))
+                    return
+
+            extras = intent.getExtras()
+            if extras is not None:
+                bitmap = extras.get('data')
+                if bitmap is not None and yol:
+                    try:
+                        os.makedirs(os.path.dirname(yol), exist_ok=True)
+                        _bitmap_kaydet(bitmap, yol)
+                        if os.path.getsize(yol) > 0:
+                            _ana_thread(lambda p=yol: cb(os.path.normpath(p), None))
+                            return
+                    except Exception as e:
+                        print(f'Kamera bitmap kayıt: {e}', flush=True)
+
+        _ana_thread(lambda: cb(None, 'Kamera fotoğrafı alınamadı. Galeriden seçmeyi deneyin.'))
+    except Exception:
+        print(traceback.format_exc(), flush=True)
+        _ana_thread(lambda: cb(None, 'Kamera hatası'))
+
+
 def uygulama_izinlerini_iste():
-    """Açılışta kamera iznini önceden iste."""
+    """Açılışta kamera iznini önceden iste ve activity callback bağla."""
     if not _android_mi():
         return
+    _activity_bagla()
 
     def _cb(ok):
         print(f'Kamera izni: {"verildi" if ok else "reddedildi"}', flush=True)
@@ -181,6 +258,58 @@ def galeriden_sec(callback):
         _galeri_masaustu(callback)
 
 
+def _kamera_android_intent(callback):
+    """Sistem kamera uygulamasını aç (Android Intent)."""
+    global _kamera_callback, _kamera_hedef
+    _activity_bagla()
+    _kamera_callback = callback
+    try:
+        from jnius import autoclass
+        Intent = autoclass('android.content.Intent')
+        MediaStore = autoclass('android.provider.MediaStore')
+        PythonActivity = autoclass('org.kivy.android.PythonActivity')
+        activity = PythonActivity.mActivity
+
+        klasor = _foto_dir()
+        os.makedirs(klasor, exist_ok=True)
+        _kamera_hedef = os.path.join(
+            klasor,
+            f'cam_{datetime.now().strftime("%Y%m%d_%H%M%S")}.jpg',
+        )
+
+        intent = Intent(MediaStore.ACTION_IMAGE_CAPTURE)
+
+        try:
+            File = autoclass('java.io.File')
+            FileProvider = autoclass('androidx.core.content.FileProvider')
+            pkg = activity.getPackageName()
+            photo_file = File(_kamera_hedef)
+            parent = photo_file.getParentFile()
+            if parent is not None:
+                parent.mkdirs()
+            uri = FileProvider.getUriForFile(activity, pkg + '.fileprovider', photo_file)
+            intent.putExtra(MediaStore.EXTRA_OUTPUT, uri)
+            intent.addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
+            intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        except Exception as e:
+            print(f'FileProvider atlandı (thumbnail modu): {e}', flush=True)
+
+        pm = activity.getPackageManager()
+        if intent.resolveActivity(pm) is None:
+            _kamera_callback = None
+            _kamera_hedef = None
+            _ana_thread(lambda: callback(None, 'Bu cihazda kamera uygulaması bulunamadı'))
+            return
+
+        activity.startActivityForResult(intent, _KAMERA_ISTEK)
+    except Exception as e:
+        print(f'Kamera intent: {e}', flush=True)
+        print(traceback.format_exc(), flush=True)
+        _kamera_callback = None
+        _kamera_hedef = None
+        _kamera_plyer(callback)
+
+
 def _kamera_plyer(callback):
     try:
         from plyer import camera
@@ -205,7 +334,7 @@ def _kamera_plyer(callback):
         camera.take_picture(filename=yol, on_complete=_bitti)
     except Exception as e:
         print(f'Kamera plyer: {e}', flush=True)
-        _ana_thread(lambda: callback(None, 'Kamera açılamadı. Ayarlardan kamera iznini açın.'))
+        _ana_thread(lambda: callback(None, 'Kamera açılamadı. Galeriden seçmeyi deneyin.'))
 
 
 def _kamera_masaustu(callback):
@@ -253,7 +382,7 @@ def kameradan_cek(callback):
     if _android_mi():
         def _izinli(ok):
             if ok:
-                Clock.schedule_once(lambda *_: _kamera_plyer(callback), 0)
+                Clock.schedule_once(lambda *_: _kamera_android_intent(callback), 0)
             else:
                 _ana_thread(lambda: callback(
                     None,

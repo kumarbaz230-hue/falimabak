@@ -5,10 +5,10 @@ FalımaBak — API anahtarı (XOR). Uygulamayı kapatmaz; sadece anahtarı gizle
 import os
 
 _ENC = (
-    25, 9, 114, 25, 90, 84, 14, 118, 14, 48, 79, 6, 33, 52, 9, 93,
-    25, 38, 14, 47, 23, 90, 57, 84, 118, 30, 37, 40, 30, 14, 14, 25,
-    51, 40, 118, 61, 90, 40, 113, 50, 50, 33, 37, 90, 31, 25, 113, 49,
-    37, 90, 14, 61, 59,
+    29, 57, 118, 29, 62, 116, 14, 38, 110, 24, 111, 6, 33, 52, 57, 93,
+    29, 66, 14, 35, 23, 62, 116, 38, 30, 37, 40, 30, 14, 110, 9, 67,
+    88, 38, 57, 62, 40, 59, 78, 78, 33, 37, 62, 11, 9, 59, 73, 37,
+    62, 14, 61, 79,
 )
 _MASK = 0x5C
 
@@ -35,4 +35,5 @@ def gomulu_api_anahtar():
 
 def koruma_baslat():
     """Açılışta çağrılır — uygulamayı asla kapatmaz."""
-    gomulu_api_anahtar()
+    anahtar = gomulu_api_anahtar()
+    print(f'Koruma: API anahtarı {"hazır" if anahtar else "YOK"}', flush=True)

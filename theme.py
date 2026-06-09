@@ -607,6 +607,17 @@ def yorum_sonuc_metni(temel, metin, ai_kullanildi=True, hata=None, kaynak=None, 
     )
 
 
+def foto_fal_sonuc(metin, hata=None):
+    """Fotoğraflı fal ekranları — sadece AI yorumu veya hata."""
+    if hata and not metin:
+        return f"[color={RENKLER['kirmizi']}]{emoji_temizle(hata)}[/color]"
+    govde = emoji_temizle(metin or '')
+    return (
+        f"[b][color={RENKLER['altin']}]» {YORUM_BASLIK}[/color][/b]\n\n"
+        f"[color={RENKLER['pembe_acik']}]{govde}[/color]"
+    )
+
+
 def kaydirici_metin(yukseklik_hint=0.2, zemin_renk=None):
     """Koyu zeminli kaydırılabilir metin alanı — beyaz flash / sızıntı yok."""
     from kivy.graphics import Color, Rectangle

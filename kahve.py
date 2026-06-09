@@ -17,7 +17,7 @@ import random
 from theme import (
     RENKLER, TUS, YORUM_BEKLE, fontlari_yukle, metin_label,
     tus_buton, baslik_satir, buton_metin_guncelle,
-    yorum_sonuc_metni, kaydirici_metin, FotoKutucukPanel,
+    kaydirici_metin, FotoKutucukPanel, yorum_bekle_markup, foto_fal_sonuc,
 )
 from kamera import galeriden_sec, kameradan_cek
 from ai_yorum import yorum_al
@@ -266,7 +266,7 @@ class KahveScreen(Screen):
         Clock.schedule_once(lambda dt: self.remove_widget(flash) if flash in self.children else None, 0.3)
     
     def fal_yorumla(self, instance):
-        """Kahve falını yorumla"""
+        """Kahve falını yorumla — fotoğraflar AI ile doğrulanır ve yorumlanır."""
         if not self.foto_panel.tamam_mi():
             eksik = ', '.join(self.foto_panel.eksik_basliklar())
             self.yorum_label.markup = True
@@ -275,99 +275,17 @@ class KahveScreen(Screen):
                 f"[color={RENKLER['gri_acik']}]Her kutuya dokunup galeri veya kamera ile ekleyin.[/color]"
             )
             return
-        
-        # Animasyon
-        anim = Sequence(
-            Animation(opacity=0.5, duration=0.2),
-            Animation(opacity=1, duration=0.3)
-        )
-        anim.start(self.sekiller_alani)
-        
-        # Rastgele şekiller seç (4-5 tane)
-        secilen_sayisi = random.randint(4, 5)
-        secilen_sekiller = random.sample(KAHVE_SEKILLERI, secilen_sayisi)
-        
-        # Şekilleri göster
-        sekiller_text = ''
-        
-        # Kategorilere göre grupla
-        kategoriler = {}
-        for sekil in secilen_sekiller:
-            kat = sekil['kategori']
-            if kat not in kategoriler:
-                kategoriler[kat] = []
-            kategoriler[kat].append(sekil)
-        
-        sekiller_text += f"[b][color={RENKLER['altin']}]🔮 FİNCANINIZDA ÇIKANLAR:[/color][/b]\n\n"
-        
-        for kat, sekiller in kategoriler.items():
-            sekiller_text += f"[color={RENKLER['mor_parlak']}][b]✦ {kat} ✦[/b][/color]\n"
-            for sekil in sekiller:
-                durum = random.choice(['Pozitif', 'Negatif'])
-                yorum = sekil['pozitif'] if durum == 'Pozitif' else sekil['negatif']
-                renk = RENKLER['yesil'] if durum == 'Pozitif' else RENKLER['kirmizi']
-                
-                sekiller_text += f"  • [color={renk}]{sekil['isim']}[/color]\n"
-                sekiller_text += f"    [color={RENKLER['gri_acik']}]{yorum}[/color]\n"
-            sekiller_text += "\n"
-        
-        # Şanslı sayı
-        sansli_sayi = random.randint(1, 100)
-        sekiller_text += f"[color={RENKLER['altin']}]🍀 Şanslı Sayınız: [b]{sansli_sayi}[/b][/color]\n"
-        
-        self.sekiller_label.markup = True
-        self.sekiller_label.text = sekiller_text
-        
-        # Genel yorum
-        yorum = f"\n[b][color={RENKLER['altin']}]╔═══ ☕ GENEL YORUM ☕ ═══╗[/color][/b]\n\n"
-        
-        # Kategorilere göre özel yorum
-        kategori_yorumlari = []
-        for kat in kategoriler:
-            if kat == 'Aşk':
-                kategori_yorumlari.append("💕 Aşk şansınız çok yüksek! Kalbinizi açın.")
-            elif kat == 'Para':
-                kategori_yorumlari.append("💰 Para ve bolluk kapınızda! Fırsatları değerlendirin.")
-            elif kat == 'Kariyer':
-                kategori_yorumlari.append("🏆 Kariyerinizde yükselme zamanı! Yeteneklerinizi gösterin.")
-            elif kat == 'Sağlık':
-                kategori_yorumlari.append("🌿 Sağlığınız yerinde! Spor ve beslenmeye dikkat edin.")
-            elif kat == 'Seyahat':
-                kategori_yorumlari.append("✈️ Güzel bir seyahat sizi bekliyor! Bavul hazırlığı yapın.")
-            elif kat == 'Haber':
-                kategori_yorumlari.append("📬 Müjdeli haber yolda! Posta kutunuzu kontrol edin.")
-            elif kat == 'Dostluk':
-                kategori_yorumlari.append("🤝 Dostlarınız sizi seviyor! Onlarla vakit geçirin.")
-            elif kat == 'Aile':
-                kategori_yorumlari.append("👨‍👩‍👧‍👧 Aile içinde huzur ve mutluluk hakim olacak.")
-            elif kat == 'Uyarı':
-                kategori_yorumlari.append("⚠️ Dikkatli olun! Çevrenizdeki insanlara güveninizi sorgulayın.")
-            elif kat in ('Güç', 'Mücadele'):
-                kategori_yorumlari.append("💪 Güçlü ve kararlısınız! Her engeli aşacaksınız.")
-            else:
-                kategori_yorumlari.append("✨ Hayatınızda güzel değişiklikler oluyor. Hazır olun!")
-        
-        for ky in kategori_yorumlari:
-            yorum += f"[color={RENKLER['gri_acik']}]{ky}[/color]\n"
-        
-        yorum += f"\n[color={RENKLER['gri_acik']}]📝 {random.choice(GENEL_YORUMLAR)}[/color]"
-        
-        yorum += f"\n\n[color={RENKLER['altin']}]╚═══ ☕ NAZAR BONCUĞUNUZ SİZİ KORUSUN ═══╝[/color]"
-        
+
+        self.sekiller_label.text = ''
         self.yorum_label.markup = True
-        self.yorum_label.text = yorum
-        self._son_kahve_yorum = yorum
+        self.yorum_label.text = yorum_bekle_markup()
         buton_metin_guncelle(self.fal_buton, YORUM_BEKLE)
         self.fal_buton.disabled = True
 
-        sekiller = [s['isim'] for s in secilen_sekiller]
-
         def _ai_bitir(metin, ai_kullanildi, hata, kaynak=None, fotograf=False):
-            self.yorum_label.text = yorum_sonuc_metni(
-                self._son_kahve_yorum, metin, ai_kullanildi, hata, kaynak, fotograf,
-            )
+            self.yorum_label.text = foto_fal_sonuc(metin, hata)
             buton_metin_guncelle(self.fal_buton, TUS['tekrar'])
             self.fal_buton.disabled = False
 
         foto_veri = self.foto_panel.tum_veri()
-        yorum_al('kahve', {'sekiller': sekiller, **foto_veri}, _ai_bitir)
+        yorum_al('kahve', foto_veri, _ai_bitir)

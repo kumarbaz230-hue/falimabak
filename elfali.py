@@ -22,8 +22,8 @@ import random
 
 from theme import (
     RENKLER, TUS, YORUM_BEKLE, fontlari_yukle, metin_label,
-    tus_buton, baslik_satir, buton_metin_guncelle, yorum_sonuc_metni,
-    kaydirici_metin, FotoKutucukPanel,
+    tus_buton, baslik_satir, buton_metin_guncelle,
+    kaydirici_metin, FotoKutucukPanel, yorum_bekle_markup, foto_fal_sonuc,
 )
 from kamera import galeriden_sec, kameradan_cek
 from ai_yorum import yorum_al
@@ -312,7 +312,7 @@ class ElFaliScreen(Screen):
         Clock.schedule_once(lambda dt: self.remove_widget(flash) if flash in self.children else None, 0.2)
     
     def fal_bak(self, instance):
-        """El falı yorumu"""
+        """El falı yorumu — fotoğraflar AI ile doğrulanır ve yorumlanır."""
         if not self.foto_panel.tamam_mi():
             eksik = ', '.join(self.foto_panel.eksik_basliklar())
             self.sonuc_label.markup = True
@@ -321,76 +321,16 @@ class ElFaliScreen(Screen):
                 f"[color={RENKLER['gri_acik']}]Her kutuya dokunup galeri veya kamera ile ekleyin.[/color]"
             )
             return
-        
-        # Animasyon
-        anim = Sequence(
-            Animation(opacity=0.5, duration=0.15),
-            Animation(opacity=1, duration=0.25)
-        )
-        anim.start(self.sonuc_alani)
-        
-        # El tipi belirle
-        el_tipi = random.choice(EL_TIPLERI)
-        
-        # Rastgele çizgiler seç (5-7 tane)
-        secilen_sayisi = random.randint(5, 7)
-        secilen_cizgiler = random.sample(EL_CIZGILERI, secilen_sayisi)
-        
-        # Sonuç oluştur
-        sonuc = f"[b][color={RENKLER['altin']}]👐 EL FALINIZ HAZIR! 👐[/color][/b]\n\n"
-        
-        # El tipi
-        sonuc += f"[b][color={RENKLER['pembe']}]📋 EL TİPİNİZ:[/color][/b]\n"
-        sonuc += f"[color={RENKLER['altin']}]{el_tipi['tip']}[/color]\n"
-        sonuc += f"[color={RENKLER['gri_acik']}]{el_tipi['ozellik']}[/color]\n"
-        sonuc += f"Karakter: [color={RENKLER['gri_acik']}]{el_tipi['karakter']}[/color]\n"
-        sonuc += f"Meslek: [color={RENKLER['gri_acik']}]{el_tipi['meslek']}[/color]\n\n"
-        
-        # Çizgiler
-        sonuc += f"[b][color={RENKLER['altin']}]✋ ÇİZGİ ANALİZİ:[/color][/b]\n\n"
-        
-        for cizgi in secilen_cizgiler:
-            durum = random.choice(['Pozitif', 'Negatif'])
-            yorum = cizgi['pozitif'] if durum == 'Pozitif' else cizgi['negatif']
-            renk = RENKLER['yesil'] if durum == 'Pozitif' else RENKLER['kirmizi']
-            
-            sonuc += f"[color={renk}]{cizgi['ikon']} [b]{cizgi['isim']}[/b] - ({durum})[/color]\n"
-            sonuc += f"[color={RENKLER['gri_acik']}]{yorum}[/color]\n"
-            sonuc += f"[i][color={RENKLER['mor_parlak']}]📍 {cizgi['ipucu']}[/color][/i]\n\n"
-        
-        # Genel yorum
-        sonuc += f"[b][color={RENKLER['altin']}]💫 GENEL DEĞERLENDİRME:[/color][/b]\n"
-        
-        genel_yorumlar = [
-            f"{el_tipi['tip']} tipine sahipsiniz. {el_tipi['karakter']} bir karakteriniz var. Size en uygun meslekler: {el_tipi['meslek']}.",
-            "Elinizdeki çizgiler çok net ve belirgin. Hayatta ne istediğinizi biliyorsunuz!",
-            "Avuç içinizdeki çizgiler karmaşık değil, bu sizin kararlı yapınızı gösteriyor.",
-            "Çizgileriniz derin ve uzun. Uzun ve başarılı bir yaşam sizi bekliyor.",
-            "Eliniz sıcak ve yumuşak. Duygusal ve sevgi dolu bir insansınız.",
-            "Parmaklarınızın uzunluğu sanatsal yeteneklerinize işaret ediyor.",
-            "Baş parmağınızın şekli güçlü bir iradeye sahip olduğunuzu gösteriyor."
-        ]
-        sonuc += f"[color={RENKLER['gri_acik']}]{random.choice(genel_yorumlar)}[/color]\n\n"
-        
-        sonuc += f"[b][color={RENKLER['altin']}]🔢 ŞANSLI SAYINIZ:[/color][/b] "
-        sonuc += f"[color={RENKLER['yesil']}]{random.randint(1, 100)}[/color]"
-        
+
         self.sonuc_label.markup = True
-        self.sonuc_label.text = sonuc
-        self._son_elfali_yorum = sonuc
+        self.sonuc_label.text = yorum_bekle_markup()
         buton_metin_guncelle(self.fal_bak_btn, YORUM_BEKLE)
         self.fal_bak_btn.disabled = True
 
         def _ai_bitir(metin, ai_kullanildi, hata, kaynak=None, fotograf=False):
-            self.sonuc_label.text = yorum_sonuc_metni(
-                self._son_elfali_yorum, metin, ai_kullanildi, hata, kaynak, fotograf,
-            )
+            self.sonuc_label.text = foto_fal_sonuc(metin, hata)
             buton_metin_guncelle(self.fal_bak_btn, TUS['tekrar'])
             self.fal_bak_btn.disabled = False
 
         foto_veri = self.foto_panel.tum_veri()
-        yorum_al('elfali', {
-            'el_tipi': el_tipi['tip'],
-            'cizgiler': [c['isim'] for c in secilen_cizgiler],
-            **foto_veri,
-        }, _ai_bitir)
+        yorum_al('elfali', foto_veri, _ai_bitir)

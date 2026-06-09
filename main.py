@@ -528,6 +528,11 @@ class FalimaBakApp(App):
         except Exception as e:
             print(f'Config kopyalama: {e}', flush=True)
         try:
+            from ai_yorum import mobil_ai_hazirla
+            Clock.schedule_once(lambda *_: mobil_ai_hazirla(), 0.5)
+        except Exception as e:
+            print(f'AI mobil hazırlık: {e}', flush=True)
+        try:
             from kamera import uygulama_izinlerini_iste
             Clock.schedule_once(lambda *_: uygulama_izinlerini_iste(), 1.5)
         except Exception:
