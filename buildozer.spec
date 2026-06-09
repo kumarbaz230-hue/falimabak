@@ -7,38 +7,45 @@ package.domain = org.kumar.falimabak
 source.dir = .
 source.main = main.py
 
-source.include_exts = py,png,jpg,jpeg,kv,json,webp,ttf,txt
-source.include_patterns = assets/*,config.ornek.json
-source.exclude_dirs = tests,bin,.git,__pycache__,.buildozer,.venv,venv,env,.idea,user_photos,.github,recipes,tools,images
-source.exclude_patterns = license,images/*/*.jpg,*.bat,*.md,config.json,kullanici_veri.json,.env,secrets.json,secrets.ornek.json
+source.include_exts = py,png,jpg,jpeg,kv,json,webp,ttf,txt,html
+source.include_patterns = assets/*,config.ornek.json,store/*
+source.exclude_dirs = tests,bin,.git,__pycache__,.buildozer,.venv,venv,env,.idea,user_photos,.github,recipes,tools,images,keystore
+source.exclude_patterns = license,images/*/*.jpg,*.bat,config.json,kullanici_veri.json,.env,secrets.json,secrets.ornek.json
 
-version = 1.0.19
+version = 1.1.0
 
 icon.filename = %(source.dir)s/assets/app_icon.png
 presplash.filename = %(source.dir)s/assets/splash_banner.png
 
-# certifi: Android SSL sertifikaları (Gemini HTTPS için zorunlu)
 requirements = python3,kivy==2.3.1,pillow,android,plyer,certifi
 
 orientation = portrait
 fullscreen = 0
 
-android.api = 31
+android.api = 34
 android.minapi = 24
 android.ndk = 25b
 android.ndk_api = 24
 
-android.permissions = INTERNET,WRITE_EXTERNAL_STORAGE,READ_EXTERNAL_STORAGE,READ_MEDIA_IMAGES,CAMERA
+android.permissions = INTERNET,ACCESS_NETWORK_STATE,AD_ID,CAMERA,READ_MEDIA_IMAGES
 
-android.archs = arm64-v8a
+android.archs = arm64-v8a,armeabi-v7a
 android.accept_sdk_license = True
 android.allow_backup = True
 android.enable_androidx = True
+
+android.gradle_dependencies = androidx.appcompat:appcompat:1.6.1,com.google.android.gms:play-services-ads:23.6.0
+
+# Test AdMob App ID — yayın öncesi secrets.json + bu satırı gerçek ID ile güncelle
+android.meta_data = com.google.android.gms.ads.APPLICATION_ID=ca-app-pub-3940256099942544~3347511713
 
 android.add_src = android_res
 android.add_application_xml = %(source.dir)s/android_res/application.xml
 
 android.presplash_color = #0F0C20
+
+# Release AAB: buildozer android release
+# İmzalama: keystore/PLAY_IMZA.md dosyasına bak
 
 [buildozer]
 

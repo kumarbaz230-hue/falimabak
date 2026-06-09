@@ -833,6 +833,11 @@ def yorum_al(tip, veri, callback):
                 fal_kaydet(tip, baslik_olustur(tip, veri), metin)
             except Exception:
                 pass
+            try:
+                from reklam import fal_sonrasi_reklam
+                fal_sonrasi_reklam()
+            except Exception:
+                pass
         callback(metin, ai_kullanildi, hata, kaynak, fotograf)
 
     def _calistir():

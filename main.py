@@ -1,5 +1,5 @@
 """
-🔮 FalımaBak - Premium Fal Uygulaması v1.0.19
+🔮 FalımaBak - Premium Fal Uygulaması v1.1.0
 Mystic Dark Dashboard — mobil odaklı
 """
 
@@ -490,6 +490,11 @@ class GecmisScreen(Screen):
         kaydir.add_widget(self._liste)
         ana.add_widget(kaydir)
 
+        try:
+            from reklam import reklam_alani_bosluk
+            ana.add_widget(reklam_alani_bosluk())
+        except Exception:
+            pass
         ana.add_widget(alt_nav_bar('gecmis', on_sec=self._nav))
         ekran_icerik_sar(self, ana)
         self._yenile()
@@ -573,8 +578,13 @@ class Anasayfa(Screen):
                 ikon_anahtar=ikon, renk=renk, hedef=hedef))
         ana.add_widget(menu)
 
-        ana.add_widget(metin_label('FalımaBak v1.0.19', font_size='10sp', bold=True,
+        ana.add_widget(metin_label('FalımaBak v1.1.0', font_size='10sp', bold=True,
             color=RENKLER['altin_yumusak'], halign='center', size_hint_y=None, height=dp(18)))
+        try:
+            from reklam import reklam_alani_bosluk
+            ana.add_widget(reklam_alani_bosluk())
+        except Exception:
+            pass
         ana.add_widget(alt_nav_bar('anasayfa', on_sec=self._nav))
         ekran_icerik_sar(self, ana)
 
@@ -626,6 +636,11 @@ class FalimaBakApp(App):
         try:
             from kamera import kamera_hazirla
             Clock.schedule_once(lambda *_: kamera_hazirla(), 0.8)
+        except Exception:
+            pass
+        try:
+            from reklam import reklam_hazirla
+            Clock.schedule_once(lambda *_: reklam_hazirla(), 1.2)
         except Exception:
             pass
 
@@ -701,6 +716,11 @@ class FalimaBakApp(App):
             ]
             for _, fab in ekranlar:
                 sm.add_widget(fab())
+            try:
+                from reklam import ekran_reklam_guncelle
+                sm.bind(current=lambda _, ekran: ekran_reklam_guncelle(ekran))
+            except Exception:
+                pass
         except Exception:
             err = traceback.format_exc()
             print(err, flush=True)

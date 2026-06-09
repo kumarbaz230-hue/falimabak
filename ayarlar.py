@@ -15,7 +15,7 @@ from theme import (
 from gecmis import kullanici_ismi, isim_guncelle, gecmis_temizle, dil_al
 from dil import t, dil_listesi, dil_etiket, dil_degistir
 
-_SURUM = '1.0.18'
+_SURUM = '1.1.0'
 
 
 def _ayar_karti(baslik, alt_baslik=None):
@@ -76,6 +76,13 @@ class AyarlarScreen(Screen):
         islem.height = dp(148)
         ana.add_widget(islem)
 
+        hukuk = _ayar_karti(t('settings_legal'), t('settings_legal_hint'))
+        gizlilik_btn = siyah_buton(t('settings_privacy'), font_size='14sp')
+        gizlilik_btn.bind(on_press=self._gizlilik_ac)
+        hukuk.add_widget(gizlilik_btn)
+        hukuk.height = dp(118)
+        ana.add_widget(hukuk)
+
         self._mesaj = metin_label(
             '', font_size='13sp', color=RENKLER['yesil'],
             halign='center', size_hint_y=None, height=dp(28),
@@ -83,6 +90,11 @@ class AyarlarScreen(Screen):
         ana.add_widget(self._mesaj)
 
         ana.add_widget(BoxLayout(size_hint_y=1))
+        try:
+            from reklam import reklam_alani_bosluk
+            ana.add_widget(reklam_alani_bosluk())
+        except Exception:
+            pass
         ana.add_widget(metin_label(
             f'FalımaBak v{_SURUM}',
             font_size='10sp', color=RENKLER['gri_koyu'],
@@ -117,6 +129,13 @@ class AyarlarScreen(Screen):
             app = App.get_running_app()
             if app and hasattr(app, 'ekranlari_yenile_dil'):
                 app.ekranlari_yenile_dil()
+
+    def _gizlilik_ac(self, *_):
+        try:
+            from reklam import gizlilik_url, url_ac
+            url_ac(gizlilik_url())
+        except Exception:
+            pass
 
     def _gecmis_temizle(self, *_):
         if gecmis_temizle():
