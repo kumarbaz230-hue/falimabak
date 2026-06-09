@@ -16,7 +16,10 @@ from kivy.animation import Animation
 import random
 
 from ai_yorum import yorum_al
-from theme import TUS, tus_buton, siyah_buton, baslik_satir, buton_metin_guncelle, yorum_baslik, yorum_bekle_markup, yorum_durum_notu
+from theme import (
+    TUS, tus_buton, siyah_buton, baslik_satir, buton_metin_guncelle,
+    yorum_baslik, yorum_bekle_markup, yorum_durum_notu, diger_fal_buton,
+)
 
 RENKLER = {
     'arka_plan': '#1a0a2e',
@@ -119,20 +122,20 @@ class DigerFallarScreen(Screen):
         ana_layout = BoxLayout(orientation='vertical', spacing=10, padding=15)
         
         from kivy.metrics import dp
-        ana_layout.add_widget(baslik_satir('✨', 'DİĞER FALLAR', font_size='24sp', height=dp(44)))
+        ana_layout.add_widget(baslik_satir('', 'DİĞER FALLAR', font_size='24sp', height=dp(44)))
         
         # Fal türü seçimi
         fal_turu_layout = GridLayout(cols=2, spacing=10, size_hint=(1, 0.2))
         
         fal_turleri = [
-            ('İskambil', 'iskambil', '🃏'),
-            ('Çiçek Falı', 'cicek', '🌸'),
-            ('El Falı', 'el', '✋'),
-            ('Nazar Falı', 'nazar', '👁'),
+            ('İskambil', 'iskambil'),
+            ('Çiçek Falı', 'cicek'),
+            ('El Falı', 'el'),
+            ('Nazar Falı', 'nazar'),
         ]
         
-        for text, fal_type, ikon in fal_turleri:
-            btn = siyah_buton(text, ikon=ikon, vurgu=True, font_size='13sp')
+        for text, fal_type in fal_turleri:
+            btn = diger_fal_buton(text, fal_type, vurgu=True, font_size='13sp')
             btn.bind(on_press=lambda x, ft=fal_type: self.fal_sec(ft))
             fal_turu_layout.add_widget(btn)
         

@@ -136,6 +136,14 @@ NAV_IKON_DOSYALARI = {
     'ayarlar':  'nav_ayarlar.png',
 }
 
+# Diğer Fallar ekranı — iskambil, çiçek, el, nazar
+DIGER_FAL_IKONLARI = {
+    'iskambil': 'diger_iskambil.png',
+    'cicek':    'diger_cicek.png',
+    'el':       'diger_el.png',
+    'nazar':    'diger_nazar.png',
+}
+
 # Mobil safe area (çentik / gesture bar) — Android'de aşağıda genişletilir
 SAFE_UST = dp(8)
 SAFE_ALT = dp(10)
@@ -425,6 +433,71 @@ def ikonlu_siyah_buton(ikon, metin, vurgu=False, altin_yazi=False, **kwargs):
     )
     btn.add_widget(btn._metin_lbl)
     return btn
+
+
+def png_ikonlu_siyah_buton(png_dosya, metin, vurgu=False, altin_yazi=False, **kwargs):
+    """PNG ikon + metin — Diğer Fallar butonları için."""
+    from kivy.graphics import Color, RoundedRectangle
+    from kivy.uix.behaviors import ButtonBehavior
+    from kivy.uix.boxlayout import BoxLayout
+    from kivy.uix.image import Image
+    from kivy.uix.label import Label
+
+    fontlari_yukle()
+    arka = RENKLER['buton_vurgu'] if vurgu else RENKLER['buton_arka']
+    yazi = RENKLER['buton_altin'] if altin_yazi else RENKLER['beyaz']
+    font_size = kwargs.pop('font_size', '14sp')
+    height = kwargs.pop('height', BUTON_MIN_YUKSEK)
+
+    class _PngButon(ButtonBehavior, BoxLayout):
+        pass
+
+    btn = _PngButon(
+        orientation='horizontal',
+        spacing=dp(6),
+        padding=[dp(8), dp(6)],
+        size_hint_y=None,
+        height=height,
+        **kwargs,
+    )
+    with btn.canvas.before:
+        Color(*get_color_from_hex(arka))
+        btn._bg = RoundedRectangle(radius=[dp(8)])
+
+    def _ciz(inst, *_):
+        btn._bg.pos = inst.pos
+        btn._bg.size = inst.size
+
+    btn.bind(pos=_ciz, size=_ciz)
+    Clock.schedule_once(lambda dt: _ciz(btn), 0)
+
+    yol = asset_yolu(png_dosya) if png_dosya else ''
+    if yol and os.path.isfile(yol):
+        btn.add_widget(Image(
+            source=yol,
+            size_hint=(None, 1),
+            width=dp(32),
+            allow_stretch=True,
+            keep_ratio=True,
+        ))
+    btn._metin_lbl = Label(
+        text=metin,
+        font_name=FON_ADI,
+        font_size=font_size,
+        bold=True,
+        color=get_color_from_hex(yazi),
+        halign='left',
+        valign='middle',
+        size_hint_x=1,
+    )
+    btn.add_widget(btn._metin_lbl)
+    return btn
+
+
+def diger_fal_buton(metin, fal_anahtar, vurgu=True, **kwargs):
+    """Diğer Fallar grid butonu."""
+    png = DIGER_FAL_IKONLARI.get(fal_anahtar, '')
+    return png_ikonlu_siyah_buton(png, metin, vurgu=vurgu, **kwargs)
 
 
 def buton_metin_guncelle(btn, metin):
