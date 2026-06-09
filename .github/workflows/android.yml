@@ -1,6 +1,8 @@
 name: Build Android APK
 
 on:
+  push:
+    branches: [main]
   workflow_dispatch:
 
 jobs:
@@ -15,6 +17,7 @@ jobs:
       ANDROID_NDK_LATEST_HOME: ""
       USE_OPENGL_ES2: "1"
       USE_SDL2: "1"
+      KIVY_CROSS_PLATFORM: "android"
 
     steps:
       - name: Checkout
@@ -35,8 +38,8 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.buildozer/android/packages
-          key: bz-pkgs-v7-${{ hashFiles('buildozer.spec') }}
-          restore-keys: bz-pkgs-v7-
+          key: bz-pkgs-v8-${{ hashFiles('buildozer.spec') }}
+          restore-keys: bz-pkgs-v8-
 
       - name: Install system dependencies
         run: |
@@ -64,7 +67,7 @@ jobs:
 
       - name: Install Buildozer
         run: |
-          python -m pip install --upgrade pip setuptools
+          python -m pip install --upgrade pip setuptools wheel virtualenv
           pip install "cython==0.29.34" "buildozer==1.5.0"
 
       - name: Build APK
@@ -86,7 +89,7 @@ jobs:
         if: always()
         run: |
           if [ -f buildozer.log ]; then
-            grep -E "config.pxi|Command failed|gradlew failed|fatal error:" buildozer.log | grep -vi "warning:" | tail -n 20 || true
+            grep -E "config.pxi|Command failed|gradlew failed|fatal error:|# Android packaging" buildozer.log | grep -vi "warning:" | tail -n 30 || true
           fi
           ls -la bin/ 2>/dev/null || echo "bin/ yok"
 
