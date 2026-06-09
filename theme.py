@@ -1091,8 +1091,9 @@ def alt_nav_bar(aktif='anasayfa', on_sec=None):
             ))
             self.add_widget(ust)
             if secili:
+                gold = get_color_from_hex(RENKLER['altin'])
                 with self.canvas.after:
-                    Color(*get_color_from_hex(RENKLER['altin']), 0.8)
+                    Color(gold[0], gold[1], gold[2], 0.8)
                     self._cizgi = RoundedRectangle(radius=[dp(1)])
                 self.bind(pos=self._ciz, size=self._ciz)
                 Clock.schedule_once(lambda *_: self._ciz(), 0)
@@ -1113,23 +1114,27 @@ def alt_nav_bar(aktif='anasayfa', on_sec=None):
         padding=[dp(10), dp(4), dp(10), SAFE_ALT],
         spacing=dp(6),
     )
+    gold = get_color_from_hex(RENKLER['altin'])
+    mor = get_color_from_hex(RENKLER['mor_parlak'])
+    nav_bg = get_color_from_hex('#120E28')
+    nav_bg2 = get_color_from_hex(RENKLER['kart_arka_cam'])
     with nav.canvas.before:
         Color(0, 0, 0, 0.55)
         nav._golge = Rectangle()
-        Color(*get_color_from_hex('#120E28'))
+        Color(nav_bg[0], nav_bg[1], nav_bg[2], 1)
         nav._bg = Rectangle()
-        Color(*get_color_from_hex(RENKLER['kart_arka_cam']))
+        Color(nav_bg2[0], nav_bg2[1], nav_bg2[2], 1)
         nav._bg2 = Rectangle()
-        Color(*get_color_from_hex(RENKLER['altin']), 0.55)
+        Color(gold[0], gold[1], gold[2], 0.55)
         nav._ust = Line(width=dp(1.5))
-        Color(*get_color_from_hex(RENKLER['mor_parlak']), 0.15)
+        Color(mor[0], mor[1], mor[2], 0.15)
         nav._alt = Line(width=dp(1))
 
     def _nav_ciz(*_):
         nav._golge.pos = (nav.x, nav.y - dp(2))
         nav._golge.size = (nav.width, nav.height + dp(2))
         nav._bg.pos = nav.pos
-        nav._bg.size = (nav.width, nav.height + dp(40))
+        nav._bg.size = nav.size
         nav._bg2.pos = nav.pos
         nav._bg2.size = nav.size
         nav._ust.points = [nav.x, nav.top, nav.right, nav.top]
