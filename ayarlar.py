@@ -1,4 +1,4 @@
-"""FalımaBak — Uygulama ayarları."""
+"""FalımaBak — Uygulama ayarları (premium kart düzeni)."""
 
 from kivy.uix.screenmanager import Screen
 from kivy.uix.boxlayout import BoxLayout
@@ -6,12 +6,34 @@ from kivy.utils import get_color_from_hex
 from kivy.metrics import dp
 
 from theme import (
-    RENKLER, SAFE_UST, SAFE_ALT,
+    RENKLER, SAFE_UST,
     metin_label, baslik_satir, siyah_buton, alt_nav_bar, ekran_icerik_sar,
-    guvenli_textinput,
+    guvenli_textinput, kart_zemin_bagla,
 )
 from gecmis import kullanici_ismi, isim_guncelle, gecmis_temizle
 from ai_yorum import config_kaydet, _ayar_yukle, gemini_key_kisa
+
+_SURUM = '1.0.14'
+
+
+def _ayar_karti(baslik, alt_baslik=None):
+    kart = BoxLayout(
+        orientation='vertical',
+        size_hint_y=None,
+        spacing=dp(10),
+        padding=[dp(16), dp(14), dp(16), dp(14)],
+    )
+    kart_zemin_bagla(kart, radius=16)
+    kart.add_widget(metin_label(
+        baslik, font_size='16sp', bold=True, color=RENKLER['altin'],
+        halign='left', size_hint_y=None, height=dp(22),
+    ))
+    if alt_baslik:
+        kart.add_widget(metin_label(
+            alt_baslik, font_size='11sp', color=RENKLER['gri_acik'],
+            halign='left', size_hint_y=None, height=dp(32),
+        ))
+    return kart
 
 
 class AyarlarScreen(Screen):
@@ -20,40 +42,41 @@ class AyarlarScreen(Screen):
         self._kur()
 
     def _kur(self):
-        ana = BoxLayout(orientation='vertical', padding=[dp(12), SAFE_UST, dp(12), 0], spacing=dp(10))
+        ana = BoxLayout(orientation='vertical', padding=[dp(12), SAFE_UST, dp(12), 0], spacing=dp(12))
         ana.add_widget(baslik_satir('', 'Ayarlar', font_size='22sp', height=dp(40)))
 
-        ana.add_widget(metin_label(
-            'Adınız',
-            font_size='15sp', bold=True, color=RENKLER['altin'],
-            size_hint_y=None, height=dp(24),
-        ))
-        self._isim_input = guvenli_textinput(hint_text='İsteğe bağlı — yorumlarda kullanılır')
-        ana.add_widget(self._isim_input)
+        profil = _ayar_karti('Profil', 'Adınız yorumlarda kişiselleştirme için kullanılır.')
+        self._isim_input = guvenli_textinput(hint_text='İsteğe bağlı')
+        profil.add_widget(self._isim_input)
+        profil.height = dp(130)
+        ana.add_widget(profil)
 
-        ana.add_widget(metin_label(
-            'Yapay zeka anahtarı (isteğe bağlı)',
-            font_size='15sp', bold=True, color=RENKLER['altin'],
-            size_hint_y=None, height=dp(24),
-        ))
+        ai_kart = _ayar_karti(
+            'Gelişmiş — Yapay zeka',
+            'Boş bırakırsanız uygulama anahtarı veya cihaz içi yorum kullanılır.',
+        )
         self._api_input = guvenli_textinput(
-            hint_text='Boş bırakılırsa uygulama anahtarı kullanılır',
+            hint_text='Gemini API anahtarı (isteğe bağlı)',
             password=True,
         )
-        ana.add_widget(self._api_input)
-        ana.add_widget(metin_label(
-            'AI çalışmazsa aistudio.google.com/apikey adresinden AIzaSy ile başlayan key alıp buraya yapıştırın.',
-            font_size='11sp', color=RENKLER['gri_acik'],
-            size_hint_y=None, height=dp(36),
+        ai_kart.add_widget(self._api_input)
+        ai_kart.add_widget(metin_label(
+            'aistudio.google.com/apikey — AIzaSy ile başlayan anahtar.',
+            font_size='10sp', color=RENKLER['gri_koyu'],
+            size_hint_y=None, height=dp(28),
         ))
+        ai_kart.height = dp(168)
+        ana.add_widget(ai_kart)
 
-        kaydet_btn = siyah_buton('Kaydet', vurgu=True, font_size='15sp')
+        islem = _ayar_karti('Veri ve geçmiş')
+        kaydet_btn = siyah_buton('Ayarları kaydet', vurgu=True, font_size='15sp')
         kaydet_btn.bind(on_press=self._kaydet)
-        ana.add_widget(kaydet_btn)
-
+        islem.add_widget(kaydet_btn)
         temizle_btn = siyah_buton('Fal geçmişini temizle', font_size='14sp')
         temizle_btn.bind(on_press=self._gecmis_temizle)
-        ana.add_widget(temizle_btn)
+        islem.add_widget(temizle_btn)
+        islem.height = dp(148)
+        ana.add_widget(islem)
 
         self._mesaj = metin_label(
             '', font_size='13sp', color=RENKLER['yesil'],
@@ -63,7 +86,7 @@ class AyarlarScreen(Screen):
 
         ana.add_widget(BoxLayout(size_hint_y=1))
         ana.add_widget(metin_label(
-            'FalımaBak v1.0.13',
+            f'FalımaBak v{_SURUM} · Premium',
             font_size='10sp', color=RENKLER['gri_koyu'],
             halign='center', size_hint_y=None, height=dp(18),
         ))

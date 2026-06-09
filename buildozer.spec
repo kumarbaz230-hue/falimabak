@@ -12,7 +12,10 @@ source.include_patterns = assets/*,config.ornek.json
 source.exclude_dirs = tests,bin,.git,__pycache__,.buildozer,.venv,venv,env,.idea,user_photos,.github,recipes,tools,images
 source.exclude_patterns = license,images/*/*.jpg,*.bat,*.md,config.json,kullanici_veri.json,.env,secrets.json,secrets.ornek.json
 
-version = 1.0.13
+version = 1.0.14
+
+icon.filename = %(source.dir)s/assets/app_icon.png
+presplash.filename = %(source.dir)s/assets/splash_banner.png
 
 # certifi: Android SSL sertifikaları (Gemini HTTPS için zorunlu)
 requirements = python3,kivy==2.3.1,pillow,android,plyer,certifi

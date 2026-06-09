@@ -1,5 +1,5 @@
 """
-🔮 FalımaBak - Premium Fal Uygulaması v3.2
+🔮 FalımaBak - Premium Fal Uygulaması v1.0.14
 Mystic Dark Dashboard — mobil odaklı
 """
 
@@ -207,19 +207,40 @@ class GunlukFalKarti(ButtonBehavior, BoxLayout):
 
 class BaslikKarti(BoxLayout):
     def __init__(self, **kwargs):
-        super().__init__(
-            orientation='vertical', size_hint_y=None, height=dp(140),
-            padding=[dp(14), dp(12), dp(14), dp(10)], spacing=dp(4), **kwargs,
-        )
+        super().__init__(orientation='vertical', size_hint_y=None, spacing=dp(6), **kwargs)
+        banner_yol = asset_yolu('menu_banner.png')
+        isim = kullanici_ismi()
+
+        if os.path.isfile(banner_yol):
+            self.height = dp(108)
+            self.add_widget(Image(
+                source=banner_yol,
+                size_hint=(1, None),
+                height=dp(100),
+                allow_stretch=True,
+                keep_ratio=False,
+            ))
+            if isim:
+                self.height = dp(128)
+                self.add_widget(metin_label(
+                    f'Merhaba, {isim}!',
+                    font_size='12sp', color=RENKLER['altin_yumusak'],
+                    halign='left', size_hint_y=None, height=dp(18),
+                ))
+            return
+
+        self.height = dp(140)
+        self.padding = [dp(14), dp(12), dp(14), dp(10)]
+        self.spacing = dp(4)
         with self.canvas.before:
             Color(*get_color_from_hex(RENKLER['kart_arka']))
             self._panel = RoundedRectangle(radius=[dp(16)])
+            Color(*get_color_from_hex(RENKLER['altin']))
+            self._cizgi = RoundedRectangle(radius=[dp(2)])
         self.bind(pos=self._baslik_ciz, size=self._baslik_ciz)
         Clock.schedule_once(lambda *_: self._baslik_ciz(), 0)
 
-        isim = kullanici_ismi()
         selam = f'Merhaba, {isim}!' if isim else 'Geleceğinizi Keşfedin'
-
         ust = BoxLayout(orientation='horizontal', size_hint_y=None, height=dp(44), spacing=dp(8))
         ust.add_widget(emoji_label('🔮', font_size='34sp', size_hint=(None, 1), width=dp(40)))
         ust.add_widget(metin_label(
@@ -232,20 +253,13 @@ class BaslikKarti(BoxLayout):
         self.add_widget(metin_label(YORUM_BASLIK, font_size='11sp', color=RENKLER['gri_acik'],
             halign='left', size_hint_y=None, height=dp(18)))
 
-        etiketler = BoxLayout(orientation='horizontal', size_hint_y=None, height=dp(22), spacing=dp(8))
-        for yazi, renk in [
-            ('Tarot', RENKLER['mor']), ('Kahve', RENKLER['turuncu']),
-            ('Astroloji', RENKLER['mavi_acik']), ('El Falı', RENKLER['pembe']),
-        ]:
-            etiketler.add_widget(metin_label(
-                yazi, font_size='9sp', bold=True, color=renk,
-                halign='left', size_hint=(None, 1), width=dp(64),
-            ))
-        self.add_widget(etiketler)
-
     def _baslik_ciz(self, *_):
+        if not hasattr(self, '_panel'):
+            return
         self._panel.pos = self.pos
         self._panel.size = self.size
+        self._cizgi.pos = (self.x, self.y)
+        self._cizgi.size = (dp(4), self.height)
 
 
 class SplashScreen(Screen):
@@ -256,37 +270,45 @@ class SplashScreen(Screen):
     def _kur(self):
         gradient_arka_plan_ekle(self)
         root = FloatLayout()
+        banner_yol = asset_yolu('splash_banner.png')
+        self._banner_var = os.path.isfile(banner_yol)
+
+        if self._banner_var:
+            root.add_widget(Image(
+                source=banner_yol,
+                allow_stretch=True,
+                keep_ratio=False,
+                size_hint=(1, 1),
+            ))
 
         ikon_yol = asset_yolu('app_icon.png')
-        if _ANDROID:
-            self.logo = emoji_label('◆', font_size='72sp',
-                pos_hint={'center_x': 0.5, 'center_y': 0.58}, size_hint=(None, None),
-                size=(dp(100), dp(100)))
-        elif os.path.isfile(ikon_yol):
+        logo_boyut = dp(92)
+        if os.path.isfile(ikon_yol):
             self.logo = Image(
                 source=ikon_yol,
-                pos_hint={'center_x': 0.5, 'center_y': 0.58},
+                pos_hint={'center_x': 0.5, 'center_y': 0.58 if self._banner_var else 0.58},
                 size_hint=(None, None),
-                size=(dp(100), dp(100)),
+                size=(logo_boyut, logo_boyut),
                 allow_stretch=True,
                 keep_ratio=True,
             )
         else:
             self.logo = emoji_label('🔮', font_size='72sp',
                 pos_hint={'center_x': 0.5, 'center_y': 0.58}, size_hint=(None, None),
-                size=(dp(100), dp(100)))
+                size=(logo_boyut, logo_boyut))
         root.add_widget(self.logo)
 
-        root.add_widget(metin_label(
-            'FalımaBak', font_size='36sp', bold=True, color=RENKLER['altin'],
-            halign='center', pos_hint={'center_x': 0.5, 'center_y': 0.46},
-            size_hint=(0.9, None), height=dp(44),
-        ))
-        root.add_widget(metin_label(
-            YORUM_BASLIK, font_size='13sp', color=RENKLER['gri_acik'],
-            halign='center', pos_hint={'center_x': 0.5, 'center_y': 0.40},
-            size_hint=(0.9, None), height=dp(24),
-        ))
+        if not self._banner_var:
+            root.add_widget(metin_label(
+                'FalımaBak', font_size='36sp', bold=True, color=RENKLER['altin'],
+                halign='center', pos_hint={'center_x': 0.5, 'center_y': 0.46},
+                size_hint=(0.9, None), height=dp(44),
+            ))
+            root.add_widget(metin_label(
+                YORUM_BASLIK, font_size='13sp', color=RENKLER['gri_acik'],
+                halign='center', pos_hint={'center_x': 0.5, 'center_y': 0.40},
+                size_hint=(0.9, None), height=dp(24),
+            ))
 
         self.yukleniyor = metin_label(
             'Yükleniyor...', font_size='13sp', color=RENKLER['altin_yumusak'],
@@ -296,12 +318,10 @@ class SplashScreen(Screen):
         root.add_widget(self.yukleniyor)
         self.add_widget(root)
 
-        # Android'de Image/Label animasyonu native crash yapabiliyor — statik splash
         if not _ANDROID:
-            boyut = dp(100)
-            self.logo.size = (boyut, boyut)
+            boyut = logo_boyut
             anim_logo = (
-                Animation(size=(boyut * 1.1, boyut * 1.1), opacity=0.85, duration=1.0, t='in_out_sine')
+                Animation(size=(boyut * 1.08, boyut * 1.08), opacity=0.88, duration=1.0, t='in_out_sine')
                 + Animation(size=(boyut, boyut), opacity=1.0, duration=1.0, t='in_out_sine')
             )
             anim_logo.repeat = True
@@ -314,9 +334,6 @@ class SplashScreen(Screen):
         else:
             self._anim_logo = None
             self._anim_txt = None
-            if hasattr(self.logo, 'size'):
-                s = dp(100)
-                self.logo.size = (s, s)
 
         Clock.schedule_once(self._gec, 2.2)
 
@@ -489,7 +506,7 @@ class Anasayfa(Screen):
                 ikon_anahtar=ikon, renk=renk, hedef=hedef))
         ana.add_widget(menu)
 
-        ana.add_widget(metin_label('FalımaBak v3.2', font_size='10sp', bold=True,
+        ana.add_widget(metin_label('FalımaBak v1.0.14', font_size='10sp', bold=True,
             color=RENKLER['altin_yumusak'], halign='center', size_hint_y=None, height=dp(18)))
         ana.add_widget(alt_nav_bar('anasayfa', on_sec=self._nav))
         ekran_icerik_sar(self, ana)
