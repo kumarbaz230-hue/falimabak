@@ -1,4 +1,4 @@
-"""Rüya Tabiri — kullanıcının rüyasını FalımaBak yapay zekâ ile yorumlar."""
+"""Rüya Tabiri — kullanıcının rüyasını FalımaBak yorumlar."""
 
 from kivy.uix.screenmanager import Screen
 from kivy.uix.boxlayout import BoxLayout

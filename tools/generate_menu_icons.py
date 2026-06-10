@@ -193,11 +193,13 @@ def ikon_ruya():
 
 
 def main():
-    ikon_tarot()
-    ikon_kahve()
-    ikon_astroloji()
-    ikon_elfali()
-    ikon_diger()
+    import sys
+    if '--hepsi' in sys.argv:
+        ikon_tarot()
+        ikon_kahve()
+        ikon_astroloji()
+        ikon_elfali()
+        ikon_diger()
     ikon_ruya()
     print('Menu ikonlari hazir.', flush=True)
 

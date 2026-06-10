@@ -1,6 +1,7 @@
 """
 FalımaBak - Fal yorumu motoru.
-Öncelik: Gemini (mobil/bulut) → Ollama (masaüstü) → offline yedek.
+Öncelik (metin): Gemini → OpenRouter → Groq → Ollama (PC) → offline.
+Görsel (kahve/el): yalnızca Gemini Vision → offline.
 """
 
 import base64
@@ -22,6 +23,11 @@ CONFIG_ORNEK_YOLU = os.path.join(BASE_DIR, 'config.ornek.json')
 SECRETS_YOLU = os.path.join(BASE_DIR, 'secrets.json')
 SECRETS_ORNEK_YOLU = os.path.join(BASE_DIR, 'secrets.ornek.json')
 _gomulu_anahtar = None
+_son_gemini_istek = 0.0
+_model_kota = {}  # model -> kota bitiş zamanı (429 sonrası)
+
+GEMINI_MIN_ARALIK = 1.5
+GEMINI_KOTA_BEKLE = 90
 
 
 def _config_yolu():
@@ -48,14 +54,33 @@ _varsayilan = {
     'gemini_model': 'gemini-2.5-flash',
     'gemini_yedek_modeller': [
         'gemini-2.0-flash',
-        'gemini-2.0-flash-lite',
         'gemini-1.5-flash',
-        'gemini-1.5-flash-8b',
     ],
     # Masaüstü Ollama (mobilde atlanır)
     'ollama_url': 'http://127.0.0.1:11434/api/generate',
     'ollama_model': 'llama3.1:8b',
     'ollama_masaustu': True,
+    # OpenRouter — Gemini düşünce (DeepSeek / Qwen)
+    # https://openrouter.ai/keys
+    'openrouter_api_key': '',
+    'openrouter_model': 'deepseek/deepseek-chat',
+    'openrouter_yedek_modeller': [
+        'qwen/qwen-2.5-72b-instruct',
+    ],
+    # Groq — son bulut yedek (gsk_ ile başlar)
+    # https://console.groq.com/keys
+    'groq_api_key': '',
+    'groq_model': 'llama-3.3-70b-versatile',
+    'groq_yedek_modeller': [
+        'llama-3.1-8b-instant',
+    ],
+    # xAI Grok — xai- ile başlar (Groq değil)
+    # https://console.x.ai/
+    'xai_api_key': '',
+    'xai_model': 'grok-2-1212',
+    'xai_yedek_modeller': [
+        'grok-beta',
+    ],
 }
 
 
@@ -83,11 +108,56 @@ def _ayar_yukle():
 def _mobil_ayar_duzelt(ayar):
     """Android: AI her zaman Gemini; offline mod devre dışı."""
     if not _android_mi():
-        return ayar
-    ayar = dict(ayar)
+        return _gemini_ayar_duzelt(ayar)
+    ayar = _gemini_ayar_duzelt(dict(ayar))
     ayar['ai_aktif'] = True
-    ayar['ai_mod'] = 'gemini'
+    ayar['ai_mod'] = 'otomatik'
     ayar['ai_timeout'] = max(int(ayar.get('ai_timeout') or 45), 90)
+    return ayar
+
+
+_GECERLI_GEMINI = frozenset({
+    'gemini-2.5-flash',
+    'gemini-2.5-pro',
+    'gemini-2.0-flash',
+    'gemini-2.0-flash-lite',
+    'gemini-1.5-flash',
+    'gemini-1.5-pro',
+})
+
+
+def _gemini_model_normalize(model):
+    """Geçersiz/lite/8b modelleri güvenilir flash modeline çevir."""
+    model = (model or 'gemini-2.5-flash').strip()
+    ml = model.lower()
+    if 'lite' in ml or '8b' in ml:
+        return 'gemini-2.5-flash', 'kota/limit'
+    if '3.5' in ml or not ml.startswith('gemini-') or model not in _GECERLI_GEMINI:
+        return 'gemini-2.5-flash', 'tanımsız model'
+    return model, None
+
+
+def _gemini_ayar_duzelt(ayar):
+    """Lite/8b modeller kotada hızlı tükenir — flash ailesine yönlendir."""
+    ayar = dict(ayar)
+    ham = (ayar.get('gemini_model') or 'gemini-2.5-flash').strip()
+    model, neden = _gemini_model_normalize(ham)
+    if neden:
+        print(f'AI: {ham} yerine {model} kullanılıyor ({neden})', flush=True)
+    ayar['gemini_model'] = model
+    yedek = []
+    for m in ayar.get('gemini_yedek_modeller') or []:
+        m = (m or '').strip()
+        if not m or m == model:
+            continue
+        m_norm, neden = _gemini_model_normalize(m)
+        if neden == 'kota/limit':
+            continue
+        if m_norm not in yedek and m_norm != model:
+            yedek.append(m_norm)
+    if not yedek:
+        yedek = ['gemini-2.0-flash', 'gemini-1.5-flash']
+    ayar['gemini_yedek_modeller'] = yedek
     return ayar
 
 
@@ -98,10 +168,19 @@ def mobil_ai_hazirla():
     ssl_hazirla()
     _gomulu_anahtar_yukle()
     anahtar_var = bool(_gemini_anahtar(_ayar_yukle()))
-    print(f'AI mobil: anahtar {"hazır" if anahtar_var else "YOK"}', flush=True)
+    or_var = bool(_openrouter_anahtar(_ayar_yukle()))
+    xai_var = bool(_xai_anahtar(_ayar_yukle()))
+    groq_var = bool(_groq_anahtar(_ayar_yukle()))
+    print(
+        f'AI mobil: gemini={"hazır" if anahtar_var else "YOK"} '
+        f'openrouter={"hazır" if or_var else "YOK"} '
+        f'grok={"hazır" if xai_var else "YOK"} '
+        f'groq={"hazır" if groq_var else "YOK"}',
+        flush=True,
+    )
     config_kaydet({
         'ai_aktif': True,
-        'ai_mod': 'gemini',
+        'ai_mod': 'otomatik',
         'ai_timeout': 90,
     })
     if anahtar_var:
@@ -249,34 +328,102 @@ def ai_kaynak():
     for kaynak in _kaynak_sirasi(ayar):
         if kaynak == 'gemini' and _gemini_anahtar(ayar):
             return 'bulut'
+        if kaynak == 'openrouter' and _openrouter_anahtar(ayar):
+            return 'openrouter'
+        if kaynak == 'xai' and _xai_anahtar(ayar):
+            return 'grok'
+        if kaynak == 'groq' and _groq_anahtar(ayar):
+            return 'groq'
         if kaynak == 'ollama' and ollama_aktif_mi():
             return 'ollama'
     return 'cihaz'
 
 
 def ai_durum_metni():
-    """Kullanıcıya gösterilebilir durum metni."""
-    k = ai_kaynak()
-    if k == 'bulut':
-        return 'FalımaBak Yorumluyor (Bulut)'
-    if k == 'ollama':
-        return 'FalımaBak Yorumluyor (Yerel)'
-    return 'FalımaBak Yorumluyor'
+    """Kullanıcıya her zaman aynı marka metni."""
+    try:
+        from dil import t
+        return t('yorum_baslik')
+    except Exception:
+        return 'FalımaBak Yorumluyor'
 
 
-def _kaynak_sirasi(ayar):
-    if _android_mi() and _gemini_anahtar(ayar):
-        return ['gemini']
+def _secrets_yukle():
+    if not hasattr(_secrets_yukle, '_cache'):
+        _secrets_yukle._cache = {}
+        for yol in (SECRETS_YOLU,):
+            if not os.path.isfile(yol):
+                continue
+            try:
+                with open(yol, encoding='utf-8') as f:
+                    _secrets_yukle._cache = json.load(f) or {}
+            except Exception:
+                pass
+            break
+    return _secrets_yukle._cache
+
+
+def _api_anahtar_al(ayar, config_key, secret_key, env_key):
+    ayar = ayar or {}
+    v = (ayar.get(config_key) or '').strip()
+    if v and not v.upper().startswith('BURAYA'):
+        return v
+    s = (_secrets_yukle().get(secret_key) or '').strip()
+    if s and not s.upper().startswith('BURAYA'):
+        return s
+    return (os.environ.get(env_key) or '').strip()
+
+
+def _openrouter_anahtar(ayar=None):
+    return _api_anahtar_al(
+        ayar or _ayar_yukle(), 'openrouter_api_key', 'openrouter_api_key', 'OPENROUTER_API_KEY',
+    )
+
+
+def _groq_anahtar(ayar=None):
+    key = _api_anahtar_al(
+        ayar or _ayar_yukle(), 'groq_api_key', 'groq_api_key', 'GROQ_API_KEY',
+    )
+    if key.startswith('xai-'):
+        return ''
+    return key
+
+
+def _xai_anahtar(ayar=None):
+    ayar = ayar or _ayar_yukle()
+    key = _api_anahtar_al(ayar, 'xai_api_key', 'xai_api_key', 'XAI_API_KEY')
+    if key:
+        return key
+    groq_slot = (_api_anahtar_al(ayar, 'groq_api_key', 'groq_api_key', 'GROQ_API_KEY') or '').strip()
+    if groq_slot.startswith('xai-'):
+        return groq_slot
+    return ''
+
+
+def _kaynak_sirasi(ayar, gorsel_var=False):
+    """Görsel fallarda yalnızca Gemini; metin fallarda çoklu bulut zinciri."""
+    if gorsel_var:
+        if _gemini_anahtar(ayar):
+            return ['gemini']
+        return []
+
     mod = (ayar.get('ai_mod') or 'otomatik').lower()
     if mod == 'offline':
         return []
     if mod == 'gemini':
-        return ['gemini']
+        return ['gemini'] if _gemini_anahtar(ayar) else []
     if mod == 'ollama':
-        return ['ollama']
+        return ['ollama'] if ollama_aktif_mi() else []
+
     sira = []
     if _gemini_anahtar(ayar):
         sira.append('gemini')
+    if _openrouter_anahtar(ayar):
+        sira.append('openrouter')
+    if _xai_anahtar(ayar):
+        sira.append('xai')
+    if _groq_anahtar(ayar):
+        sira.append('groq')
     if not _android_mi() and ayar.get('ollama_masaustu', True):
         sira.append('ollama')
     return sira
@@ -443,7 +590,45 @@ def _foto_dogrula(tip, yollar, aciklamalar, ayar):
     return True, None
 
 
-def _gemini_istek(prompt, ayar, model=None, gorsel=None):
+def _gemini_istek_araligi():
+    global _son_gemini_istek
+    simdi = time.time()
+    fark = simdi - _son_gemini_istek
+    if fark < GEMINI_MIN_ARALIK:
+        time.sleep(GEMINI_MIN_ARALIK - fark)
+    _son_gemini_istek = time.time()
+
+
+def _model_kota_aktif(model):
+    return time.time() < _model_kota.get(model, 0)
+
+
+def _model_kota_isaretle(model, saniye=GEMINI_KOTA_BEKLE):
+    _model_kota[model] = time.time() + saniye
+
+
+def _metin_eksik_mi(metin, finish_reason=''):
+    """Kesik veya çok kısa AI yanıtını kullanıcıya gösterme."""
+    if not metin:
+        return True
+    t = metin.strip()
+    if len(t) < 140 or len(t.split()) < 25:
+        return True
+    fr = (finish_reason or '').upper()
+    if fr and fr not in ('STOP', 'END_TURN', ''):
+        return True
+    if len(t) > 280 and t[-1] not in '.!?…"\')»':
+        son = t[-100:]
+        if son.count('.') + son.count('!') + son.count('?') == 0:
+            return True
+    return False
+
+
+def _gecici_http_kodu(kod):
+    return kod in (429, 503)
+
+
+def _gemini_istek(prompt, ayar, model=None, gorsel=None, max_tokens=None):
     anahtar = _gemini_anahtar(ayar)
     if not anahtar:
         return None
@@ -468,13 +653,18 @@ def _gemini_istek(prompt, ayar, model=None, gorsel=None):
     if gorsel_sayisi:
         zaman_asimi = max(zaman_asimi, 75 + gorsel_sayisi * 12)
 
+    if max_tokens is None:
+        max_tokens = 1800 if gorsel_sayisi else 2048
+
     govde = {
         'contents': [{'parts': parcalar}],
         'generationConfig': {
             'temperature': 0.88,
-            'maxOutputTokens': 1100 if gorsel_sayisi > 1 else 900,
+            'maxOutputTokens': int(max_tokens),
         },
     }
+
+    _gemini_istek_araligi()
 
     denemeler = [
         (base_url, {'Content-Type': 'application/json', 'x-goog-api-key': anahtar}),
@@ -497,8 +687,9 @@ def _gemini_istek(prompt, ayar, model=None, gorsel=None):
             yanit_parcalar = adaylar[0].get('content', {}).get('parts') or []
             metinler = [p.get('text', '') for p in yanit_parcalar if p.get('text')]
             metin = '\n'.join(metinler).strip()
+            finish = adaylar[0].get('finishReason', 'STOP') or 'STOP'
             if metin:
-                return metin
+                return metin, finish
         except urllib.error.HTTPError as e:
             son_hata = e
             detay = ''
@@ -522,7 +713,7 @@ def _gemini_istek(prompt, ayar, model=None, gorsel=None):
 
     if son_hata and isinstance(son_hata, urllib.error.HTTPError):
         raise son_hata
-    return None
+    return None, None
 
 
 def _gemini_modeller(ayar):
@@ -530,9 +721,7 @@ def _gemini_modeller(ayar):
     modeller = [primary]
     for yedek in ayar.get('gemini_yedek_modeller') or (
         'gemini-2.0-flash',
-        'gemini-2.0-flash-lite',
         'gemini-1.5-flash',
-        'gemini-1.5-flash-8b',
     ):
         if yedek and yedek not in modeller:
             modeller.append(yedek)
@@ -541,6 +730,7 @@ def _gemini_modeller(ayar):
 
 def _gemini_dene(prompt, ayar, gorsel=None):
     """Gemini'yi ana + yedek modelle dener. (metin, son_http_kodu)"""
+    ayar = _gemini_ayar_duzelt(ayar)
     anahtar = _gemini_anahtar(ayar)
     if not anahtar:
         return None, None
@@ -551,10 +741,29 @@ def _gemini_dene(prompt, ayar, gorsel=None):
     son_kod = None
     kota_doldu = False
     for model in modeller:
-        for deneme in range(2):
+        if _model_kota_aktif(model):
+            print(f'AI: {model} kotada — atlanıyor', flush=True)
+            continue
+        for deneme in range(3):
             try:
-                metin = _gemini_istek(prompt, ayar, model=model, gorsel=gorsel)
-                if metin:
+                for token_limit in (None, 3072):
+                    metin, finish = _gemini_istek(
+                        prompt, ayar, model=model, gorsel=gorsel, max_tokens=token_limit,
+                    )
+                    if not metin:
+                        break
+                    if _metin_eksik_mi(metin, finish):
+                        if finish == 'MAX_TOKENS' and token_limit is None:
+                            print(
+                                f'AI: Yanıt kesildi ({model}) — uzun token ile tekrar',
+                                flush=True,
+                            )
+                            continue
+                        print(
+                            f'AI: Eksik yanıt ({model}, {finish}) — sonraki deneme/model',
+                            flush=True,
+                        )
+                        break
                     if model != primary:
                         print(f'AI: Gemini yedek model ({model})', flush=True)
                     return metin, None
@@ -562,6 +771,7 @@ def _gemini_dene(prompt, ayar, gorsel=None):
                 son_kod = e.code
                 if e.code == 429:
                     kota_doldu = True
+                    _model_kota_isaretle(model)
                 detay = ''
                 try:
                     detay = e.read().decode('utf-8', errors='replace')[:280]
@@ -572,8 +782,8 @@ def _gemini_dene(prompt, ayar, gorsel=None):
                     + (f' — {detay}' if detay else ''),
                     flush=True,
                 )
-                if e.code == 429 and deneme == 0:
-                    time.sleep(5)
+                if _gecici_http_kodu(e.code) and deneme < 2:
+                    time.sleep(2 ** deneme + (1 if e.code == 503 else 0))
                     continue
                 if e.code == 404:
                     break
@@ -582,22 +792,22 @@ def _gemini_dene(prompt, ayar, gorsel=None):
                 print(f'AI yorum hatası (gemini/{model}): {e}', flush=True)
                 break
     if kota_doldu:
-        print('AI: Gemini kotası doldu — Ollama veya hazır yorum devreye girer', flush=True)
+        print('AI: Gemini kotası doldu — hazır yorum devreye girer', flush=True)
     return None, 429 if kota_doldu else son_kod
 
 
 def _kullanici_hata_mesaji(hatalar):
     if not hatalar:
-        return 'Gerçek AI yorumu alınamadı; hazır yorum gösteriliyor.'
+        return None
     kodlar = []
     for h in hatalar:
         if ':' in h:
             kodlar.append(h.split(':', 1)[1])
-    if '429' in kodlar:
-        return 'Bulut kotası dolu; biraz bekleyip tekrar deneyin. Şimdilik hazır yorum.'
+    if '429' in kodlar or '503' in kodlar:
+        return 'Servis yoğun; FalımaBak yorumu gösteriliyor. Biraz sonra tekrar deneyin.'
     if any(k in ('401', '403', '400') for k in kodlar):
-        return 'Yapay zeka servisi yanıt vermedi; hazır yorum gösteriliyor.'
-    return 'AI bağlantısı kurulamadı; hazır yorum gösteriliyor.'
+        return 'Bağlantı kurulamadı; FalımaBak yorumu gösteriliyor.'
+    return 'Bağlantı kurulamadı; FalımaBak yorumu gösteriliyor.'
 
 
 def _gecersiz_foto_yaniti(metin, tip):
@@ -624,11 +834,182 @@ def _ollama_istek(prompt, ayar):
             'model': ayar['ollama_model'],
             'prompt': prompt,
             'stream': False,
-            'options': {'temperature': 0.85, 'num_predict': 600},
+            'options': {'temperature': 0.85, 'num_predict': 1200},
         },
         timeout=int(ayar.get('ai_timeout', 90)),
     )
     return (veri.get('response') or '').strip() or None
+
+
+def _chat_openai_istek(url, api_key, model, prompt, ayar, extra_headers=None):
+    """OpenAI uyumlu chat/completions (OpenRouter, Groq)."""
+    zaman_asimi = int(ayar.get('ai_timeout', 45))
+    hdrs = {
+        'Authorization': f'Bearer {api_key}',
+    }
+    if extra_headers:
+        hdrs.update(extra_headers)
+    veri = _http_post(
+        url,
+        {
+            'model': model,
+            'messages': [{'role': 'user', 'content': prompt}],
+            'temperature': 0.88,
+            'max_tokens': 2048,
+        },
+        headers=hdrs,
+        timeout=zaman_asimi,
+    )
+    secimler = veri.get('choices') or []
+    if not secimler:
+        return None
+    mesaj = secimler[0].get('message') or {}
+    metin = (mesaj.get('content') or '').strip()
+    return metin or None
+
+
+def _modeller_listesi(ayar, primary_key, yedek_key, varsayilan, varsayilan_yedek):
+    primary = (ayar.get(primary_key) or varsayilan).strip()
+    modeller = [primary] if primary else []
+    for m in ayar.get(yedek_key) or varsayilan_yedek:
+        m = (m or '').strip()
+        if m and m not in modeller:
+            modeller.append(m)
+    return modeller
+
+
+def _bulut_metin_dene(saglayici, prompt, ayar):
+    """OpenRouter veya Groq — yalnızca metin fal."""
+    if saglayici == 'openrouter':
+        anahtar = _openrouter_anahtar(ayar)
+        if not anahtar:
+            return None, None
+        url = 'https://openrouter.ai/api/v1/chat/completions'
+        modeller = _modeller_listesi(
+            ayar, 'openrouter_model', 'openrouter_yedek_modeller',
+            'deepseek/deepseek-chat', ['qwen/qwen-2.5-72b-instruct'],
+        )
+        ek_hdr = {
+            'HTTP-Referer': 'https://github.com/kumarbaz230-hue/falimabak',
+            'X-Title': 'Falimabak',
+        }
+    elif saglayici == 'groq':
+        anahtar = _groq_anahtar(ayar)
+        if not anahtar:
+            return None, None
+        url = 'https://api.groq.com/openai/v1/chat/completions'
+        modeller = _modeller_listesi(
+            ayar, 'groq_model', 'groq_yedek_modeller',
+            'llama-3.3-70b-versatile', ['llama-3.1-8b-instant'],
+        )
+        ek_hdr = {}
+    elif saglayici == 'xai':
+        anahtar = _xai_anahtar(ayar)
+        if not anahtar:
+            return None, None
+        url = 'https://api.x.ai/v1/chat/completions'
+        modeller = _modeller_listesi(
+            ayar, 'xai_model', 'xai_yedek_modeller',
+            'grok-2-1212', ['grok-beta'],
+        )
+        ek_hdr = {}
+    else:
+        return None, None
+
+    son_kod = None
+    for model in modeller:
+        for deneme in range(2):
+            try:
+                _gemini_istek_araligi()
+                metin = _chat_openai_istek(url, anahtar, model, prompt, ayar, ek_hdr)
+                if metin and not _metin_eksik_mi(metin):
+                    if model != modeller[0]:
+                        print(f'AI: {saglayici} yedek model ({model})', flush=True)
+                    return metin, None
+                if metin:
+                    print(f'AI: {saglayici} eksik yanıt ({model})', flush=True)
+            except urllib.error.HTTPError as e:
+                son_kod = e.code
+                detay = ''
+                try:
+                    detay = e.read().decode('utf-8', errors='replace')[:200]
+                except Exception:
+                    pass
+                print(f'AI HTTP ({saglayici}/{model}): {e.code} {e.reason} {detay}', flush=True)
+                if _gecici_http_kodu(e.code) and deneme == 0:
+                    time.sleep(2 + (1 if e.code == 503 else 0))
+                    continue
+                break
+            except (urllib.error.URLError, TimeoutError, Exception) as e:
+                print(f'AI hata ({saglayici}/{model}): {e}', flush=True)
+                break
+    return None, son_kod
+
+
+def _veri_ozeti(tip, veri):
+    """Kart/sembol veritabanı özeti — AI sadece hikâyeleştirir."""
+    veri = veri or {}
+    if tip == 'tarot':
+        satirlar = []
+        for k in veri.get('kartlar') or []:
+            satirlar.append(
+                f"• {k.get('pozisyon', '')}: {k.get('isim', '')} ({k.get('durum', '')}) "
+                f"— anlam: {k.get('anlam', '')}"
+            )
+        return '\n'.join(satirlar) or 'Tarot kartları çekildi.'
+    if tip == 'kahve':
+        acik = veri.get('foto_aciklamalari') or []
+        if acik:
+            return 'Fotoğraflar: ' + '; '.join(acik)
+        sek = veri.get('sekiller') or []
+        return 'Semboller: ' + ', '.join(sek) if sek else 'Kahve falı sembolleri.'
+    if tip == 'elfali':
+        ciz = veri.get('cizgiler') or []
+        el = veri.get('el_tipi') or ''
+        parca = [f'El tipi: {el}'] if el else []
+        if ciz:
+            parca.append('Çizgiler: ' + ', '.join(ciz))
+        return '\n'.join(parca) or 'El falı çizgileri.'
+    if tip == 'astroloji':
+        return f"Burç: {veri.get('burc', '')}\nDoğum: {veri.get('dogum', '')}"
+    if tip == 'burc_eslesme':
+        return (
+            f"Kişi 1: {veri.get('isim1', '')} — {veri.get('burc1', '')} ({veri.get('dogum1', '')})\n"
+            f"Kişi 2: {veri.get('isim2', '')} — {veri.get('burc2', '')} ({veri.get('dogum2', '')})\n"
+            f"Uyum skoru: {veri.get('skor', '')}/100"
+        )
+    if tip == 'ruya':
+        return (veri.get('ruya') or veri.get('ozet') or '').strip()
+    if tip == 'diger':
+        alt = veri.get('alt_tip') or veri.get('tur', '')
+        ozet = veri.get('sonuc', '')
+        if veri.get('kartlar'):
+            ozet = '; '.join(
+                f"{k.get('pozisyon')}: {k.get('isim')}" for k in veri['kartlar']
+            )
+        elif veri.get('cicekler'):
+            ozet = ', '.join(c.get('isim', '') for c in veri['cicekler'])
+        return f"Fal: {alt}\nSonuç/semboller: {ozet}"
+    return str(veri)[:800]
+
+
+def _prompt_hikayelestir(tip, veri, kullanici=''):
+    """Kısa prompt — temel veri + hikâyeleştirme (düşük token)."""
+    ozet = _veri_ozeti(tip, veri)
+    tip_etiket = {
+        'tarot': 'Tarot', 'kahve': 'Kahve', 'elfali': 'El Falı',
+        'astroloji': 'Astroloji', 'burc_eslesme': 'Burç Eşleşmesi',
+        'ruya': 'Rüya Tabiri', 'diger': 'Fal',
+    }.get(tip, tip)
+    return (
+        f'Sen Türk {tip_etiket} yorumcususun. Eğlence amaçlı, sıcak Türkçe yaz.\n'
+        f'{kullanici}'
+        f'Temel fal verisi (doğru kabul et, kart/sembol uydurma):\n{ozet}\n\n'
+        'Görev: Yukarıdaki veriyi en az 4 paragraf akıcı yoruma dönüştür. '
+        'Sadece selamlama yazma; aşk, kariyer ve genel mesaj ekle. '
+        'Kesin gelecek iddiası ve korku dili kullanma.\n'
+        'Sadece yorum metnini yaz.'
+    )
 
 
 def _prompt_olustur(tip, veri, gorsel_var=False):
@@ -641,22 +1022,10 @@ def _prompt_olustur(tip, veri, gorsel_var=False):
     except Exception:
         pass
 
-    if tip == 'tarot':
-        kartlar = veri.get('kartlar', [])
-        satirlar = []
-        for k in kartlar:
-            satirlar.append(
-                f"- {k.get('pozisyon', '')}: {k.get('isim', '')} "
-                f"({k.get('durum', '')}) — {k.get('anlam', '')}"
-            )
-        liste = '\n'.join(satirlar)
-        return (
-            'Sen deneyimli bir Türk tarot yorumcususun. Eğlence amaçlı, mistik ama sıcak bir dille yaz.\n'
-            f'{kullanici}'
-            f'Çekilen kartlar:\n{liste}\n\n'
-            '3-5 paragraf Türkçe yorum yaz. Aşk, kariyer ve genel enerji hakkında ipuçları ver. '
-            'Korkutucu veya kesin gelecek iddiası kullanma.'
-        )
+    if not gorsel_var and tip in (
+        'tarot', 'astroloji', 'burc_eslesme', 'ruya', 'diger', 'kahve', 'elfali',
+    ):
+        return _prompt_hikayelestir(tip, veri, kullanici)
 
     if tip == 'kahve':
         if gorsel_var:
@@ -680,16 +1049,8 @@ def _prompt_olustur(tip, veri, gorsel_var=False):
                 'aşk, para, sağlık ve genel mesaj. Olumlu ama gerçekçi ol. '
                 'Korkutucu veya kesin gelecek iddiası kullanma.'
             )
-        sekiller = veri.get('sekiller', [])
-        return (
-            'Sen Türk kahve falı yorumcususun. Eğlence amaçlı, samimi Türkçe yaz.\n'
-            f'{kullanici}'
-            f'Fincanda görülen semboller: {", ".join(sekiller)}\n'
-            '3-4 paragraf yorum: aşk, para, sağlık ve genel mesaj. Olumlu ama gerçekçi ol.'
-        )
 
-    if tip == 'elfali':
-        if gorsel_var:
+    if tip == 'elfali' and gorsel_var:
             aciklamalar = veri.get('foto_aciklamalari') or []
             if aciklamalar:
                 foto_metin = '\n'.join(
@@ -709,74 +1070,8 @@ def _prompt_olustur(tip, veri, gorsel_var=False):
                 'Önce gözlemlerini kısaca özetle, sonra 3-5 paragraf yaz: karakter, aşk, kariyer, şans.\n'
                 'Olumlu ama gerçekçi ol. Kesin gelecek iddiası kullanma.'
             )
-        cizgiler = veri.get('cizgiler', [])
-        el_tipi = veri.get('el_tipi', '')
-        return (
-            'Sen el falı yorumcususun. Eğlence amaçlı Türkçe yaz.\n'
-            f'{kullanici}'
-            f'El tipi: {el_tipi}\n'
-            f'Çizgiler: {", ".join(cizgiler)}\n'
-            '3-4 paragraf: karakter, aşk, kariyer ve şans.'
-        )
 
-    if tip == 'astroloji':
-        return (
-            'Sen astroloji yorumcususun. Eğlence amaçlı Türkçe yaz.\n'
-            f'{kullanici}'
-            f"Burç: {veri.get('burc', '')}\n"
-            f"Doğum: {veri.get('dogum', '')}\n"
-            'Haftalık yorum: aşk, iş, sağlık ve şans. 3-4 paragraf.'
-        )
-
-    if tip == 'burc_eslesme':
-        return (
-            'Sen burç uyumu ve ilişki astrolojisi uzmanısın. Eğlence amaçlı Türkçe yaz.\n'
-            f'{kullanici}'
-            f"1. kişi: {veri.get('isim1', '')} — {veri.get('burc1', '')} "
-            f"(doğum: {veri.get('dogum1', '')})\n"
-            f"2. kişi: {veri.get('isim2', '')} — {veri.get('burc2', '')} "
-            f"(doğum: {veri.get('dogum2', '')})\n"
-            f"Temel uyum skoru (eğlence): {veri.get('skor', '')}/100\n"
-            'Yaz: genel uyum, aşk ve iletişim, güçlü yanlar, dikkat edilecek noktalar, '
-            'ilişki tavsiyesi. 4-6 paragraf. Olumlu ama dengeli ol; kesin gelecek iddiası kullanma.'
-        )
-
-    if tip == 'ruya':
-        ruya = (veri.get('ruya') or veri.get('ozet') or '').strip()
-        return (
-            'Sen deneyimli bir rüya tabircisisin. Eğlence ve kişisel farkındalık amaçlı Türkçe yaz.\n'
-            'Tıbbi teşhis, psikolojik tanı veya kesin gelecek iddiası kullanma.\n'
-            f'{kullanici}'
-            f'Kullanıcının rüyası:\n"""{ruya}"""\n'
-            'Yorumunda şunları kapsa:\n'
-            '1) Rüyanın genel atmosferi ve ana mesajı\n'
-            '2) Öne çıkan sembollerin geleneksel rüya tabiri anlamları (su, uçmak, düşmek, '
-            'hayvanlar, ev, yolculuk vb. rüyada geçenlere göre)\n'
-            '3) Duygusal/ruhsal ipuçları — bilinçaltının ne anlatmak isteyebileceği\n'
-            '4) Yakın dönem için nazik, yapıcı bir tavsiye\n'
-            '5-7 paragraf, sıcak ve anlaşılır dil. Her seferinde farklı ifadeler kullan.'
-        )
-
-    if tip == 'diger':
-        alt = veri.get('alt_tip') or veri.get('tur', '')
-        ozet = veri.get('sonuc', '')
-        if veri.get('kartlar'):
-            sat = '; '.join(
-                f"{k.get('pozisyon')}: {k.get('isim')}" for k in veri['kartlar']
-            )
-            ozet = sat or ozet
-        elif veri.get('cicekler'):
-            ozet = ', '.join(c.get('isim', '') for c in veri['cicekler'])
-        return (
-            'Sen mistik fal yorumcususun. Eğlence amaçlı Türkçe yaz.\n'
-            f'{kullanici}'
-            f'Fal türü: {alt}\n'
-            f'Sonuç/semboller: {ozet}\n'
-            '4-6 paragraf zengin yorum: aşk, kariyer, sağlık, genel mesaj. '
-            'Her seferinde farklı ifadeler kullan. Olumlu ama gerçekçi ol.'
-        )
-
-    return f'Eğlence amaçlı kısa Türkçe fal yorumu yaz.\n{kullanici}{veri}'
+    return _prompt_hikayelestir(tip, veri, kullanici)
 
 
 def _yedek_yorum(tip, veri):
@@ -833,7 +1128,8 @@ def _yorum_uret(text_prompt, ayar, gorsel=None, vision_prompt=None):
     """Sırayla kaynakları dener; (metin, kaynak, hatalar)."""
     hatalar = []
     gemini_prompt = vision_prompt if gorsel and vision_prompt else text_prompt
-    for kaynak in _kaynak_sirasi(ayar):
+    gorsel_var = bool(gorsel)
+    for kaynak in _kaynak_sirasi(ayar, gorsel_var=gorsel_var):
         if kaynak == 'gemini':
             metin, kod = _gemini_dene(gemini_prompt, ayar, gorsel=gorsel)
             if metin:
@@ -844,10 +1140,31 @@ def _yorum_uret(text_prompt, ayar, gorsel=None, vision_prompt=None):
                 return metin, 'gemini', None
             if kod:
                 hatalar.append(f'gemini:{kod}')
+        elif kaynak == 'openrouter':
+            metin, kod = _bulut_metin_dene('openrouter', text_prompt, ayar)
+            if metin:
+                print('AI kaynak: OpenRouter (bulut yedek)', flush=True)
+                return metin, 'openrouter', None
+            if kod:
+                hatalar.append(f'openrouter:{kod}')
+        elif kaynak == 'xai':
+            metin, kod = _bulut_metin_dene('xai', text_prompt, ayar)
+            if metin:
+                print('AI kaynak: Grok/xAI (bulut yedek)', flush=True)
+                return metin, 'xai', None
+            if kod:
+                hatalar.append(f'xai:{kod}')
+        elif kaynak == 'groq':
+            metin, kod = _bulut_metin_dene('groq', text_prompt, ayar)
+            if metin:
+                print('AI kaynak: Groq (bulut yedek)', flush=True)
+                return metin, 'groq', None
+            if kod:
+                hatalar.append(f'groq:{kod}')
         elif kaynak == 'ollama' and ollama_aktif_mi():
             try:
                 metin = _ollama_istek(text_prompt, ayar)
-                if metin:
+                if metin and not _metin_eksik_mi(metin):
                     if hatalar:
                         print(
                             f'AI kaynak: Ollama (Gemini başarısız: {", ".join(hatalar)})',
@@ -856,6 +1173,12 @@ def _yorum_uret(text_prompt, ayar, gorsel=None, vision_prompt=None):
                     else:
                         print('AI kaynak: Ollama (yerel)', flush=True)
                     return metin, 'ollama', None
+                if metin:
+                    print(
+                        f'AI: Ollama yanıtı çok kısa ({len(metin.strip())} karakter) — atlanıyor',
+                        flush=True,
+                    )
+                    hatalar.append('ollama:kisa')
             except urllib.error.HTTPError as e:
                 hatalar.append(f'ollama:{e.code}')
                 print(f'AI HTTP hatası (ollama): {e.code} {e.reason}', flush=True)
@@ -939,6 +1262,14 @@ def _yorum_al_calistir(tip, veri, callback):
         metin, kaynak, hatalar = _yorum_uret(
             text_prompt, ayar, gorsel=gorsel, vision_prompt=vision_prompt,
         )
+        if metin and _metin_eksik_mi(metin):
+            print(
+                f'AI: yanıt fal yorumu için yetersiz ({len(metin.strip())} karakter) — cihaz yorumu',
+                flush=True,
+            )
+            hatalar = list(hatalar or [])
+            hatalar.append('kisa_yanit')
+            metin = None
         if metin:
             foto_hata = _gecersiz_foto_yaniti(metin, tip) if fotograf_fal else None
             if foto_hata:
@@ -954,13 +1285,14 @@ def _yorum_al_calistir(tip, veri, callback):
         offline_metin = offline_yorum_uret(
             tip, _veri_nonce({**veri, 'foto_aciklamalari': aciklamalar}), foto_ozellikleri,
         )
+        hata_mesaji = _kullanici_hata_mesaji(hatalar) if hatalar else None
         if hatalar:
             print(f'AI: bulut başarısız ({", ".join(hatalar)}), cihaz yorumu', flush=True)
         else:
             print('AI kaynak: Cihaz içi', flush=True)
         _ai_log(f'cihaz tip={tip} bulut_hata={hatalar}')
         _ana_thread(
-            lambda m=offline_metin: _sonuc(m, True, None, 'cihaz', fotograf_fal),
+            lambda m=offline_metin, h=hata_mesaji: _sonuc(m, True, h, 'cihaz', fotograf_fal),
         )
 
     threading.Thread(target=_calistir, daemon=True).start()
