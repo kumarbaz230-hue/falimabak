@@ -5,6 +5,11 @@ name: Build Release AAB
 
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - buildozer.spec
+      - .github/workflows/android-release.yml
 
 jobs:
   release:

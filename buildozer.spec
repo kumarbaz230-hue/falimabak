@@ -47,7 +47,7 @@ android.add_application_xml = %(source.dir)s/android_res/application.xml
 
 android.presplash_color = #0F0C20
 
-# Release AAB: buildozer android release
+# Release AAB: GitHub Actions "Build Release AAB" veya buildozer.spec push
 # İmzalama: keystore/PLAY_IMZA.md dosyasına bak
 
 [buildozer]
