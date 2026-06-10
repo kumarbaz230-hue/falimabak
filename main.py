@@ -1,5 +1,5 @@
 """
-🔮 FalımaBak - Premium Fal Uygulaması v1.2.16
+🔮 FalımaBak - Premium Fal Uygulaması v1.2.17
 Mystic Dark Dashboard — mobil odaklı
 """
 
@@ -396,14 +396,32 @@ class SplashScreen(Screen):
                 size_hint=(0.9, None), height=dp(24),
             ))
 
-        self.yukleniyor = metin_label(
-            t('loading'), font_size='13sp', color=RENKLER['altin_yumusak'],
-            halign='center', pos_hint={'center_x': 0.5, 'y': 0.08},
-            size_hint=(0.8, None), height=dp(28),
+        self._yukleme_kutu = FloatLayout(
+            size_hint=(1, None),
+            height=dp(64) + SAFE_ALT,
+            pos_hint={'x': 0, 'y': 0},
         )
-        root.add_widget(self.yukleniyor)
+        with self._yukleme_kutu.canvas.before:
+            Color(0.06, 0.04, 0.14, 0.82)
+            self._yukleme_bg = Rectangle()
+        self._yukleme_kutu.bind(pos=self._yukleme_ciz, size=self._yukleme_ciz)
+
+        self.yukleniyor = metin_label(
+            t('loading'), font_size='16sp', bold=True, color=RENKLER['altin'],
+            halign='center', valign='middle',
+            pos_hint={'center_x': 0.5, 'center_y': 0.55},
+            size_hint=(1, None), height=dp(32),
+        )
+        self._yukleme_kutu.add_widget(self.yukleniyor)
+        self._yukleme_kutu.add_widget(metin_label(
+            t('loading_hint'), font_size='11sp', color=RENKLER['gri_acik'],
+            halign='center', pos_hint={'center_x': 0.5, 'y': 0.12},
+            size_hint=(1, None), height=dp(20),
+        ))
+        root.add_widget(self._yukleme_kutu)
         self.add_widget(root)
         Clock.schedule_once(lambda *_: self._splash_kapak(), 0)
+        Clock.schedule_once(lambda *_: self._yukleme_ciz(), 0)
 
         if not _ANDROID and not self._banner_var:
             boyut = dp(96)
@@ -422,7 +440,26 @@ class SplashScreen(Screen):
         self._anim_txt = anim_txt
         anim_txt.start(self.yukleniyor)
 
+        self._nokta = 0
+        self._nokta_ev = Clock.schedule_interval(self._yukleme_nokta, 0.4)
+
         Clock.schedule_once(self._gec, 2.2)
+
+    def _yukleme_ciz(self, *_):
+        if not getattr(self, '_yukleme_kutu', None):
+            return
+        x, y = self._yukleme_kutu.pos
+        w, h = self._yukleme_kutu.size
+        self._yukleme_bg.pos = (x, y)
+        self._yukleme_bg.size = (w, h)
+
+    def _yukleme_nokta(self, _dt):
+        from dil import t
+        if not getattr(self, 'yukleniyor', None):
+            return
+        self._nokta = (self._nokta + 1) % 4
+        taban = t('loading').rstrip('.')
+        self.yukleniyor.text = taban + ('.' * self._nokta if self._nokta else '...')
 
     def _splash_kapak(self, *_):
         if not getattr(self, '_banner_var', False):
@@ -442,6 +479,9 @@ class SplashScreen(Screen):
         img.pos = (root.x + (pw - iw) * 0.5, root.y + (ph - ih) * 0.5)
 
     def _gec(self, *_):
+        if getattr(self, '_nokta_ev', None):
+            self._nokta_ev.cancel()
+            self._nokta_ev = None
         if getattr(self, '_anim_logo', None):
             self._anim_logo.cancel(self.logo)
         if getattr(self, '_anim_txt', None):
