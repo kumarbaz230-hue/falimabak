@@ -12,12 +12,12 @@ source.include_patterns = assets/*,assets/muzik/*,config.ornek.json,store/*
 source.exclude_dirs = tests,bin,.git,__pycache__,.buildozer,.venv,venv,env,.idea,user_photos,.github,recipes,tools,images,keystore
 source.exclude_patterns = license,images/*/*.jpg,*.bat,config.json,kullanici_veri.json,.env,secrets.json,secrets.ornek.json,assets/muzik/ambiyans.wav
 
-version = 1.3.6
+version = 1.3.7
 
 icon.filename = %(source.dir)s/assets/app_icon.png
 presplash.filename = %(source.dir)s/assets/splash_banner.png
 
-requirements = python3,kivy==2.3.1,pillow,android,plyer,certifi
+requirements = python3,kivy==2.3.1,pillow,android,certifi
 
 orientation = portrait
 fullscreen = 0
@@ -28,6 +28,10 @@ android.ndk = 25b
 android.ndk_api = 24
 
 android.permissions = INTERNET,ACCESS_NETWORK_STATE,AD_ID,CAMERA
+
+# Plyer manifest'e READ_MEDIA_IMAGES ekler — kaldırıldı; galeri intent ile açılır
+android.extra_manifest_xml = %(source.dir)s/android_res/manifest_remove_permissions.xml
+p4a.hook = %(source.dir)s/hooks/p4a_manifest.py
 
 android.archs = arm64-v8a,armeabi-v7a
 android.accept_sdk_license = True

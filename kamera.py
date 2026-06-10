@@ -1,6 +1,6 @@
 """
 FalımaBak - Fotoğraf seçme / kamera (Windows + Android).
-Android: FileProvider + basit kamera yedek + plyer son çare.
+Android: FileProvider kamera + sistem galeri seçici (READ_MEDIA_IMAGES yok).
 """
 
 import os
@@ -175,111 +175,85 @@ def _intent_cozulebilir(activity, intent):
         return False
 
 
-def _galeri_intent_olustur(activity):
-    """READ_MEDIA_IMAGES olmadan çalışan galeri intent zinciri."""
+def _galeri_intent_listesi(activity):
+    """İzinsiz galeri — en uyumlu yöntemler önce (GET_CONTENT)."""
     from jnius import autoclass
     Intent = autoclass('android.content.Intent')
     MediaStore = autoclass('android.provider.MediaStore')
     Build = autoclass('android.os.Build')
 
-    adaylar = []
-    try:
-        sdk = int(Build.VERSION.SDK_INT)
-    except Exception:
-        sdk = 0
-
-    if sdk >= 33:
-        pick = Intent('android.provider.action.PICK_IMAGES')
-        pick.putExtra('android.provider.extra.PICK_IMAGES_MAX', 1)
-        adaylar.append(pick)
+    sira = []
 
     get_content = Intent(Intent.ACTION_GET_CONTENT)
     get_content.setType('image/*')
     get_content.addCategory(Intent.CATEGORY_OPENABLE)
-    adaylar.append(get_content)
+    sira.append(Intent.createChooser(get_content, 'Fotoğraf seç'))
+
+    try:
+        if int(Build.VERSION.SDK_INT) >= 33:
+            pick = Intent('android.provider.action.PICK_IMAGES')
+            pick.putExtra('android.provider.extra.PICK_IMAGES_MAX', 1)
+            if _intent_cozulebilir(activity, pick):
+                sira.append(pick)
+    except Exception:
+        pass
 
     pick_one = Intent(Intent.ACTION_PICK)
     pick_one.setDataAndType(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, 'image/*')
-    adaylar.append(pick_one)
+    if _intent_cozulebilir(activity, pick_one):
+        sira.append(pick_one)
 
-    open_doc = Intent(Intent.ACTION_OPEN_DOCUMENT)
-    open_doc.setType('image/*')
-    open_doc.addCategory(Intent.CATEGORY_OPENABLE)
-    open_doc.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-    open_doc.addFlags(Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION)
-    adaylar.append(open_doc)
-
-    for intent in adaylar:
-        if _intent_cozulebilir(activity, intent):
-            action = str(intent.getAction() or '')
-            if action == 'android.intent.action.GET_CONTENT':
-                return Intent.createChooser(intent, 'Fotoğraf seç')
-            return intent
-    return Intent.createChooser(get_content, 'Fotoğraf seç')
+    return sira
 
 
-def _galeri_activity_ac(activity, intent):
-    activity.startActivityForResult(intent, _GALERI_ISTEK)
+_galeri_intent_sira = []
+_galeri_intent_idx = 0
 
 
-def _galeri_plyer_yedek(callback):
-    """Native picker açılmazsa plyer (SAF) yedek."""
-    try:
-        from plyer import filechooser
+def _galeri_sonraki_intent(activity):
+    """Bir intent açılamazsa sıradakini dene (kullanıcı iptal ederse deneme)."""
+    global _galeri_callback, _galeri_intent_sira, _galeri_intent_idx
+    cb = _galeri_callback
+    if not cb or _galeri_intent_idx >= len(_galeri_intent_sira):
+        _galeri_callback = None
+        if cb:
+            _ana_thread(lambda: cb(None, _dil('cam_fail')))
+        return
+    intent = _galeri_intent_sira[_galeri_intent_idx]
+    _galeri_intent_idx += 1
 
-        def _secildi(dosyalar):
-            try:
-                if not dosyalar:
-                    _ana_thread(lambda: callback(None, _dil('cam_cancel')))
-                    return
-                kayit = _kopyala(dosyalar[0])
-                if kayit:
-                    _ana_thread(lambda: callback(kayit, None))
-                else:
-                    _ana_thread(lambda: callback(None, _dil('cam_fail')))
-            except Exception:
-                _ana_thread(lambda: callback(None, _dil('cam_fail')))
+    def _ac(*_):
+        try:
+            activity.startActivityForResult(intent, _GALERI_ISTEK)
+        except Exception as e:
+            print(f'Galeri intent hatasi: {e}', flush=True)
+            _galeri_sonraki_intent(activity)
 
-        filechooser.open_file(
-            on_selection=_secildi,
-            filters=['*.png', '*.jpg', '*.jpeg', '*.webp'],
-        )
-    except Exception as e:
-        print(f'Galeri plyer yedek: {e}', flush=True)
-        _ana_thread(lambda: callback(None, _dil('cam_fail')))
+    Clock.schedule_once(_ac, 0)
 
 
 def _galeri_android_picker(callback):
-    """Android fotoğraf seçici — READ_MEDIA_IMAGES izni gerekmez."""
-    global _galeri_callback
+    """Android fotoğraf seçici — READ_MEDIA_IMAGES gerekmez."""
+    global _galeri_callback, _galeri_intent_sira, _galeri_intent_idx
+    activity = None
     try:
         _activity_bagla()
-        _galeri_callback = callback
-
         from jnius import autoclass
         PythonActivity = autoclass('org.kivy.android.PythonActivity')
         activity = PythonActivity.mActivity
         if activity is None:
             raise RuntimeError('Activity yok')
 
-        intent = _galeri_intent_olustur(activity)
-
-        def _ac(*_):
-            try:
-                _galeri_activity_ac(activity, intent)
-            except Exception as e:
-                print(f'Galeri activity: {e}', flush=True)
-                global _galeri_callback
-                cb = _galeri_callback
-                _galeri_callback = None
-                if cb:
-                    _galeri_plyer_yedek(cb)
-
-        Clock.schedule_once(_ac, 0)
+        _galeri_callback = callback
+        _galeri_intent_sira = _galeri_intent_listesi(activity)
+        _galeri_intent_idx = 0
+        if not _galeri_intent_sira:
+            raise RuntimeError('Galeri intent yok')
+        _galeri_sonraki_intent(activity)
     except Exception as e:
-        print(f'Galeri picker: {traceback.format_exc()}', flush=True)
+        print(f'Galeri picker: {e}', flush=True)
         _galeri_callback = None
-        _galeri_plyer_yedek(callback)
+        _ana_thread(lambda: callback(None, _dil('cam_fail')))
 
 
 def _on_activity_result(request_code, result_code, intent):
@@ -518,25 +492,6 @@ def _intent_basit_kamera(callback):
     activity.startActivityForResult(intent, _KAMERA_ISTEK)
 
 
-def _kamera_plyer(callback):
-    try:
-        from plyer import camera
-        klasor = _foto_dir()
-        yol = os.path.join(klasor, f'cam_{datetime.now().strftime("%Y%m%d_%H%M%S")}.jpg')
-        open(yol, 'ab').close()
-
-        def _bitti(ok):
-            if ok and os.path.isfile(yol) and os.path.getsize(yol) > 0:
-                _ana_thread(lambda: callback(os.path.normpath(yol), None))
-            else:
-                _ana_thread(lambda: callback(None, _dil('cam_fail')))
-
-        camera.take_picture(filename=yol, on_complete=_bitti)
-    except Exception as e:
-        print(f'Plyer kamera: {e}', flush=True)
-        _ana_thread(lambda: callback(None, _dil('cam_fail')))
-
-
 def _android_kamera_ac(callback):
     global _kamera_callback, _kamera_hedef
     try:
@@ -551,7 +506,7 @@ def _android_kamera_ac(callback):
             print(f'Basit kamera: {e2}', flush=True)
             _kamera_callback = None
             _kamera_hedef = None
-            _kamera_plyer(callback)
+            _ana_thread(lambda: callback(None, _dil('cam_fail')))
 
 
 def _kamera_masaustu(callback):
