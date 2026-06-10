@@ -12,6 +12,7 @@ from gecmis import _yukle, _kaydet
 from theme import RENKLER, metin_label, siyah_buton
 
 FAL_GUNLUK_UCRETSIZ = 3  # Her fal türü için ayrı (toplam değil)
+REKLAM_GUNLUK_MAX = 5     # Fal türü başına günde 5 ödüllü reklam (+1 hak each)
 SINIRSIZ_TIPLER = frozenset({'burc_eslesme'})
 
 TIP_ETIKET = {
@@ -28,10 +29,11 @@ def _gunluk_veri():
     bugun = date.today().isoformat()
     fs = veri.get('fal_sayac') or {}
     if fs.get('tarih') != bugun:
-        fs = {'tarih': bugun, 'kullanim': {}, 'bonus': {}}
+        fs = {'tarih': bugun, 'kullanim': {}, 'bonus': {}, 'reklam_izleme': {}}
     else:
         fs.setdefault('kullanim', {})
         fs.setdefault('bonus', {})
+        fs.setdefault('reklam_izleme', {})
     veri['fal_sayac'] = fs
     return veri, fs
 
@@ -66,11 +68,29 @@ def fal_kullanildi_kaydet(tip):
     _kaydet(veri)
 
 
+def reklam_kalan(tip):
+    _, fs = _gunluk_veri()
+    izlenen = int((fs.get('reklam_izleme') or {}).get(tip, 0))
+    return max(0, REKLAM_GUNLUK_MAX - izlenen)
+
+
+def reklam_hakki_var(tip):
+    """Günde fal türü başına en fazla REKLAM_GUNLUK_MAX ödüllü reklam."""
+    _, fs = _gunluk_veri()
+    izlenen = int((fs.get('reklam_izleme') or {}).get(tip, 0))
+    return izlenen < REKLAM_GUNLUK_MAX
+
+
 def fal_reklam_bonus(tip):
+    if not reklam_hakki_var(tip):
+        return False
     veri, fs = _gunluk_veri()
+    ri = fs.setdefault('reklam_izleme', {})
+    ri[tip] = int(ri.get(tip, 0)) + 1
     fs['bonus'][tip] = int(fs['bonus'].get(tip, 0)) + 1
     veri['fal_sayac'] = fs
     _kaydet(veri)
+    return True
 
 
 def yorum_baslat(tip, devam_fn):
@@ -78,7 +98,35 @@ def yorum_baslat(tip, devam_fn):
     if fal_izinli(tip):
         devam_fn()
         return
+    if not reklam_hakki_var(tip):
+        _reklam_limit_popup(tip)
+        return
     _limit_popup(tip, devam_fn)
+
+
+def _reklam_limit_popup(tip):
+    from dil import t
+
+    etiket = TIP_ETIKET.get(tip, tip)
+    icerik = BoxLayout(orientation='vertical', padding=dp(16), spacing=dp(12))
+    icerik.add_widget(metin_label(
+        t('limit_reklam_doldu', tip=etiket, limit=FAL_GUNLUK_UCRETSIZ, reklam_max=REKLAM_GUNLUK_MAX),
+        font_size='13sp', color=RENKLER['beyaz'],
+        halign='center', size_hint_y=None, height=dp(80),
+    ))
+    tamam = siyah_buton(t('cookie_close'), vurgu=True, font_size='14sp')
+    icerik.add_widget(tamam)
+
+    popup = Popup(
+        title=t('limit_title'),
+        content=icerik,
+        size_hint=(0.88, None),
+        height=dp(180),
+        separator_color=get_color_from_hex(RENKLER['altin']),
+        title_color=get_color_from_hex(RENKLER['altin']),
+    )
+    tamam.bind(on_press=lambda *_: popup.dismiss())
+    popup.open()
 
 
 def _limit_popup(tip, devam_fn):
@@ -88,7 +136,8 @@ def _limit_popup(tip, devam_fn):
     d = fal_durumu(tip)
     icerik = BoxLayout(orientation='vertical', padding=dp(16), spacing=dp(12))
     icerik.add_widget(metin_label(
-        t('limit_msg', tip=etiket, limit=d['limit']),
+        t('limit_msg', tip=etiket, limit=d['limit'],
+          reklam_kalan=reklam_kalan(tip), reklam_max=REKLAM_GUNLUK_MAX),
         font_size='13sp', color=RENKLER['beyaz'],
         halign='center', size_hint_y=None, height=dp(72),
     ))
