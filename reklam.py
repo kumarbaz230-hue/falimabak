@@ -175,6 +175,37 @@ def _interstitial_yenile():
             pass
 
 
+def reklam_izle(callback):
+    """Tam ekran reklam; kapanınca callback(basarili)."""
+    if not _android_mi():
+        Clock.schedule_once(lambda *_: callback(True), 0.2)
+        return
+    if not _baslati:
+        reklam_hazirla()
+    if not _ads:
+        Clock.schedule_once(lambda *_: callback(False), 0)
+        return
+
+    def _goster(*_):
+        if _ads.is_interstitial_loaded():
+            _banner_gizle()
+
+            def _bitti(ok):
+                if ok:
+                    Clock.schedule_once(lambda *__: _interstitial_yenile(), 0.5)
+                callback(ok)
+
+            _ads.show_interstitial_callback(_bitti)
+            return
+        try:
+            _ads.request_interstitial()
+        except Exception:
+            pass
+        Clock.schedule_once(lambda *_: callback(False), 0)
+
+    Clock.schedule_once(_goster, 0.1)
+
+
 def fal_sonrasi_reklam():
     global _son_interstitial
     if not _android_mi():

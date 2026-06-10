@@ -339,62 +339,9 @@ class AstrolojiScreen(Screen):
                 self.sonuc_label.text = f"[color={RENKLER['kirmizi']}]Geçersiz tarih! Lütfen\ngeçerli bir tarih girin.[/color]"
                 self.yorum_label.text = ''
                 return
-            
-            burc_adi = self.burc_bul(gun, ay)
-            burc = BURCLAR[burc_adi]
-            yorumlar = BURC_YORUMLARI[burc_adi]
-            
-            # Burç sonucu
-            sonuc = f"{burc['sembol']} [b]BURCUNUZ: {burc_adi}[/b] {burc['sembol']}\n"
-            sonuc += f"Element: {burc['element']}  |  Gezegen: {burc['gezegen']}\n"
-            sonuc += f"{burc['tarih']}"
-            
-            self.sonuc_label.markup = True
-            self.sonuc_label.text = sonuc
-            
-            # Detaylı yorum
-            yorum = f"[b][color={RENKLER['altin']}]⭐ {burc_adi} BURCU YORUMU ⭐[/color][/b]\n\n"
-            
-            secilen_yorum = random.choice(yorumlar)
-            yorum += f"[color={RENKLER['mavi_acik']}]{secilen_yorum}[/color]\n\n"
-            
-            # Şanslı sayı
-            sansli_sayi = random.randint(1, 100)
-            yorum += f"[b][color={RENKLER['altin']}]🍀 Şanslı Sayın: [color={RENKLER['yesil']}]{sansli_sayi}[/color][/color][/b]\n\n"
-            
-            # Günlük tavsiye
-            yorum += f"[b][color={RENKLER['altin']}]💫 Günün Tavsiyesi:[/color][/b]\n"
-            tavsiyeler = [
-                "Bugün sezgilerinize güvenin! İç sesiniz sizi doğru yönlendirecek.",
-                "Yeni insanlarla tanışmak için harika bir gün. Sosyal olun!",
-                "Maddi konularda dikkatli kararlar alın. Acele etmeyin.",
-                "Ailenizle vakit geçirin. Onlar size iyi gelecek.",
-                "Kendinize zaman ayırın. Bir hobi edinin.",
-                "Spor yapın ve sağlıklı beslenin. Vücudunuza iyi bakın.",
-                "Meditasyon yapın. Zihninizi dinlendirin.",
-                "Sevdiklerinize sürpriz yapın! Mutluluk paylaştıkça büyür."
-            ]
-            yorum += f"[color={RENKLER['gri_acik']}]{random.choice(tavsiyeler)}[/color]\n\n"
-            
-            yorum += f"[color={RENKLER['altin']}]📅 {date.today().strftime('%d.%m.%Y')}[/color]"
-            
-            self.yorum_label.markup = True
-            self.yorum_label.text = yorum
-            self._son_astro_yorum = yorum
-            buton_metin_guncelle(self.fal_buton, yorum_bekle_metin())
-            self.fal_buton.disabled = True
 
-            def _ai_bitir(metin, ai_kullanildi, hata, kaynak=None, fotograf=False):
-                self.yorum_label.text = yorum_sonuc_metni(
-                    self._son_astro_yorum, metin, ai_kullanildi, hata, kaynak, fotograf,
-                )
-                buton_metin_guncelle(self.fal_buton, tus_metin('tekrar'))
-                self.fal_buton.disabled = False
-
-            yorum_al('astroloji', {
-                'burc': burc_adi,
-                'dogum': f'{gun:02d}.{ay:02d}.{yil}',
-            }, _ai_bitir)
+            from fal_limit import yorum_baslat
+            yorum_baslat('astroloji', lambda: self._fal_bak_devam(gun, ay, yil))
             
         except ValueError:
             self.sonuc_label.markup = True
@@ -404,3 +351,53 @@ class AstrolojiScreen(Screen):
             self.sonuc_label.markup = True
             self.sonuc_label.text = f"[color={RENKLER['kirmizi']}]Hata: {str(e)}[/color]"
             self.yorum_label.text = ''
+
+    def _fal_bak_devam(self, gun, ay, yil):
+        burc_adi = self.burc_bul(gun, ay)
+        burc = BURCLAR[burc_adi]
+        yorumlar = BURC_YORUMLARI[burc_adi]
+
+        sonuc = f"{burc['sembol']} [b]BURCUNUZ: {burc_adi}[/b] {burc['sembol']}\n"
+        sonuc += f"Element: {burc['element']}  |  Gezegen: {burc['gezegen']}\n"
+        sonuc += f"{burc['tarih']}"
+
+        self.sonuc_label.markup = True
+        self.sonuc_label.text = sonuc
+
+        yorum = f"[b][color={RENKLER['altin']}]⭐ {burc_adi} BURCU YORUMU ⭐[/color][/b]\n\n"
+        secilen_yorum = random.choice(yorumlar)
+        yorum += f"[color={RENKLER['mavi_acik']}]{secilen_yorum}[/color]\n\n"
+
+        sansli_sayi = random.randint(1, 100)
+        yorum += f"[b][color={RENKLER['altin']}]🍀 Şanslı Sayın: [color={RENKLER['yesil']}]{sansli_sayi}[/color][/color][/b]\n\n"
+        yorum += f"[b][color={RENKLER['altin']}]💫 Günün Tavsiyesi:[/color][/b]\n"
+        tavsiyeler = [
+            "Bugün sezgilerinize güvenin! İç sesiniz sizi doğru yönlendirecek.",
+            "Yeni insanlarla tanışmak için harika bir gün. Sosyal olun!",
+            "Maddi konularda dikkatli kararlar alın. Acele etmeyin.",
+            "Ailenizle vakit geçirin. Onlar size iyi gelecek.",
+            "Kendinize zaman ayırın. Bir hobi edinin.",
+            "Spor yapın ve sağlıklı beslenin. Vücudunuza iyi bakın.",
+            "Meditasyon yapın. Zihninizi dinlendirin.",
+            "Sevdiklerinize sürpriz yapın! Mutluluk paylaştıkça büyür.",
+        ]
+        yorum += f"[color={RENKLER['gri_acik']}]{random.choice(tavsiyeler)}[/color]\n\n"
+        yorum += f"[color={RENKLER['altin']}]📅 {date.today().strftime('%d.%m.%Y')}[/color]"
+
+        self.yorum_label.markup = True
+        self.yorum_label.text = yorum
+        self._son_astro_yorum = yorum
+        buton_metin_guncelle(self.fal_buton, yorum_bekle_metin())
+        self.fal_buton.disabled = True
+
+        def _ai_bitir(metin, ai_kullanildi, hata, kaynak=None, fotograf=False):
+            self.yorum_label.text = yorum_sonuc_metni(
+                self._son_astro_yorum, metin, ai_kullanildi, hata, kaynak, fotograf,
+            )
+            buton_metin_guncelle(self.fal_buton, tus_metin('tekrar'))
+            self.fal_buton.disabled = False
+
+        yorum_al('astroloji', {
+            'burc': burc_adi,
+            'dogum': f'{gun:02d}.{ay:02d}.{yil}',
+        }, _ai_bitir)

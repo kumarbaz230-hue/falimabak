@@ -1,5 +1,5 @@
 """
-🔮 FalımaBak - Premium Fal Uygulaması v1.2.7
+🔮 FalımaBak - Premium Fal Uygulaması v1.2.8
 Mystic Dark Dashboard — mobil odaklı
 """
 
@@ -695,6 +695,11 @@ class FalimaBakApp(App):
             try:
                 from android import activity
                 activity.bind(on_back_pressed=self._geri_tusu_android)
+            except Exception:
+                pass
+            try:
+                from android_geri import geri_tusu_kur
+                Clock.schedule_once(lambda *_: geri_tusu_kur(self), 0.3)
             except Exception:
                 pass
         if not _ANDROID:

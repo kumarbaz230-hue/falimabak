@@ -846,9 +846,19 @@ def yorum_al(tip, veri, callback):
     ai_kullanildi=True → Gemini veya Ollama kullanıldı.
     kaynak: 'gemini' | 'ollama' | None
     """
+    from fal_limit import yorum_baslat
+    yorum_baslat(tip, lambda: _yorum_al_calistir(tip, veri, callback))
+
+
+def _yorum_al_calistir(tip, veri, callback):
 
     def _sonuc(metin, ai_kullanildi, hata, kaynak=None, fotograf=False):
         if metin:
+            try:
+                from fal_limit import fal_kullanildi_kaydet
+                fal_kullanildi_kaydet(tip)
+            except Exception:
+                pass
             try:
                 from gecmis import baslik_olustur, fal_kaydet
                 fal_kaydet(tip, baslik_olustur(tip, veri), metin)

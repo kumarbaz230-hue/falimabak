@@ -184,6 +184,10 @@ class DigerFallarScreen(Screen):
         self.rect.pos = self.pos
 
     def _fal_baslat(self, veri):
+        from fal_limit import yorum_baslat
+        yorum_baslat('diger', lambda: self._fal_baslat_devam(veri))
+
+    def _fal_baslat_devam(self, veri):
         self.sonuc_label.markup = True
         self.sonuc_label.text = yorum_bekle_markup()
         self.tekrar_buton.disabled = True

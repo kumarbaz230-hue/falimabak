@@ -276,6 +276,10 @@ class KahveScreen(Screen):
             )
             return
 
+        from fal_limit import yorum_baslat
+        yorum_baslat('kahve', lambda: self._fal_yorumla_devam(instance))
+
+    def _fal_yorumla_devam(self, instance):
         self.sekiller_label.text = ''
         self.yorum_label.markup = True
         self.yorum_label.text = yorum_bekle_markup()

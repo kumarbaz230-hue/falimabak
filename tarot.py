@@ -301,7 +301,14 @@ class TarotScreen(Screen):
             self.isim_satir.add_widget(metin_label('—', font_size='8sp', color=RENKLER['gri'], halign='center'))
 
     def fal_ac(self, instance):
-        if self._calisiyor: return
+        if self._calisiyor:
+            return
+        from fal_limit import yorum_baslat
+        yorum_baslat('tarot', lambda: self._fal_ac_devam(instance))
+
+    def _fal_ac_devam(self, instance):
+        if self._calisiyor:
+            return
         self._calisiyor = True
         buton_metin_guncelle(self.fal_btn, tus_metin('bekle')); self.fal_btn.disabled = True
         cache_temizle()

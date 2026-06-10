@@ -107,6 +107,38 @@ if platform == 'android':
                 if self._interstitial is not None and self.is_interstitial_loaded():
                     self._interstitial.show()
 
+            @run_on_ui_thread
+            def show_interstitial_callback(self, py_callback):
+                from jnius import PythonJavaClass, java_method
+                from kivy.clock import Clock
+
+                if self._interstitial is None or not self.is_interstitial_loaded():
+                    Clock.schedule_once(lambda *_: py_callback(False), 0)
+                    return
+
+                AdListener = autoclass('com.google.android.gms.ads.AdListener')
+                bridge = self
+
+                class _CloseListener(PythonJavaClass):
+                    __javaclasses__ = ['com/google/android/gms/ads/AdListener']
+
+                    @java_method('()V')
+                    def onAdClosed(self):
+                        Clock.schedule_once(lambda *_: py_callback(True), 0)
+                        try:
+                            bridge.request_interstitial()
+                        except Exception:
+                            pass
+
+                    @java_method('(I)V')
+                    def onAdFailedToLoad(self, error_code):
+                        Clock.schedule_once(lambda *_: py_callback(False), 0)
+
+                listener = _CloseListener()
+                bridge._close_listener = listener
+                bridge._interstitial.setAdListener(listener)
+                bridge._interstitial.show()
+
             def _get_builder(self, options):
                 builder = AdRequestBuilder()
                 for test_device in self._test_devices:
@@ -158,6 +190,10 @@ class AdMobBridge:
     def show_interstitial(self):
         pass
 
+    def show_interstitial_callback(self, callback):
+        from kivy.clock import Clock
+        Clock.schedule_once(lambda *_: callback(True), 0.2)
+
     def hide_banner(self):
         pass
 
@@ -192,6 +228,13 @@ class KivMob:
 
     def show_interstitial(self):
         self.bridge.show_interstitial()
+
+    def show_interstitial_callback(self, callback):
+        if hasattr(self.bridge, 'show_interstitial_callback'):
+            self.bridge.show_interstitial_callback(callback)
+        else:
+            from kivy.clock import Clock
+            Clock.schedule_once(lambda *_: callback(False), 0)
 
     def hide_banner(self):
         self.bridge.hide_banner()

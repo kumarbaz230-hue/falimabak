@@ -322,6 +322,10 @@ class ElFaliScreen(Screen):
             )
             return
 
+        from fal_limit import yorum_baslat
+        yorum_baslat('elfali', lambda: self._fal_bak_devam(instance))
+
+    def _fal_bak_devam(self, instance):
         self.sonuc_label.markup = True
         self.sonuc_label.text = yorum_bekle_markup()
         buton_metin_guncelle(self.fal_bak_btn, yorum_bekle_metin())
