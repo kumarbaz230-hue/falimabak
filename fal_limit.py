@@ -11,8 +11,8 @@ from kivy.utils import get_color_from_hex
 from gecmis import _yukle, _kaydet
 from theme import RENKLER, metin_label, siyah_buton
 
-FAL_GUNLUK_UCRETSIZ = 3  # Her fal türü için ayrı (toplam değil)
-REKLAM_GUNLUK_MAX = 1     # Fal türü başına günde 1 ödüllü reklam (+1 hak)
+FAL_GUNLUK_UCRETSIZ = 1  # Her fal türünde günde 1 ücretsiz (ilk fal)
+REKLAM_GUNLUK_MAX = 5     # Sonrası: günde 5 ödüllü reklam (+1 fal each)
 SINIRSIZ_TIPLER = frozenset({'burc_eslesme'})
 
 TIP_ETIKET = {
@@ -110,7 +110,7 @@ def _reklam_limit_popup(tip):
     etiket = TIP_ETIKET.get(tip, tip)
     icerik = BoxLayout(orientation='vertical', padding=dp(16), spacing=dp(12))
     icerik.add_widget(metin_label(
-        t('limit_reklam_doldu', tip=etiket, limit=FAL_GUNLUK_UCRETSIZ),
+        t('limit_reklam_doldu', tip=etiket, reklam_max=REKLAM_GUNLUK_MAX),
         font_size='13sp', color=RENKLER['beyaz'],
         halign='center', size_hint_y=None, height=dp(80),
     ))
@@ -136,7 +136,8 @@ def _limit_popup(tip, devam_fn):
     d = fal_durumu(tip)
     icerik = BoxLayout(orientation='vertical', padding=dp(16), spacing=dp(12))
     icerik.add_widget(metin_label(
-        t('limit_msg', tip=etiket, limit=d['limit']),
+        t('limit_msg', tip=etiket, limit=d['limit'],
+          reklam_kalan=reklam_kalan(tip), reklam_max=REKLAM_GUNLUK_MAX),
         font_size='13sp', color=RENKLER['beyaz'],
         halign='center', size_hint_y=None, height=dp(72),
     ))
