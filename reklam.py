@@ -21,7 +21,7 @@ _VARSAYILAN_ADMOB = {
     'admob_app_id': 'ca-app-pub-9430596197237392~1799758284',
     'admob_banner_id': 'ca-app-pub-9430596197237392/2682788969',
     'admob_interstitial_id': 'ca-app-pub-9430596197237392/7839128738',
-    'admob_rewarded_id': '',
+    'admob_rewarded_id': 'ca-app-pub-9430596197237392/2749687921',
 }
 
 _ads = None

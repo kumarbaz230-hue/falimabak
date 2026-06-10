@@ -1,5 +1,5 @@
 """
-🔮 FalımaBak - Premium Fal Uygulaması v1.2.9
+🔮 FalımaBak - Premium Fal Uygulaması v1.2.10
 Mystic Dark Dashboard — mobil odaklı
 """
 
