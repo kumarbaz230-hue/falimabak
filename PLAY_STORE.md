@@ -6,7 +6,8 @@
 2. Paket adı: `org.kumar.falimabak.falimabak`
 3. Oluştur:
    - **Banner** reklam birimi
-   - **Interstitial** (geçiş) reklam birimi
+   - **Interstitial** (geçiş) reklam birimi — fal sonrası ara sıra
+   - **Rewarded** (ödüllü) reklam birimi — fal limiti dolunca +1 hak
 4. `secrets.json` dosyana yaz (repo'ya **ekleme**):
 
 ```json
@@ -15,15 +16,16 @@
   "admob_test_mod": false,
   "admob_app_id": "ca-app-pub-XXXX~YYYY",
   "admob_banner_id": "ca-app-pub-XXXX/ZZZZ",
-  "admob_interstitial_id": "ca-app-pub-XXXX/WWWW"
+  "admob_interstitial_id": "ca-app-pub-XXXX/WWWW",
+  "admob_rewarded_id": "ca-app-pub-XXXX/RRRR"
 }
 ```
 
 5. `buildozer.spec` içinde `android.meta_data` satırını gerçek **App ID** ile güncelle.
 
-Test için `admob_test_mod: true` bırak — Google test reklamları gösterilir.
+Test için `admob_test_mod: true` bırak — Google test reklamları gösterilir. `admob_rewarded_id` boş bırakılırsa Google test ödüllü birimi kullanılır.
 
-**Önemli:** APK içine `secrets.json` girmez. Gerçek AdMob ID'lerini `config.ornek.json` dosyasına yaz (reklam birim ID'leri gizli değildir).
+**Önemli:** APK içine `secrets.json` girmez. Gerçek AdMob birim ID'lerini `config.ornek.json` dosyasına yaz (reklam birim ID'leri gizli değildir). Ödüllü birim ID'sini AdMob → Reklam birimleri → **Ödüllü** oluşturduktan sonra ekle.
 
 ---
 

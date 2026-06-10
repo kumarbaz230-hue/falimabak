@@ -1,5 +1,5 @@
 """
-FalımaBak — AdMob reklam yönetimi (banner + interstitial).
+FalımaBak — AdMob reklam yönetimi (banner + interstitial + ödüllü).
 """
 
 import json
@@ -21,6 +21,7 @@ _VARSAYILAN_ADMOB = {
     'admob_app_id': 'ca-app-pub-9430596197237392~1799758284',
     'admob_banner_id': 'ca-app-pub-9430596197237392/2682788969',
     'admob_interstitial_id': 'ca-app-pub-9430596197237392/7839128738',
+    'admob_rewarded_id': '',
 }
 
 _ads = None
@@ -68,6 +69,7 @@ def _reklam_ayar():
     app_id = veri.get('admob_app_id', '').strip()
     banner_id = veri.get('admob_banner_id', '').strip()
     inter_id = veri.get('admob_interstitial_id', '').strip()
+    rewarded_id = veri.get('admob_rewarded_id', '').strip()
 
     if not _gecerli(app_id):
         app_id = TestIds.APP
@@ -75,11 +77,14 @@ def _reklam_ayar():
         banner_id = TestIds.BANNER
     if not _gecerli(inter_id):
         inter_id = TestIds.INTERSTITIAL
+    if not _gecerli(rewarded_id):
+        rewarded_id = TestIds.REWARDED
 
     return {
         'app_id': app_id,
         'banner_id': banner_id,
         'interstitial_id': inter_id,
+        'rewarded_id': rewarded_id,
         'test_banner': banner_id == TestIds.BANNER,
     }
 
@@ -132,6 +137,12 @@ def reklam_hazirla():
             _ads.request_interstitial()
         except Exception as e:
             print(f'Interstitial atlandı: {e}', flush=True)
+        try:
+            _ads.new_rewarded(ayar['rewarded_id'])
+            _ads.request_rewarded()
+            print('Ödüllü reklam yükleme başlatıldı', flush=True)
+        except Exception as e:
+            print(f'Ödüllü reklam atlandı: {e}', flush=True)
         _baslati = True
         Clock.schedule_once(lambda *_: _banner_yukle_goster(), 2.5)
         Clock.schedule_once(lambda *_: _banner_yukle_goster(), 5.0)
@@ -175,8 +186,16 @@ def _interstitial_yenile():
             pass
 
 
+def _rewarded_yenile():
+    if _ads:
+        try:
+            _ads.request_rewarded()
+        except Exception:
+            pass
+
+
 def reklam_izle(callback):
-    """Tam ekran reklam; kapanınca callback(basarili)."""
+    """Ödüllü reklam izlet; ödül alınınca callback(True)."""
     if not _android_mi():
         Clock.schedule_once(lambda *_: callback(True), 0.2)
         return
@@ -186,24 +205,32 @@ def reklam_izle(callback):
         Clock.schedule_once(lambda *_: callback(False), 0)
         return
 
-    def _goster(*_):
-        if _ads.is_interstitial_loaded():
-            _banner_gizle()
+    def _odullu_goster(*_):
+        _banner_gizle()
 
-            def _bitti(ok):
-                if ok:
-                    Clock.schedule_once(lambda *__: _interstitial_yenile(), 0.5)
-                callback(ok)
+        def _bitti(ok):
+            if ok:
+                Clock.schedule_once(lambda *__: _rewarded_yenile(), 0.5)
+            callback(ok)
 
-            _ads.show_interstitial_callback(_bitti)
+        if _ads.is_rewarded_loaded():
+            _ads.show_rewarded_callback(_bitti)
             return
+
         try:
-            _ads.request_interstitial()
+            _ads.request_rewarded()
         except Exception:
             pass
-        Clock.schedule_once(lambda *_: callback(False), 0)
 
-    Clock.schedule_once(_goster, 0.1)
+        def _bekle(*__):
+            if _ads.is_rewarded_loaded():
+                _ads.show_rewarded_callback(_bitti)
+            else:
+                callback(False)
+
+        Clock.schedule_once(_bekle, 2.5)
+
+    Clock.schedule_once(_odullu_goster, 0.1)
 
 
 def fal_sonrasi_reklam():

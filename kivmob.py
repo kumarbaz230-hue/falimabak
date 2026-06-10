@@ -1,4 +1,4 @@
-"""KivMob — AdMob bridge (FalımaBak, banner + interstitial)."""
+"""KivMob — AdMob bridge (FalımaBak, banner + interstitial + rewarded)."""
 
 from kivy.utils import platform
 from kivy.logger import Logger
@@ -27,12 +27,22 @@ if platform == 'android':
             InterstitialAd = None
             _INTERSTITIAL_OK = False
 
+        try:
+            RewardedAd = autoclass('com.google.android.gms.ads.rewarded.RewardedAd')
+            _REWARDED_OK = True
+        except Exception:
+            RewardedAd = None
+            _REWARDED_OK = False
+
         class AndroidBridge:
             @run_on_ui_thread
             def __init__(self, appID):
                 self._loaded = False
                 self._activity = PythonActivity.mActivity
                 self._interstitial = None
+                self._rewarded = None
+                self._rewarded_loaded = False
+                self._rewarded_unit_id = ''
                 self._test_devices = []
                 try:
                     MobileAds.initialize(self._activity)
@@ -139,6 +149,106 @@ if platform == 'android':
                 bridge._interstitial.setAdListener(listener)
                 bridge._interstitial.show()
 
+            @run_on_ui_thread
+            def new_rewarded(self, unitID):
+                self._rewarded_unit_id = unitID or ''
+                self._rewarded = None
+                self._rewarded_loaded = False
+
+            def is_rewarded_loaded(self):
+                return bool(self._rewarded_loaded and self._rewarded)
+
+            @run_on_ui_thread
+            def request_rewarded(self, options=None):
+                if not _REWARDED_OK or not self._rewarded_unit_id:
+                    self._rewarded_loaded = False
+                    return
+                from jnius import PythonJavaClass, java_method
+                from kivy.clock import Clock
+
+                bridge = self
+                request = self._get_builder(options).build()
+
+                class _LoadCb(PythonJavaClass):
+                    __javaclasses__ = ['com/google/android/gms/ads/rewarded/RewardedAdLoadCallback']
+
+                    @java_method('(Lcom/google/android/gms/ads/rewarded/RewardedAd;)V')
+                    def onAdLoaded(self, ad):
+                        bridge._rewarded = ad
+                        bridge._rewarded_loaded = True
+
+                    @java_method('(Lcom/google/android/gms/ads/LoadAdError;)V')
+                    def onAdFailedToLoad(self, error):
+                        bridge._rewarded = None
+                        bridge._rewarded_loaded = False
+
+                self._rewarded = None
+                self._rewarded_loaded = False
+                RewardedAd.load(
+                    self._activity,
+                    self._rewarded_unit_id,
+                    request,
+                    _LoadCb(),
+                )
+
+            @run_on_ui_thread
+            def show_rewarded_callback(self, py_callback):
+                from jnius import PythonJavaClass, java_method
+                from kivy.clock import Clock
+
+                if not self.is_rewarded_loaded():
+                    Clock.schedule_once(lambda *_: py_callback(False), 0)
+                    return
+
+                bridge = self
+                fired = [False]
+
+                def _once(ok):
+                    if fired[0]:
+                        return
+                    fired[0] = True
+                    py_callback(ok)
+
+                earned = [False]
+
+                class _RewardCb(PythonJavaClass):
+                    __javaclasses__ = ['com/google/android/gms/ads/OnUserEarnedRewardListener']
+
+                    @java_method('(Lcom/google/android/gms/ads/rewarded/RewardItem;)V')
+                    def onUserEarnedReward(self, reward_item):
+                        earned[0] = True
+                        Clock.schedule_once(lambda *_: _once(True), 0)
+
+                class _FullScreenCb(PythonJavaClass):
+                    __javaclasses__ = ['com/google/android/gms/ads/FullScreenContentCallback']
+
+                    @java_method('()V')
+                    def onAdDismissedFullScreenContent(self):
+                        if not earned[0]:
+                            Clock.schedule_once(lambda *_: _once(False), 0)
+                        bridge._rewarded = None
+                        bridge._rewarded_loaded = False
+                        try:
+                            bridge.request_rewarded()
+                        except Exception:
+                            pass
+
+                    @java_method('(Lcom/google/android/gms/ads/AdError;)V')
+                    def onAdFailedToShowFullScreenContent(self, ad_error):
+                        if not earned[0]:
+                            Clock.schedule_once(lambda *_: _once(False), 0)
+                        bridge._rewarded = None
+                        bridge._rewarded_loaded = False
+                        try:
+                            bridge.request_rewarded()
+                        except Exception:
+                            pass
+
+                ad = bridge._rewarded
+                bridge._rewarded_loaded = False
+                ad.setFullScreenContentCallback(_FullScreenCb())
+                ad.show(bridge._activity, _RewardCb())
+
             def _get_builder(self, options):
                 builder = AdRequestBuilder()
                 for test_device in self._test_devices:
@@ -160,6 +270,7 @@ class TestIds:
     APP = 'ca-app-pub-3940256099942544~3347511713'
     BANNER = 'ca-app-pub-3940256099942544/6300978111'
     INTERSTITIAL = 'ca-app-pub-3940256099942544/1033173712'
+    REWARDED = 'ca-app-pub-3940256099942544/5224354917'
 
 
 class AdMobBridge:
@@ -191,6 +302,19 @@ class AdMobBridge:
         pass
 
     def show_interstitial_callback(self, callback):
+        from kivy.clock import Clock
+        Clock.schedule_once(lambda *_: callback(True), 0.2)
+
+    def new_rewarded(self, unitID):
+        pass
+
+    def is_rewarded_loaded(self):
+        return True
+
+    def request_rewarded(self, options=None):
+        pass
+
+    def show_rewarded_callback(self, callback):
         from kivy.clock import Clock
         Clock.schedule_once(lambda *_: callback(True), 0.2)
 
@@ -232,6 +356,26 @@ class KivMob:
     def show_interstitial_callback(self, callback):
         if hasattr(self.bridge, 'show_interstitial_callback'):
             self.bridge.show_interstitial_callback(callback)
+        else:
+            from kivy.clock import Clock
+            Clock.schedule_once(lambda *_: callback(False), 0)
+
+    def new_rewarded(self, unitID):
+        if hasattr(self.bridge, 'new_rewarded'):
+            self.bridge.new_rewarded(unitID)
+
+    def is_rewarded_loaded(self):
+        if hasattr(self.bridge, 'is_rewarded_loaded'):
+            return self.bridge.is_rewarded_loaded()
+        return False
+
+    def request_rewarded(self, options=None):
+        if hasattr(self.bridge, 'request_rewarded'):
+            self.bridge.request_rewarded(options)
+
+    def show_rewarded_callback(self, callback):
+        if hasattr(self.bridge, 'show_rewarded_callback'):
+            self.bridge.show_rewarded_callback(callback)
         else:
             from kivy.clock import Clock
             Clock.schedule_once(lambda *_: callback(False), 0)
