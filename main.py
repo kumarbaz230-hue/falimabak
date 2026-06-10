@@ -1,5 +1,5 @@
 """
-🔮 FalımaBak - Premium Fal Uygulaması v1.2.15
+🔮 FalımaBak - Premium Fal Uygulaması v1.2.16
 Mystic Dark Dashboard — mobil odaklı
 """
 
@@ -693,15 +693,12 @@ class FalimaBakApp(App):
         Window.bind(on_keyboard=self._geri_tusu)
         if _ANDROID:
             try:
-                from android import activity
-                activity.bind(on_back_pressed=self._geri_tusu_android)
-            except Exception:
-                pass
-            try:
                 from android_geri import geri_tusu_kur
-                Clock.schedule_once(lambda *_: geri_tusu_kur(self), 0.3)
-            except Exception:
-                pass
+                geri_tusu_kur(self)
+                Clock.schedule_once(lambda *_: geri_tusu_kur(self), 1.0)
+                Clock.schedule_once(lambda *_: geri_tusu_kur(self), 3.0)
+            except Exception as e:
+                print(f'Geri kurulum: {e}', flush=True)
         if not _ANDROID:
             return
         try:
@@ -734,13 +731,17 @@ class FalimaBakApp(App):
         except Exception:
             pass
 
-    def _geri_tusu_android(self):
-        """Android sistem geri tuşu — True: varsayılan çıkış engellenir."""
-        return self._geri_isle()
+    def on_resume(self):
+        if _ANDROID:
+            try:
+                from android_geri import geri_tusu_kur
+                geri_tusu_kur(self)
+            except Exception:
+                pass
 
-    def _geri_tusu(self, _window, key, *_args):
-        """Klavye / SDL geri (27)."""
-        if key != 27:
+    def _geri_tusu(self, _window, key, *args):
+        scancode = args[0] if args else None
+        if key not in (4, 27) and scancode not in (4,):
             return False
         return self._geri_isle()
 

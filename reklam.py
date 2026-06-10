@@ -146,6 +146,8 @@ def reklam_hazirla():
         _baslati = True
         Clock.schedule_once(lambda *_: _banner_yukle_goster(), 2.5)
         Clock.schedule_once(lambda *_: _banner_yukle_goster(), 5.0)
+        Clock.schedule_once(lambda *_: _rewarded_yenile(), 3.0)
+        Clock.schedule_once(lambda *_: _rewarded_yenile(), 8.0)
     except Exception:
         print(f'Reklam hatası: {traceback.format_exc()}', flush=True)
         _baslati = False
@@ -176,6 +178,7 @@ def ekran_reklam_guncelle(ekran_adi):
         Clock.schedule_once(lambda *_: _banner_goster(), 2.0)
     else:
         _banner_gizle()
+        Clock.schedule_once(lambda *_: _rewarded_yenile(), 0.3)
 
 
 def _interstitial_yenile():
@@ -188,6 +191,19 @@ def _interstitial_yenile():
 
 def _rewarded_yenile():
     if _ads:
+        try:
+            _ads.request_rewarded()
+        except Exception:
+            pass
+
+
+def reklam_onyukle():
+    """Limit ekranından önce ödüllü reklamı hazırla."""
+    if not _android_mi():
+        return
+    if not _baslati:
+        reklam_hazirla()
+    if _ads and not _ads.is_rewarded_loaded():
         try:
             _ads.request_rewarded()
         except Exception:
@@ -222,13 +238,24 @@ def reklam_izle(callback):
         except Exception:
             pass
 
-        def _bekle(*__):
+        def _bekle(adim=0):
             if _ads.is_rewarded_loaded():
                 _ads.show_rewarded_callback(_bitti)
-            else:
-                callback(False)
+                return
+            if adim < 10:
+                try:
+                    _ads.request_rewarded()
+                except Exception:
+                    pass
+                Clock.schedule_once(lambda *_: _bekle(adim + 1), 1.0)
+                return
+            if _ads.is_interstitial_loaded():
+                print('Ödüllü yok — geçici interstitial yedek', flush=True)
+                _ads.show_interstitial_callback(_bitti)
+                return
+            callback(False)
 
-        Clock.schedule_once(_bekle, 2.5)
+        Clock.schedule_once(lambda *_: _bekle(0), 1.0)
 
     Clock.schedule_once(_odullu_goster, 0.1)
 

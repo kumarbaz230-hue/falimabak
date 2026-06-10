@@ -101,6 +101,8 @@ def yorum_baslat(tip, devam_fn):
     if not reklam_hakki_var(tip):
         _reklam_limit_popup(tip)
         return
+    from reklam import reklam_onyukle
+    reklam_onyukle()
     _limit_popup(tip, devam_fn)
 
 

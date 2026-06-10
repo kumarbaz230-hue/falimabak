@@ -181,6 +181,10 @@ if platform == 'android':
                     def onAdFailedToLoad(self, error):
                         bridge._rewarded = None
                         bridge._rewarded_loaded = False
+                        try:
+                            print(f'Ödüllü reklam yüklenemedi: {error.getMessage()}', flush=True)
+                        except Exception:
+                            print('Ödüllü reklam yüklenemedi', flush=True)
 
                 self._rewarded = None
                 self._rewarded_loaded = False
