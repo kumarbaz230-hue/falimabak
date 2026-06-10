@@ -14,7 +14,7 @@ from kivy.metrics import dp
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 ASSETS_DIR = os.path.join(BASE_DIR, 'assets')
-APP_SURUM = '1.3.1'
+APP_SURUM = '1.3.2'
 
 # ============================================================
 #  PROFESYONEL RENK PALETİ
@@ -150,6 +150,7 @@ MENU_IKON_DOSYALARI = {
     'elfali':    'menu_elfali.png',
     'diger':     'menu_diger.png',
     'burc_eslesme': 'menu_burc_eslesme.png',
+    'ruya':      'menu_ruya.png',
 }
 
 NAV_IKON_DOSYALARI = {
@@ -169,6 +170,8 @@ DIGER_FAL_IKONLARI = {
 # Mobil safe area (çentik / gesture bar) — Android'de aşağıda genişletilir
 SAFE_UST = dp(8)
 COIN_SAG_BOSLUK = dp(96)
+COIN_UST_KENAR = dp(4)
+COIN_SAG_KENAR = dp(6)
 SAFE_ALT = dp(10)
 BUTON_MIN_YUKSEK = dp(48)
 

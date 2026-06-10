@@ -939,6 +939,7 @@ class FalimaBakApp(App):
         Clock.schedule_once(lambda *_: self._ekranlari_yukle(), 0.05)
 
         from coin_ui import CoinChip
+        from theme import COIN_SAG_KENAR, COIN_UST_KENAR
 
         kok = FloatLayout()
         kok.add_widget(sm)
@@ -948,9 +949,10 @@ class FalimaBakApp(App):
 
         def _coin_konum(*_):
             ch = self._coin_chip
+            # Tam sağ üst köşe — SAFE_UST kullanma (buton satırına kayıyordu)
             ch.pos = (
-                max(0, kok.width - ch.width - dp(14)),
-                max(0, kok.height - ch.height - SAFE_UST - dp(6)),
+                max(0, kok.width - ch.width - COIN_SAG_KENAR),
+                max(0, kok.height - ch.height - COIN_UST_KENAR),
             )
 
         kok.bind(size=_coin_konum, pos=_coin_konum)

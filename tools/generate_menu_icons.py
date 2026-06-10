@@ -169,12 +169,36 @@ def ikon_diger():
     _kaydet('menu_diger.png', img)
 
 
+def ikon_ruya():
+    """Hilal ay + bulut + yıldız — rüya tabiri."""
+    img = _zemin((14, 10, 38), (30, 16, 58))
+    d = ImageDraw.Draw(img)
+    cx, cy = S // 2, S // 2 - 18
+    bg = (24, 18, 50)
+    # Hilal ay
+    d.ellipse([cx - 54, cy - 54, cx + 54, cy + 54], fill=(255, 236, 160, 255))
+    d.ellipse([cx - 30, cy - 58, cx + 68, cy + 46], fill=(*bg, 255))
+    d.ellipse([cx - 54, cy - 54, cx + 54, cy + 54], outline=(255, 215, 100, 180), width=2)
+    # Bulutlar
+    for bx, by, bw in [(-62, 38, 48), (-28, 28, 56), (18, 34, 52)]:
+        d.ellipse([cx + bx, cy + by, cx + bx + bw, cy + by + 36], fill=(190, 178, 230, 215))
+        d.ellipse([cx + bx + 12, cy + by - 10, cx + bx + bw - 8, cy + by + 28], fill=(210, 198, 245, 230))
+    # Yıldızlar
+    for sx, sy, r in [(52, 62, 4), (198, 48, 3), (186, 178, 3), (64, 188, 2)]:
+        d.ellipse([sx - r, sy - r, sx + r, sy + r], fill=(255, 255, 210, 255))
+    # Rüya baloncukları
+    for bx, by in [(58, -68), (72, -58), (86, -48)]:
+        d.ellipse([cx + bx, cy + by, cx + bx + 10, cy + by + 10], fill=(180, 160, 255, 200))
+    _kaydet('menu_ruya.png', img)
+
+
 def main():
     ikon_tarot()
     ikon_kahve()
     ikon_astroloji()
     ikon_elfali()
     ikon_diger()
+    ikon_ruya()
     print('Menu ikonlari hazir.', flush=True)
 
 
