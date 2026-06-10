@@ -1,8 +1,10 @@
 """FalımaBak — fal geçmişi, günlük fal ve kullanıcı ayarları."""
 
+import hashlib
 import json
 import os
 import random
+import secrets
 from datetime import date, datetime
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -92,6 +94,40 @@ KURABIYE_MESAJLARI = [
     'İç sesin “evet” dediğinde tereddüt etme.',
     'Bugün gülümsemen bir zincirleme mutluluk başlatacak.',
 ]
+
+KURABIYE_TEKRAR_GUN = 14
+
+
+def _kurabiye_kimlik(veri):
+    """Kurulum başına benzersiz kimlik — her cihaz/kullanıcı farklı mesaj alır."""
+    kid = veri.get('kurabiye_kimlik')
+    if kid:
+        return str(kid)
+    kid = secrets.token_hex(12)
+    veri['kurabiye_kimlik'] = kid
+    return kid
+
+
+def _kurabiye_mesaj_sec(bugun, veri):
+    """Günlük + kişiye özel mesaj; son birkaç günün mesajları tekrarlanmaz."""
+    kimlik = _kurabiye_kimlik(veri)
+    isim = (veri.get('isim') or '').strip()
+    ham = f'{bugun}|{kimlik}|{isim}'.encode('utf-8')
+    tohum = int(hashlib.sha256(ham).hexdigest()[:16], 16)
+    rng = random.Random(tohum)
+
+    son_indeksler = veri.get('kurabiye_son_indeksler') or []
+    if not isinstance(son_indeksler, list):
+        son_indeksler = []
+    son_indeksler = [int(i) for i in son_indeksler if isinstance(i, int) or str(i).isdigit()]
+    son_indeksler = son_indeksler[-KURABIYE_TEKRAR_GUN:]
+
+    adet = len(KURABIYE_MESAJLARI)
+    aday = [i for i in range(adet) if i not in son_indeksler]
+    if not aday:
+        aday = list(range(adet))
+    idx = rng.choice(aday)
+    return idx, KURABIYE_MESAJLARI[idx]
 
 
 def _yukle():
@@ -251,11 +287,27 @@ def kurabiye_ac():
     bugun = date.today().isoformat()
     veri = _yukle()
     if veri.get('kurabiye_tarih') == bugun:
-        return {'yeni': False, 'mesaj': veri.get('kurabiye_mesaj', '')}
-    tohum = bugun + (veri.get('isim') or '') + str(len(KURABIYE_MESAJLARI))
-    mesaj = random.Random(tohum).choice(KURABIYE_MESAJLARI)
+        if veri.get('kurabiye_kimlik'):
+            return {'yeni': False, 'mesaj': veri.get('kurabiye_mesaj', '')}
+        idx, mesaj = _kurabiye_mesaj_sec(bugun, veri)
+        veri['kurabiye_mesaj'] = mesaj
+        gecmis = veri.get('kurabiye_son_indeksler') or []
+        if not isinstance(gecmis, list):
+            gecmis = []
+        gecmis = [int(i) for i in gecmis if isinstance(i, int) or str(i).isdigit()]
+        gecmis.append(idx)
+        veri['kurabiye_son_indeksler'] = gecmis[-KURABIYE_TEKRAR_GUN:]
+        _kaydet(veri)
+        return {'yeni': True, 'mesaj': mesaj}
+    idx, mesaj = _kurabiye_mesaj_sec(bugun, veri)
     veri['kurabiye_tarih'] = bugun
     veri['kurabiye_mesaj'] = mesaj
+    gecmis = veri.get('kurabiye_son_indeksler') or []
+    if not isinstance(gecmis, list):
+        gecmis = []
+    gecmis = [int(i) for i in gecmis if isinstance(i, int) or str(i).isdigit()]
+    gecmis.append(idx)
+    veri['kurabiye_son_indeksler'] = gecmis[-KURABIYE_TEKRAR_GUN:]
     _kaydet(veri)
     return {'yeni': True, 'mesaj': mesaj}
 
