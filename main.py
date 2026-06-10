@@ -1,5 +1,5 @@
 """
-🔮 FalımaBak - Premium Fal Uygulaması v1.2.17
+🔮 FalımaBak - Premium Fal Uygulaması v1.3.0
 Mystic Dark Dashboard — mobil odaklı
 """
 
@@ -683,6 +683,12 @@ class Anasayfa(Screen):
         if hasattr(self, '_kurabiye'):
             self._kurabiye.yenile()
         try:
+            from coin_ui import coin_baslangic_kontrol, coin_ui_yenile
+            coin_baslangic_kontrol()
+            coin_ui_yenile()
+        except Exception:
+            pass
+        try:
             from reklam import reklam_hazirla, ekran_reklam_guncelle
             reklam_hazirla()
             ekran_reklam_guncelle('anasayfa')
@@ -903,7 +909,30 @@ class FalimaBakApp(App):
         sm.add_widget(SplashScreen(name='splash'))
         self._sm = sm
         Clock.schedule_once(lambda *_: self._ekranlari_yukle(), 0.05)
-        return sm
+
+        from kivy.uix.anchorlayout import AnchorLayout
+        from coin_ui import CoinChip
+
+        kok = FloatLayout()
+        kok.add_widget(sm)
+        self._coin_wrap = AnchorLayout(
+            size_hint=(1, 1),
+            anchor_x='right',
+            anchor_y='top',
+            padding=[dp(8), SAFE_UST + dp(4), dp(12), 0],
+        )
+        self._coin_chip = CoinChip()
+        self._coin_wrap.add_widget(self._coin_chip)
+        kok.add_widget(self._coin_wrap)
+
+        def _coin_gorunurluk(*_):
+            gizle = sm.current in ('splash', 'onboarding', 'hata')
+            self._coin_wrap.opacity = 0 if gizle else 1
+            self._coin_wrap.disabled = gizle
+
+        sm.bind(current=_coin_gorunurluk)
+        Clock.schedule_once(lambda *_: _coin_gorunurluk(), 0)
+        return kok
 
     def _ekranlari_yukle(self):
         sm = self._sm
