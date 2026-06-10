@@ -83,7 +83,7 @@ GENEL_UZUN = [
 ]
 
 KAPANIS_CUMLE = [
-    'Falınız eğlence amaçlıdır; kalbinizin sesini her zaman dinleyin.',
+    'Kalbinizin sesini her zaman dinleyin; güzel günler dileriz.',
     'Yıldızlar yol gösterir, yürüyen sizsiniz — güzel günler dileriz.',
     'Pozitif enerjinizi koruyun; nazar boncuğunuz sizi korusun.',
     'Umutla ilerleyin; en güzel hikâye henüz yazılıyor.',

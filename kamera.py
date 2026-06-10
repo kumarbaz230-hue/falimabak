@@ -146,6 +146,15 @@ def _intent_gorsel_uri(intent):
     """Galeri / photo picker sonucundan content URI al."""
     if intent is None:
         return None
+    try:
+        from jnius import autoclass
+        uris = intent.getParcelableArrayListExtra('android.provider.extra.PICK_IMAGES_RESULT')
+        if uris is not None and uris.size() > 0:
+            ilk = uris.get(0)
+            if ilk is not None:
+                return str(ilk.toString())
+    except Exception:
+        pass
     uri = intent.getData()
     if uri is not None:
         return str(uri.toString())
@@ -155,6 +164,122 @@ def _intent_gorsel_uri(intent):
         if item is not None and item.getUri() is not None:
             return str(item.getUri().toString())
     return None
+
+
+def _intent_cozulebilir(activity, intent):
+    try:
+        from jnius import autoclass
+        PackageManager = autoclass('android.content.pm.PackageManager')
+        return intent.resolveActivity(activity.getPackageManager()) is not None
+    except Exception:
+        return False
+
+
+def _galeri_intent_olustur(activity):
+    """READ_MEDIA_IMAGES olmadan çalışan galeri intent zinciri."""
+    from jnius import autoclass
+    Intent = autoclass('android.content.Intent')
+    MediaStore = autoclass('android.provider.MediaStore')
+    Build = autoclass('android.os.Build')
+
+    adaylar = []
+    try:
+        sdk = int(Build.VERSION.SDK_INT)
+    except Exception:
+        sdk = 0
+
+    if sdk >= 33:
+        pick = Intent('android.provider.action.PICK_IMAGES')
+        pick.putExtra('android.provider.extra.PICK_IMAGES_MAX', 1)
+        adaylar.append(pick)
+
+    get_content = Intent(Intent.ACTION_GET_CONTENT)
+    get_content.setType('image/*')
+    get_content.addCategory(Intent.CATEGORY_OPENABLE)
+    adaylar.append(get_content)
+
+    pick_one = Intent(Intent.ACTION_PICK)
+    pick_one.setDataAndType(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, 'image/*')
+    adaylar.append(pick_one)
+
+    open_doc = Intent(Intent.ACTION_OPEN_DOCUMENT)
+    open_doc.setType('image/*')
+    open_doc.addCategory(Intent.CATEGORY_OPENABLE)
+    open_doc.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+    open_doc.addFlags(Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION)
+    adaylar.append(open_doc)
+
+    for intent in adaylar:
+        if _intent_cozulebilir(activity, intent):
+            action = str(intent.getAction() or '')
+            if action == 'android.intent.action.GET_CONTENT':
+                return Intent.createChooser(intent, 'Fotoğraf seç')
+            return intent
+    return Intent.createChooser(get_content, 'Fotoğraf seç')
+
+
+def _galeri_activity_ac(activity, intent):
+    activity.startActivityForResult(intent, _GALERI_ISTEK)
+
+
+def _galeri_plyer_yedek(callback):
+    """Native picker açılmazsa plyer (SAF) yedek."""
+    try:
+        from plyer import filechooser
+
+        def _secildi(dosyalar):
+            try:
+                if not dosyalar:
+                    _ana_thread(lambda: callback(None, _dil('cam_cancel')))
+                    return
+                kayit = _kopyala(dosyalar[0])
+                if kayit:
+                    _ana_thread(lambda: callback(kayit, None))
+                else:
+                    _ana_thread(lambda: callback(None, _dil('cam_fail')))
+            except Exception:
+                _ana_thread(lambda: callback(None, _dil('cam_fail')))
+
+        filechooser.open_file(
+            on_selection=_secildi,
+            filters=['*.png', '*.jpg', '*.jpeg', '*.webp'],
+        )
+    except Exception as e:
+        print(f'Galeri plyer yedek: {e}', flush=True)
+        _ana_thread(lambda: callback(None, _dil('cam_fail')))
+
+
+def _galeri_android_picker(callback):
+    """Android fotoğraf seçici — READ_MEDIA_IMAGES izni gerekmez."""
+    global _galeri_callback
+    try:
+        _activity_bagla()
+        _galeri_callback = callback
+
+        from jnius import autoclass
+        PythonActivity = autoclass('org.kivy.android.PythonActivity')
+        activity = PythonActivity.mActivity
+        if activity is None:
+            raise RuntimeError('Activity yok')
+
+        intent = _galeri_intent_olustur(activity)
+
+        def _ac(*_):
+            try:
+                _galeri_activity_ac(activity, intent)
+            except Exception as e:
+                print(f'Galeri activity: {e}', flush=True)
+                global _galeri_callback
+                cb = _galeri_callback
+                _galeri_callback = None
+                if cb:
+                    _galeri_plyer_yedek(cb)
+
+        Clock.schedule_once(_ac, 0)
+    except Exception as e:
+        print(f'Galeri picker: {traceback.format_exc()}', flush=True)
+        _galeri_callback = None
+        _galeri_plyer_yedek(callback)
 
 
 def _on_activity_result(request_code, result_code, intent):
@@ -290,36 +415,6 @@ def _kopyala(kaynak):
     except Exception as e:
         print(f'Foto kopyalama: {e}', flush=True)
         return None
-
-
-def _galeri_android_picker(callback):
-    """Android fotoğraf seçici — READ_MEDIA_IMAGES izni gerekmez."""
-    global _galeri_callback
-    try:
-        _activity_bagla()
-        _galeri_callback = callback
-
-        from jnius import autoclass
-        Intent = autoclass('android.content.Intent')
-        MediaStore = autoclass('android.provider.MediaStore')
-        Build = autoclass('android.os.Build')
-        PythonActivity = autoclass('org.kivy.android.PythonActivity')
-        activity = PythonActivity.mActivity
-
-        if int(Build.VERSION.SDK_INT) >= 33:
-            intent = Intent(MediaStore.ACTION_PICK_IMAGES)
-            intent.putExtra(MediaStore.EXTRA_PICK_IMAGES_MAX, 1)
-        else:
-            intent = Intent(Intent.ACTION_GET_CONTENT)
-            intent.setType('image/*')
-            intent.addCategory(Intent.CATEGORY_OPENABLE)
-            intent = Intent.createChooser(intent, 'Fotoğraf seç')
-
-        activity.startActivityForResult(intent, _GALERI_ISTEK)
-    except Exception as e:
-        print(f'Galeri picker: {e}', flush=True)
-        _galeri_callback = None
-        _ana_thread(lambda: callback(None, 'Galeri açılamadı'))
 
 
 def _galeri_masaustu(callback):

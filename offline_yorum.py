@@ -425,7 +425,7 @@ def _ruya_yorum(veri):
         'duygularınızla bağ kurar.',
         'Gördüğünüz sahneler çoğu zaman doğrudan geleceği değil, iç dünyanızdaki '
         'hareketliliği yansıtır.',
-        'Rüya tabiri eğlence ve farkındalık içindir; mesajı kendi sezgilerinizle birleştirin.',
+        'Mesajı kendi sezgilerinizle birleştirin; rüyadaki semboller size özel anlamlar taşır.',
     ])))
     bolum.append('')
 
