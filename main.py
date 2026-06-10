@@ -1,5 +1,5 @@
 """
-🔮 FalımaBak - Premium Fal Uygulaması v1.2.5
+🔮 FalımaBak - Premium Fal Uygulaması v1.2.6
 Mystic Dark Dashboard — mobil odaklı
 """
 
@@ -53,7 +53,7 @@ from theme import (
     fal_ikon_widget, guvenli_textinput,
     metin_label, gradient_arka_plan_ekle, asset_yolu,
     alt_nav_bar, ekran_icerik_sar, kart_zemin_bagla, baslik_satir,
-    yorum_baslik_metin, gorsel_arkaplan_ekle, siyah_buton,
+    yorum_baslik_metin, gorsel_arkaplan_ekle, siyah_buton, kart_ikon_widget,
 )
 from gecmis import (
     onboarding_gerekli, onboarding_tamamla, kullanici_ismi,
@@ -192,7 +192,18 @@ class GunlukFalKarti(ButtonBehavior, BoxLayout):
         self.bind(pos=self._cizim, size=self._cizim)
         Clock.schedule_once(lambda *_: self._cizim(), 0)
 
-        self.add_widget(emoji_label(self._gunluk['ikon'], font_size='28sp', size_hint=(None, 1), width=dp(40)))
+        from kivy.uix.anchorlayout import AnchorLayout
+        ikon_kutu = AnchorLayout(
+            size_hint=(None, 1), width=dp(48),
+            anchor_x='center', anchor_y='center',
+        )
+        hedef = self._gunluk['hedef']
+        ikon_anahtar = 'diger' if hedef == 'diger_fallar' else hedef
+        ikon_kutu.add_widget(kart_ikon_widget(
+            anahtar=ikon_anahtar, boyut=dp(44),
+            renk_hex=RENKLER['altin'],
+        ))
+        self.add_widget(ikon_kutu)
         kutu = BoxLayout(orientation='vertical', size_hint=(1, 1), spacing=dp(2))
         kutu.add_widget(metin_label(
             f"{t('daily_fal')} — {self._gunluk['tarih']}",
@@ -250,8 +261,8 @@ class SansKurabiyesiKarti(ButtonBehavior, BoxLayout):
             size_hint=(None, 1), width=dp(64),
             anchor_x='center', anchor_y='center',
         )
-        ikon_kutu.add_widget(emoji_label(
-            '🥠', font_size='44sp', size_hint=(None, None), size=(dp(56), dp(56)),
+        ikon_kutu.add_widget(kart_ikon_widget(
+            dosya='icon_kurabiye.png', boyut=dp(52),
         ))
         self.add_widget(ikon_kutu)
 
@@ -309,10 +320,9 @@ class SansKurabiyesiKarti(ButtonBehavior, BoxLayout):
         self.yenile()
 
         icerik = BoxLayout(orientation='vertical', padding=dp(16), spacing=dp(10))
-        icerik.add_widget(emoji_label(
-            '🥠', font_size='52sp', halign='center',
-            size_hint_y=None, height=dp(56),
-        ))
+        ikon_satir = BoxLayout(size_hint_y=None, height=dp(56))
+        ikon_satir.add_widget(kart_ikon_widget(dosya='icon_kurabiye.png', boyut=dp(52)))
+        icerik.add_widget(ikon_satir)
         icerik.add_widget(metin_label(
             sonuc['mesaj'], font_size='14sp', color=RENKLER['beyaz'],
             halign='center', size_hint_y=None, height=dp(90),
@@ -673,7 +683,20 @@ class HataScreen(Screen):
 
 
 class FalimaBakApp(App):
+    _GERI_ALT = frozenset({
+        'tarot', 'kahve', 'astroloji', 'elfali', 'diger_fallar',
+        'burc_eslesme', 'gizlilik',
+    })
+    _GERI_SEKME = frozenset({'gecmis', 'ayarlar'})
+
     def on_start(self):
+        Window.bind(on_keyboard=self._geri_tusu)
+        if _ANDROID:
+            try:
+                from android import activity
+                activity.bind(on_back_pressed=self._geri_tusu_android)
+            except Exception:
+                pass
         if not _ANDROID:
             return
         try:
@@ -705,6 +728,85 @@ class FalimaBakApp(App):
             Clock.schedule_once(lambda *_: muzik_uygula(), 1.5)
         except Exception:
             pass
+
+    def _geri_tusu_android(self):
+        """Android sistem geri tuşu — True: varsayılan çıkış engellenir."""
+        return self._geri_isle()
+
+    def _geri_tusu(self, _window, key, *_args):
+        """Klavye / SDL geri (27)."""
+        if key != 27:
+            return False
+        return self._geri_isle()
+
+    def _geri_isle(self):
+        """Geri navigasyon veya çıkış onayı."""
+        from kivy.uix.popup import Popup
+        if Popup._popups:
+            Popup._popups[-1].dismiss()
+            return True
+        sm = self.root
+        if not sm:
+            return False
+        cur = sm.current
+        if cur in self._GERI_ALT:
+            sm.current = 'anasayfa'
+            return True
+        if cur == 'onboarding':
+            ob = sm.get_screen('onboarding')
+            if getattr(ob, '_adim', 0) > 0:
+                ob._adim -= 1
+                ob._goster()
+            else:
+                self._cikis_onay()
+            return True
+        if cur in self._GERI_SEKME:
+            sm.current = 'anasayfa'
+            return True
+        if cur == 'anasayfa':
+            self._cikis_onay()
+            return True
+        if cur in ('splash', 'hata'):
+            return False
+        return False
+
+    def _cikis_onay(self):
+        from dil import t
+        from kivy.uix.popup import Popup
+
+        if getattr(self, '_cikis_popup', None):
+            return
+        icerik = BoxLayout(orientation='vertical', padding=dp(16), spacing=dp(12))
+        icerik.add_widget(metin_label(
+            t('exit_msg'), font_size='14sp', color=RENKLER['beyaz'],
+            halign='center', size_hint_y=None, height=dp(48),
+        ))
+        btn_satir = BoxLayout(size_hint_y=None, height=dp(44), spacing=dp(10))
+        iptal = siyah_buton(t('exit_no'), font_size='14sp')
+        cik = siyah_buton(t('exit_yes'), vurgu=True, font_size='14sp')
+        btn_satir.add_widget(iptal)
+        btn_satir.add_widget(cik)
+        icerik.add_widget(btn_satir)
+
+        popup = Popup(
+            title=t('exit_title'),
+            content=icerik,
+            size_hint=(0.85, None),
+            height=dp(180),
+            separator_color=get_color_from_hex(RENKLER['altin']),
+            title_color=get_color_from_hex(RENKLER['altin']),
+            auto_dismiss=False,
+        )
+        self._cikis_popup = popup
+
+        def _kapat(*_):
+            self._cikis_popup = None
+            popup.dismiss()
+
+        iptal.bind(on_press=_kapat)
+        cik.bind(on_press=lambda *_: ( _kapat(), self.stop()))
+        popup.bind(on_dismiss=lambda *_: setattr(self, '_cikis_popup', None))
+        popup.open()
 
     def ekranlari_yenile_dil(self):
         from ayarlar import AyarlarScreen

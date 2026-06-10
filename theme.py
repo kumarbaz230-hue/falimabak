@@ -14,7 +14,7 @@ from kivy.metrics import dp
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 ASSETS_DIR = os.path.join(BASE_DIR, 'assets')
-APP_SURUM = '1.2.5'
+APP_SURUM = '1.2.6'
 
 # ============================================================
 #  PROFESYONEL RENK PALETİ
@@ -342,6 +342,42 @@ def fal_ikon_widget_yedek(anahtar, renk_hex, font_size='26sp', **kwargs):
 def fal_ikon_widget(anahtar, renk_hex, font_size='26sp', **kwargs):
     """Menü kartı ikonu — önce PNG."""
     return menu_ikon_resmi(anahtar, renk_hex=renk_hex, font_size=font_size, **kwargs)
+
+
+def png_ikon_widget(dosya, boyut=None, **kwargs):
+    """Sabit PNG ikon (Android'de emoji yerine)."""
+    from kivy.uix.image import Image
+
+    yol = asset_yolu(dosya) if not os.path.isabs(dosya) else dosya
+    if not yol or not os.path.isfile(yol):
+        return None
+    b = boyut or dp(44)
+    if isinstance(b, (int, float)):
+        b = (b, b)
+    defaults = {
+        'source': yol,
+        'allow_stretch': False,
+        'keep_ratio': True,
+        'size_hint': (None, None),
+        'size': b,
+    }
+    defaults.update(kwargs)
+    return Image(**defaults)
+
+
+def kart_ikon_widget(anahtar=None, dosya=None, boyut=None, renk_hex=None, **kwargs):
+    """Ana sayfa kart ikonu — PNG öncelikli."""
+    if dosya:
+        w = png_ikon_widget(dosya, boyut=boyut, **kwargs)
+        if w:
+            return w
+    if anahtar:
+        w = menu_ikon_resmi(anahtar, renk_hex=renk_hex or RENKLER['altin'], **kwargs)
+        if boyut:
+            b = boyut if isinstance(boyut, tuple) else (boyut, boyut)
+            w.size = b
+        return w
+    return metin_label('?', font_size='22sp', bold=True, color=renk_hex or RENKLER['altin'], **kwargs)
 
 
 def guvenli_textinput(hint_text='', **kwargs):
