@@ -15,9 +15,11 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 _DEFAULT_FOTO_DIR = os.path.join(BASE_DIR, 'user_photos')
 
 _KAMERA_ISTEK = 9001
+_GALERI_ISTEK = 9002
 _kamera_callback = None
 _kamera_hedef = None
 _kamera_mod = 'uri'
+_galeri_callback = None
 _activity_baglandi = False
 
 
@@ -140,8 +142,47 @@ def _dosya_bekle(cb, yol, deneme=0):
         _sonuc_gonder(cb, None)
 
 
+def _intent_gorsel_uri(intent):
+    """Galeri / photo picker sonucundan content URI al."""
+    if intent is None:
+        return None
+    uri = intent.getData()
+    if uri is not None:
+        return str(uri.toString())
+    clip = intent.getClipData()
+    if clip is not None and clip.getItemCount() > 0:
+        item = clip.getItemAt(0)
+        if item is not None and item.getUri() is not None:
+            return str(item.getUri().toString())
+    return None
+
+
 def _on_activity_result(request_code, result_code, intent):
-    global _kamera_callback, _kamera_hedef, _kamera_mod
+    global _kamera_callback, _kamera_hedef, _kamera_mod, _galeri_callback
+
+    if request_code == _GALERI_ISTEK:
+        cb = _galeri_callback
+        _galeri_callback = None
+        if not cb:
+            return
+        try:
+            from jnius import autoclass
+            Activity = autoclass('android.app.Activity')
+            if result_code != Activity.RESULT_OK:
+                _sonuc_gonder(cb, None, _dil('cam_cancel'))
+                return
+            uri = _intent_gorsel_uri(intent)
+            if uri:
+                kayit = _kopyala(uri)
+                if kayit:
+                    _sonuc_gonder(cb, kayit)
+                    return
+            _sonuc_gonder(cb, None, _dil('cam_fail'))
+        except Exception:
+            print(traceback.format_exc(), flush=True)
+            _sonuc_gonder(cb, None)
+        return
+
     if request_code != _KAMERA_ISTEK or not _kamera_callback:
         return
 
@@ -182,9 +223,9 @@ def _on_activity_result(request_code, result_code, intent):
                     except Exception as e:
                         print(f'Bitmap kayıt: {e}', flush=True)
 
-            uri = intent.getData()
-            if uri is not None:
-                kayit = _kopyala(str(uri.toString()))
+            uri = _intent_gorsel_uri(intent)
+            if uri:
+                kayit = _kopyala(uri)
                 if kayit:
                     _sonuc_gonder(cb, kayit)
                     return
@@ -251,26 +292,33 @@ def _kopyala(kaynak):
         return None
 
 
-def _galeri_plyer(callback):
+def _galeri_android_picker(callback):
+    """Android fotoğraf seçici — READ_MEDIA_IMAGES izni gerekmez."""
+    global _galeri_callback
     try:
-        from plyer import filechooser
+        _activity_bagla()
+        _galeri_callback = callback
 
-        def _secildi(dosyalar):
-            try:
-                if not dosyalar:
-                    _ana_thread(lambda: callback(None, 'Dosya seçilmedi'))
-                    return
-                kayit = _kopyala(dosyalar[0])
-                if kayit:
-                    _ana_thread(lambda: callback(kayit, None))
-                else:
-                    _ana_thread(lambda: callback(None, 'Fotoğraf kopyalanamadı'))
-            except Exception:
-                _ana_thread(lambda: callback(None, 'Galeri hatası'))
+        from jnius import autoclass
+        Intent = autoclass('android.content.Intent')
+        MediaStore = autoclass('android.provider.MediaStore')
+        Build = autoclass('android.os.Build')
+        PythonActivity = autoclass('org.kivy.android.PythonActivity')
+        activity = PythonActivity.mActivity
 
-        filechooser.open_file(on_selection=_secildi, filters=['*.png', '*.jpg', '*.jpeg', '*.webp'])
+        if int(Build.VERSION.SDK_INT) >= 33:
+            intent = Intent(MediaStore.ACTION_PICK_IMAGES)
+            intent.putExtra(MediaStore.EXTRA_PICK_IMAGES_MAX, 1)
+        else:
+            intent = Intent(Intent.ACTION_GET_CONTENT)
+            intent.setType('image/*')
+            intent.addCategory(Intent.CATEGORY_OPENABLE)
+            intent = Intent.createChooser(intent, 'Fotoğraf seç')
+
+        activity.startActivityForResult(intent, _GALERI_ISTEK)
     except Exception as e:
-        print(f'Galeri: {e}', flush=True)
+        print(f'Galeri picker: {e}', flush=True)
+        _galeri_callback = None
         _ana_thread(lambda: callback(None, 'Galeri açılamadı'))
 
 
@@ -299,7 +347,7 @@ def _galeri_masaustu(callback):
 
 def galeriden_sec(callback):
     if _android_mi():
-        _ana_thread(lambda: _galeri_plyer(callback), 0.05)
+        _ana_thread(lambda: _galeri_android_picker(callback), 0.05)
     else:
         _galeri_masaustu(callback)
 
