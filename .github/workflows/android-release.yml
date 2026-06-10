@@ -146,6 +146,15 @@ jobs:
           set -o pipefail
           exit $EC
 
+      - name: Show errors if failed
+        if: failure()
+        run: |
+          if [ -f buildozer-release.log ]; then
+            grep -E "ERROR|Error|failed|Traceback|gradlew|Manifest" buildozer-release.log | tail -n 50 || true
+            tail -n 30 buildozer-release.log || true
+          fi
+          ls -la bin/ 2>/dev/null || echo "bin/ yok"
+
       - name: Upload AAB
         if: success()
         uses: actions/upload-artifact@v4
@@ -153,3 +162,11 @@ jobs:
           name: falimabak-release-aab
           path: bin/*release*.aab
           if-no-files-found: error
+
+      - name: Upload log on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: buildozer-release-log
+          path: buildozer-release.log
+          if-no-files-found: ignore

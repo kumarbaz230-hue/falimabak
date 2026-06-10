@@ -6,7 +6,16 @@ import re
 _STRIP = (
     'android.permission.READ_MEDIA_IMAGES',
     'android.permission.READ_MEDIA_VIDEO',
+    'android.permission.READ_EXTERNAL_STORAGE',
+    'android.permission.WRITE_EXTERNAL_STORAGE',
 )
+
+
+def _dist_dir(toolchain):
+    dist = getattr(toolchain, '_dist', None)
+    if dist is None:
+        return None
+    return getattr(dist, 'dist_dir', None)
 
 
 def _patch_manifest(path):
@@ -15,47 +24,34 @@ def _patch_manifest(path):
     with open(path, encoding='utf-8') as f:
         text = f.read()
     orig = text
-    if 'xmlns:tools' not in text:
-        text = re.sub(
-            r'(<manifest\b)',
-            r'\1 xmlns:tools="http://schemas.android.com/tools"',
-            text,
-            count=1,
-        )
-    inserts = []
     for perm in _STRIP:
-        line = f'    <uses-permission android:name="{perm}" tools:node="remove" />'
-        if line.strip() not in text:
-            inserts.append(line)
-    if inserts and '<application' in text:
-        text = text.replace(
-            '<application',
-            '\n'.join(inserts) + '\n    <application',
-            1,
+        text = re.sub(
+            rf'\s*<uses-permission[^>]*android:name="{re.escape(perm)}"[^>]*/>\s*',
+            '\n',
+            text,
         )
     if text != orig:
         with open(path, 'w', encoding='utf-8') as f:
             f.write(text)
-        print(f'p4a_manifest: yamalandi {path}', flush=True)
+        print(f'p4a_manifest: temizlendi {path}', flush=True)
 
 
-def _dist_manifest_paths(info):
-    paths = []
-    dist_dir = None
-    if isinstance(info, dict):
-        dist_dir = info.get('dist_dir') or info.get('build_dir')
-    elif info is not None:
-        dist_dir = getattr(info, 'dist_dir', None) or getattr(info, 'build_dir', None)
-    if dist_dir:
-        paths.append(os.path.join(dist_dir, 'AndroidManifest.xml'))
-        paths.append(os.path.join(dist_dir, 'src', 'main', 'AndroidManifest.xml'))
-    return paths
+def _run(toolchain):
+    dist_dir = _dist_dir(toolchain)
+    if not dist_dir:
+        print('p4a_manifest: dist_dir yok', flush=True)
+        return
+    for rel in ('AndroidManifest.xml', os.path.join('src', 'main', 'AndroidManifest.xml')):
+        _patch_manifest(os.path.join(dist_dir, rel))
 
 
-def pre_build_apk(info=None, **kwargs):
-    for path in _dist_manifest_paths(info or kwargs):
-        _patch_manifest(path)
+def before_apk_build(toolchain):
+    _run(toolchain)
 
 
-def post_dist(info=None, **kwargs):
-    pre_build_apk(info, **kwargs)
+def after_apk_build(toolchain):
+    _run(toolchain)
+
+
+def before_apk_assemble(toolchain):
+    _run(toolchain)
