@@ -337,4 +337,4 @@ class ElFaliScreen(Screen):
             self.fal_bak_btn.disabled = False
 
         foto_veri = self.foto_panel.tum_veri()
-        yorum_al('elfali', foto_veri, _ai_bitir)
+        yorum_al('elfali', foto_veri, _ai_bitir, coin_dahil=False)

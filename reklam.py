@@ -282,9 +282,10 @@ def fal_sonrasi_reklam():
                 try:
                     from kivy.app import App
                     app = App.get_running_app()
-                    if app and app.root:
+                    sm = getattr(app, '_sm', None) if app else None
+                    if sm:
                         Clock.schedule_once(
-                            lambda *__, e=app.root.current: ekran_reklam_guncelle(e), 4,
+                            lambda *__, e=sm.current: ekran_reklam_guncelle(e), 4,
                         )
                 except Exception:
                     pass

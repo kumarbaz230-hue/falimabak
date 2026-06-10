@@ -292,4 +292,4 @@ class KahveScreen(Screen):
             self.fal_buton.disabled = False
 
         foto_veri = self.foto_panel.tum_veri()
-        yorum_al('kahve', foto_veri, _ai_bitir)
+        yorum_al('kahve', foto_veri, _ai_bitir, coin_dahil=False)

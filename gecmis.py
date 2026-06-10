@@ -327,4 +327,10 @@ def baslik_olustur(tip, veri=None):
         return f"Diğer — {veri.get('tur', 'Fal')}"
     if tip == 'burc_eslesme':
         return f"Burç Eşleşmesi — {veri.get('burc1', '?')} & {veri.get('burc2', '?')}"
+    if tip == 'ruya':
+        ozet = veri.get('ozet') or veri.get('ruya', '')
+        ozet = ' '.join(str(ozet).split())
+        if len(ozet) > 40:
+            ozet = ozet[:37] + '…'
+        return f'Rüya Tabiri — {ozet}' if ozet else 'Rüya Tabiri'
     return tip.capitalize()

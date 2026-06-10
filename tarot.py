@@ -410,4 +410,4 @@ class TarotScreen(Screen):
             )
             self.yorum.height = max(self.yorum.texture_size[1] + dp(10), dp(80))
 
-        yorum_al('tarot', {'kartlar': kartlar}, _bitir)
+        yorum_al('tarot', {'kartlar': kartlar}, _bitir, coin_dahil=False)

@@ -5,10 +5,11 @@ from datetime import date
 from gecmis import _yukle, _kaydet
 
 HOSGELDIN_BONUS = 10
+GUNLUK_GIRIS_BONUS = 3  # Her gün ilk açılışta
 FAL_MALIYET = 1
 REKLAM_COIN_ODUL = 3
 REKLAM_GUNLUK_MAX = 5
-SINIRSIZ_TIPLER = frozenset({'burc_eslesme'})
+SINIRSIZ_TIPLER = frozenset()
 
 
 def _gunluk_reklam(veri=None):
@@ -50,6 +51,19 @@ def hosgeldin_kontrol():
         return False, coin_miktar()
     veri['hosgeldin_verildi'] = True
     veri['coin'] = int(veri.get('coin', 0)) + HOSGELDIN_BONUS
+    _kaydet(veri)
+    return True, veri['coin']
+
+
+def gunluk_giris_kontrol():
+    """Her gün ilk uygulama açılışında bonus. (yeni_verildi, miktar) döner."""
+    veri = _yukle()
+    bugun = date.today().isoformat()
+    gb = veri.get('coin_gunluk_bonus') or {}
+    if gb.get('tarih') == bugun:
+        return False, coin_miktar()
+    veri['coin_gunluk_bonus'] = {'tarih': bugun}
+    veri['coin'] = int(veri.get('coin', 0)) + GUNLUK_GIRIS_BONUS
     _kaydet(veri)
     return True, veri['coin']
 

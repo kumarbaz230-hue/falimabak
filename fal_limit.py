@@ -1,4 +1,4 @@
-"""Fal başlatma — coin harcama (burç eşleşmesi ücretsiz)."""
+"""Fal başlatma — coin harcama."""
 
 from kivy.clock import Clock
 from kivy.metrics import dp
@@ -15,6 +15,8 @@ TIP_ETIKET = {
     'astroloji': 'Astroloji',
     'elfali': 'El Falı',
     'diger': 'Diğer Fallar',
+    'burc_eslesme': 'Burç Eşleşmesi',
+    'ruya': 'Rüya Tabiri',
 }
 
 
@@ -31,21 +33,24 @@ def fal_durumu(tip):
 
 
 def fal_kullanildi_kaydet(tip):
-    if fal_ucretsiz(tip):
-        return
-    coin_harca(FAL_MALIYET)
-    try:
-        from coin_ui import coin_ui_yenile
-        coin_ui_yenile()
-    except Exception:
-        pass
+    """Coin yorum_baslat anında düşülür; burada ek işlem yok."""
+    return
 
 
 def yorum_baslat(tip, devam_fn):
-    if fal_izinli(tip):
-        devam_fn()
+    if not fal_izinli(tip):
+        _coin_yetersiz_popup(tip)
         return
-    _coin_yetersiz_popup(tip)
+    if not fal_ucretsiz(tip):
+        if not coin_harca(FAL_MALIYET):
+            _coin_yetersiz_popup(tip)
+            return
+        try:
+            from coin_ui import coin_ui_yenile
+            coin_ui_yenile()
+        except Exception:
+            pass
+    devam_fn()
 
 
 def _coin_yetersiz_popup(tip):

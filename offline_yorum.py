@@ -358,6 +358,97 @@ def _astroloji_yorum(veri):
     return '\n'.join(bolum)
 
 
+RUYA_SEMBOLLER = {
+    'su': 'Su, duygularınızın ve bilinçaltınızın derinliklerini temsil eder. Temiz su arınma, '
+          'dalgalı su ise içsel hareketlilik müjdeler.',
+    'deniz': 'Deniz, geniş bir duygusal alanı ve bilinmeyene açılan kapıyı simgeler.',
+    'uç': 'Uçmak özgürlük arzusu ve sınırları aşma isteğini yansıtır; bazen hedeflerinize '
+          'yükselme dönemindesiniz demektir.',
+    'düş': 'Düşmek kontrol kaybı korkusu veya ani değişime hazırlık sürecini gösterebilir; '
+           'yere yumuşak iniş genelde güvenli bir dönüşüm işaretidir.',
+    'ölüm': 'Rüyada ölüm çoğu zaman yeniden doğuş ve bitişlerin ardından gelen yeni başlangıçları '
+            'simgeleştirir; korkutucu değil, dönüşümdür.',
+    'yılan': 'Yılan bilgelik, şifa veya gizli bir mesajın habercisidir; renk ve davranışına göre '
+             'farklı tonlar taşır.',
+    'köpek': 'Köpek sadakat, güven ve koruyucu enerjiyi temsil eder; sevdiğiniz biriyle bağınızı '
+             'güçlendirebilir.',
+    'kedi': 'Kedi bağımsızlık, sezgi ve gizemli bir rehberlik sembolüdür.',
+    'bebek': 'Bebek yeni bir fikir, proje veya masum bir başlangıcın habercisidir.',
+    'ev': 'Ev benliğiniz, güvenlik alanınız ve aile bağlarınızı yansıtır.',
+    'araba': 'Araba hayat yolculuğunuzda kontrol ve yön duygunuzu gösterir.',
+    'diş': 'Diş düşmesi kaygı veya ifade etme ihtiyacıyla ilişkilendirilir; '
+           'kendinizi daha net anlatma zamanı olabilir.',
+    'ateş': 'Ateş tutku, dönüşüm veya dikkat gerektiren bir konuyu simgeler.',
+    'düğün': 'Düğün birleşme, yeni anlaşmalar veya hayatınıza girecek güzel bir haberi müjdeler.',
+    'para': 'Para değer duygunuz, emeklerinizin karşılığı veya maddi endişelerle ilgilidir.',
+    'yol': 'Yol yeni seçimler ve ileriye dönük adımlarınızı temsil eder.',
+    'ağaç': 'Ağaç kök salma, büyüme ve sabırla olgunlaşma enerjisini taşır.',
+    'anne': 'Anne figürü şefkat, koruma veya çözülmesi gereken bir bağın hatırlatıcısı olabilir.',
+    'baba': 'Baba figürü otorite, rehberlik veya sorumluluk alanına işaret eder.',
+}
+
+
+def _ruya_sembol_bul(ruya_metin, rng):
+    metin = (ruya_metin or '').lower()
+    bulunan = []
+    for anahtar, aciklama in RUYA_SEMBOLLER.items():
+        if anahtar in metin:
+            bulunan.append(aciklama)
+    if not bulunan:
+        genel = [
+            'Rüyanızdaki imgeler bilinçaltınızın size nazik bir mesaj taşıdığını gösteriyor.',
+            'Semboller çoğu zaman bastırılmış duyguların veya yakın zamanda çözülecek bir '
+            'konunun yansımasıdır.',
+            'Rüyanın tonu — korkulu mu, huzurlu mu — yorumun anahtarıdır; huzurlu rüyalar '
+            'genelde olumlu dönüşüm müjdeler.',
+        ]
+        return [rng.choice(genel)]
+    rng.shuffle(bulunan)
+    return bulunan[:3]
+
+
+def _ruya_yorum(veri):
+    hitap = _hitap()
+    ruya = (veri.get('ruya') or veri.get('ozet') or '').strip()
+    rng = rng_olustur(veri, hash(ruya[:120]) % 99999)
+    uzun = premium_uzun_mu(rng)
+
+    bolum = ['RÜYA TABİRİ', '']
+    if ruya:
+        ozet = ruya if len(ruya) <= 120 else ruya[:117] + '…'
+        bolum.append(f'Rüyanız: "{ozet}"')
+        bolum.append('')
+
+    bolum.append('Genel anlam:')
+    bolum.append(_paragraf(hitap + rng.choice([
+        'Rüyanız bilinçaltınızın size seslenme biçimidir; semboller gerçek hayattaki '
+        'duygularınızla bağ kurar.',
+        'Gördüğünüz sahneler çoğu zaman doğrudan geleceği değil, iç dünyanızdaki '
+        'hareketliliği yansıtır.',
+        'Rüya tabiri eğlence ve farkındalık içindir; mesajı kendi sezgilerinizle birleştirin.',
+    ])))
+    bolum.append('')
+
+    semboller = _ruya_sembol_bul(ruya, rng)
+    bolum.append('Sembol yorumları:')
+    for s in semboller:
+        bolum.append(_paragraf(s))
+        bolum.append('')
+
+    bolum.append('Duygusal mesaj:')
+    for p in paragraf_sec(rng, ASK_UZUN, 1 if not uzun else 2):
+        bolum.append(_paragraf(hitap + p))
+    bolum.append('')
+
+    bolum.append('Yakın dönem ipuçları:')
+    for p in paragraf_sec(rng, GENEL_UZUN, 2 if uzun else 1):
+        bolum.append(_paragraf(hitap + p))
+
+    bolum.append('')
+    bolum.append(rng.choice(KAPANIS_CUMLE))
+    return '\n'.join(bolum)
+
+
 def _iskambil_yorum(veri, rng, hitap, uzun):
     kartlar = veri.get('kartlar') or []
     bolum = ['İSKAMBİL FALI YORUMUNUZ', '']
@@ -493,4 +584,26 @@ def _uret_ic(tip, veri, foto_ozellikleri=None):
         return _astroloji_yorum(veri)
     if tip == 'diger':
         return _diger_yorum(veri)
+    if tip == 'ruya':
+        return _ruya_yorum(veri)
+    if tip == 'burc_eslesme':
+        hitap = _hitap()
+        b1 = veri.get('burc1', '')
+        b2 = veri.get('burc2', '')
+        skor = veri.get('skor', 70)
+        rng = rng_olustur(veri, hash(f'{b1}{b2}') % 99999)
+        bolum = [
+            'BURÇ EŞLEŞMESİ YORUMU',
+            '',
+            _paragraf(
+                f'{hitap}{b1} ve {b2} burçları %{skor} uyum gösteriyor. '
+                'Farklılıklarınız sizi tamamlayabilir; iletişim ve sabırla güzel bir denge kurabilirsiniz.'
+            ),
+            '',
+        ]
+        for p in paragraf_sec(rng, ASK_UZUN, 2):
+            bolum.append(_paragraf(hitap + p))
+        bolum.append('')
+        bolum.append(rng.choice(KAPANIS_CUMLE))
+        return '\n'.join(bolum)
     return _diger_yorum({'tur': tip, 'sonuc': '', 'alt_tip': tip})

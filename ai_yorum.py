@@ -741,6 +741,22 @@ def _prompt_olustur(tip, veri, gorsel_var=False):
             'ilişki tavsiyesi. 4-6 paragraf. Olumlu ama dengeli ol; kesin gelecek iddiası kullanma.'
         )
 
+    if tip == 'ruya':
+        ruya = (veri.get('ruya') or veri.get('ozet') or '').strip()
+        return (
+            'Sen deneyimli bir rüya tabircisisin. Eğlence ve kişisel farkındalık amaçlı Türkçe yaz.\n'
+            'Tıbbi teşhis, psikolojik tanı veya kesin gelecek iddiası kullanma.\n'
+            f'{kullanici}'
+            f'Kullanıcının rüyası:\n"""{ruya}"""\n'
+            'Yorumunda şunları kapsa:\n'
+            '1) Rüyanın genel atmosferi ve ana mesajı\n'
+            '2) Öne çıkan sembollerin geleneksel rüya tabiri anlamları (su, uçmak, düşmek, '
+            'hayvanlar, ev, yolculuk vb. rüyada geçenlere göre)\n'
+            '3) Duygusal/ruhsal ipuçları — bilinçaltının ne anlatmak isteyebileceği\n'
+            '4) Yakın dönem için nazik, yapıcı bir tavsiye\n'
+            '5-7 paragraf, sıcak ve anlaşılır dil. Her seferinde farklı ifadeler kullan.'
+        )
+
     if tip == 'diger':
         alt = veri.get('alt_tip') or veri.get('tur', '')
         ozet = veri.get('sonuc', '')
@@ -799,6 +815,15 @@ def _yedek_yorum(tip, veri):
             f'{hitap}{b1} ve {b2} burçları %{skor} uyum gösteriyor. '
             'Farklılıklarınız sizi tamamlayabilir; iletişim ve sabırla güzel bir denge kurabilirsiniz.'
         )
+    if tip == 'ruya':
+        return random.choice([
+            f'{hitap}rüyanız bilinçaltınızın size nazik bir mesaj taşıdığını gösteriyor. '
+            'Semboller yakın zamanda için umut ve yenilenme enerjisi müjdeler.',
+            f'{hitap}gördüğünüz imgeler duygusal bir dönüşümün habercisi olabilir. '
+            'İç sesinize kulak verdiğinizde doğru yolu bulacaksınız.',
+            f'{hitap}rüyanızdaki detaylar, bastırılmış bir arzunun veya çözülmeyi bekleyen '
+            'bir konunun yansıması olabilir. Sabırlı ve meraklı kalın.',
+        ])
     if tip == 'diger':
         return f'{hitap}yıldızlar size güzel günler müjdeliyor. Pozitif kalın ve sezgilerinize güvenin.'
     return f'{hitap}evren size güzel haberler hazırlıyor. Pozitif kalın ve fırsatları değerlendirin.'
@@ -840,25 +865,24 @@ def _yorum_uret(text_prompt, ayar, gorsel=None, vision_prompt=None):
     return None, None, hatalar
 
 
-def yorum_al(tip, veri, callback):
+def yorum_al(tip, veri, callback, coin_dahil=True):
     """
     callback(metin, ai_kullanildi, hata, kaynak)
     ai_kullanildi=True → Gemini veya Ollama kullanıldı.
     kaynak: 'gemini' | 'ollama' | None
+    coin_dahil=False → coin zaten yorum_baslat ile düşüldü (tarot, kahve vb.)
     """
-    from fal_limit import yorum_baslat
-    yorum_baslat(tip, lambda: _yorum_al_calistir(tip, veri, callback))
+    if coin_dahil:
+        from fal_limit import yorum_baslat
+        yorum_baslat(tip, lambda: _yorum_al_calistir(tip, veri, callback))
+    else:
+        _yorum_al_calistir(tip, veri, callback)
 
 
 def _yorum_al_calistir(tip, veri, callback):
 
     def _sonuc(metin, ai_kullanildi, hata, kaynak=None, fotograf=False):
         if metin:
-            try:
-                from fal_limit import fal_kullanildi_kaydet
-                fal_kullanildi_kaydet(tip)
-            except Exception:
-                pass
             try:
                 from gecmis import baslik_olustur, fal_kaydet
                 fal_kaydet(tip, baslik_olustur(tip, veri), metin)

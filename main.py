@@ -167,8 +167,9 @@ class DashboardKart(ButtonBehavior, BoxLayout):
     def on_release(self):
         Animation(opacity=1, duration=0.1).start(self)
         app = App.get_running_app()
-        if app and app.root and self.hedef:
-            app.root.current = self.hedef
+        sm = getattr(app, '_sm', None) if app else None
+        if sm and self.hedef:
+            sm.current = self.hedef
 
 
 class GunlukFalKarti(ButtonBehavior, BoxLayout):
@@ -232,8 +233,9 @@ class GunlukFalKarti(ButtonBehavior, BoxLayout):
 
     def on_release(self):
         app = App.get_running_app()
-        if app and app.root:
-            app.root.current = self._gunluk['hedef']
+        sm = getattr(app, '_sm', None) if app else None
+        if sm:
+            sm.current = self._gunluk['hedef']
 
 
 class SansKurabiyesiKarti(ButtonBehavior, BoxLayout):
@@ -314,34 +316,48 @@ class SansKurabiyesiKarti(ButtonBehavior, BoxLayout):
 
     def on_release(self):
         from dil import t
+        from kivy.uix.anchorlayout import AnchorLayout
         from kivy.uix.popup import Popup
         Animation(opacity=1, duration=0.1).start(self)
         sonuc = kurabiye_ac()
         self.yenile()
 
-        icerik = BoxLayout(orientation='vertical', padding=dp(16), spacing=dp(10))
-        ikon_satir = BoxLayout(size_hint_y=None, height=dp(56))
+        icerik = BoxLayout(orientation='vertical', padding=[dp(16), dp(12), dp(16), dp(14)], spacing=dp(8))
+
+        baslik_kutu = BoxLayout(orientation='vertical', size_hint_y=None, spacing=dp(6))
+        ikon_satir = AnchorLayout(size_hint_y=None, height=dp(56), anchor_x='center', anchor_y='center')
         ikon_satir.add_widget(kart_ikon_widget(dosya='icon_kurabiye.png', boyut=dp(52)))
-        icerik.add_widget(ikon_satir)
+        baslik_kutu.add_widget(ikon_satir)
+        baslik_kutu.add_widget(metin_label(
+            t('cookie_title'),
+            font_size='17sp', bold=True, color=RENKLER['altin_parlak'],
+            halign='center', valign='middle',
+            size_hint_y=None, height=dp(26),
+        ))
+        baslik_kutu.bind(minimum_height=baslik_kutu.setter('height'))
+        icerik.add_widget(baslik_kutu)
+
         icerik.add_widget(metin_label(
             sonuc['mesaj'], font_size='14sp', color=RENKLER['beyaz'],
-            halign='center', size_hint_y=None, height=dp(90),
+            halign='center', valign='middle',
+            size_hint_y=None, height=dp(88),
         ))
         if not sonuc['yeni']:
             icerik.add_widget(metin_label(
                 t('cookie_already'), font_size='11sp', color=RENKLER['gri_acik'],
-                halign='center', size_hint_y=None, height=dp(36),
+                halign='center', size_hint_y=None, height=dp(40),
             ))
-        kapat = siyah_buton(t('cookie_close'), font_size='14sp')
+        kapat = siyah_buton(t('cookie_close'), vurgu=True, font_size='14sp')
         icerik.add_widget(kapat)
 
         popup = Popup(
-            title=t('cookie_fortune_title'),
+            title='',
             content=icerik,
             size_hint=(0.88, None),
-            height=dp(300),
+            height=dp(320),
             separator_color=get_color_from_hex(RENKLER['altin']),
             title_color=get_color_from_hex(RENKLER['altin']),
+            title_size=0,
         )
         kapat.bind(on_press=lambda *_: popup.dismiss())
         popup.open()
@@ -663,6 +679,7 @@ class Anasayfa(Screen):
             (t('menu_astro'), t('menu_astro_desc'), 'astroloji', RENKLER['mavi_acik'], 'astroloji'),
             (t('menu_el'), t('menu_el_desc'), 'elfali', RENKLER['pembe'], 'elfali'),
             (t('menu_burc_esles'), t('menu_burc_esles_desc'), 'burc_eslesme', RENKLER['pembe_acik'], 'burc_eslesme'),
+            (t('menu_ruya'), t('menu_ruya_desc'), 'ruya', RENKLER['mor'], 'ruya'),
             (t('menu_diger'), t('menu_diger_desc'), 'diger', RENKLER['yesil'], 'diger_fallar'),
         ]:
             menu.add_widget(DashboardKart(baslik=baslik, aciklama=aciklama,
@@ -731,9 +748,19 @@ class HataScreen(Screen):
 class FalimaBakApp(App):
     _GERI_ALT = frozenset({
         'tarot', 'kahve', 'astroloji', 'elfali', 'diger_fallar',
-        'burc_eslesme', 'gizlilik',
+        'burc_eslesme', 'ruya', 'gizlilik',
     })
     _GERI_SEKME = frozenset({'gecmis', 'ayarlar'})
+
+    @staticmethod
+    def _acik_modal_kapat():
+        """Kivy 2.3+ Popup._popups yok — açık ModalView/Popup kapat."""
+        from kivy.uix.modalview import ModalView
+        for child in list(Window.children):
+            if isinstance(child, ModalView) and getattr(child, '_is_open', False):
+                child.dismiss()
+                return True
+        return False
 
     def on_start(self):
         Window.bind(on_keyboard=self._geri_tusu)
@@ -786,18 +813,19 @@ class FalimaBakApp(App):
                 pass
 
     def _geri_tusu(self, _window, key, *args):
-        scancode = args[0] if args else None
-        if key not in (4, 27) and scancode not in (4,):
+        # Android: key 4 = BACK. Masaüstü SDL: scancode 4 = A tuşu — karışmasın!
+        if _ANDROID:
+            if key not in (4, 27):
+                return False
+        elif key != 27:
             return False
         return self._geri_isle()
 
     def _geri_isle(self):
         """Geri navigasyon veya çıkış onayı."""
-        from kivy.uix.popup import Popup
-        if Popup._popups:
-            Popup._popups[-1].dismiss()
+        if self._acik_modal_kapat():
             return True
-        sm = self.root
+        sm = self._sm
         if not sm:
             return False
         cur = sm.current
@@ -863,7 +891,7 @@ class FalimaBakApp(App):
     def ekranlari_yenile_dil(self):
         from ayarlar import AyarlarScreen
         from gizlilik import GizlilikScreen
-        sm = self.root
+        sm = self._sm
         if not sm:
             return
         cur = sm.current
@@ -910,28 +938,30 @@ class FalimaBakApp(App):
         self._sm = sm
         Clock.schedule_once(lambda *_: self._ekranlari_yukle(), 0.05)
 
-        from kivy.uix.anchorlayout import AnchorLayout
         from coin_ui import CoinChip
 
         kok = FloatLayout()
         kok.add_widget(sm)
-        self._coin_wrap = AnchorLayout(
-            size_hint=(1, 1),
-            anchor_x='right',
-            anchor_y='top',
-            padding=[dp(8), SAFE_UST + dp(4), dp(12), 0],
-        )
         self._coin_chip = CoinChip()
-        self._coin_wrap.add_widget(self._coin_chip)
-        kok.add_widget(self._coin_wrap)
+        self._coin_chip.size_hint = (None, None)
+        kok.add_widget(self._coin_chip)
+
+        def _coin_konum(*_):
+            ch = self._coin_chip
+            ch.pos = (
+                max(0, kok.width - ch.width - dp(14)),
+                max(0, kok.height - ch.height - SAFE_UST - dp(6)),
+            )
+
+        kok.bind(size=_coin_konum, pos=_coin_konum)
 
         def _coin_gorunurluk(*_):
             gizle = sm.current in ('splash', 'onboarding', 'hata')
-            self._coin_wrap.opacity = 0 if gizle else 1
-            self._coin_wrap.disabled = gizle
+            self._coin_chip.opacity = 0 if gizle else 1
+            self._coin_chip.disabled = gizle
 
         sm.bind(current=_coin_gorunurluk)
-        Clock.schedule_once(lambda *_: _coin_gorunurluk(), 0)
+        Clock.schedule_once(lambda *_: (_coin_konum(), _coin_gorunurluk()), 0)
         return kok
 
     def _ekranlari_yukle(self):
@@ -943,6 +973,7 @@ class FalimaBakApp(App):
             from diger_fallar import DigerFallarScreen
             from elfali import ElFaliScreen
             from burc_eslesme import BurcEslesmeScreen
+            from ruya import RuyaScreen
             from ayarlar import AyarlarScreen
             from gizlilik import GizlilikScreen
 
@@ -958,6 +989,7 @@ class FalimaBakApp(App):
                 ('diger_fallar', lambda: DigerFallarScreen(name='diger_fallar')),
                 ('elfali', lambda: ElFaliScreen(name='elfali')),
                 ('burc_eslesme', lambda: BurcEslesmeScreen(name='burc_eslesme')),
+                ('ruya', lambda: RuyaScreen(name='ruya')),
             ]
             for _, fab in ekranlar:
                 sm.add_widget(fab())

@@ -14,7 +14,7 @@ from kivy.metrics import dp
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 ASSETS_DIR = os.path.join(BASE_DIR, 'assets')
-APP_SURUM = '1.3.0'
+APP_SURUM = '1.3.1'
 
 # ============================================================
 #  PROFESYONEL RENK PALETİ
@@ -82,6 +82,7 @@ KART_MENU_AR = {
     'elfali':    '#221535',
     'diger':     '#122820',
     'burc_eslesme': '#281428',
+    'ruya':      '#181828',
 }
 
 # Tuş metinleri (Segoe UI) + ayrı emoji ikonları
@@ -137,6 +138,7 @@ FAL_IKONLARI = {
     'elfali':    '✋',
     'diger':     '✨',
     'burc_eslesme': '💞',
+    'ruya':      '🌙',
     'ok':        '›',
 }
 
@@ -166,6 +168,7 @@ DIGER_FAL_IKONLARI = {
 
 # Mobil safe area (çentik / gesture bar) — Android'de aşağıda genişletilir
 SAFE_UST = dp(8)
+COIN_SAG_BOSLUK = dp(96)
 SAFE_ALT = dp(10)
 BUTON_MIN_YUKSEK = dp(48)
 
@@ -331,7 +334,7 @@ def fal_ikon_widget_yedek(anahtar, renk_hex, font_size='26sp', **kwargs):
         return emoji_label(metin, font_size=font_size, color=renk_hex, **kwargs)
     harf = {
         'tarot': 'T', 'kahve': 'K', 'astroloji': 'Y',
-        'elfali': 'E', 'diger': 'D', 'burc_eslesme': 'B',
+        'elfali': 'E', 'diger': 'D', 'burc_eslesme': 'B', 'ruya': 'R',
     }.get(anahtar, 'F')
     return metin_label(
         harf, font_size=font_size, bold=True, color=renk_hex,
@@ -381,19 +384,21 @@ def kart_ikon_widget(anahtar=None, dosya=None, boyut=None, renk_hex=None, **kwar
 
 
 def guvenli_textinput(hint_text='', **kwargs):
-    """Android'de font_name ile TextInput çökmesini önler."""
+    """Android/desktop güvenli TextInput — multiline ve mobilde font_name kullanmaz."""
     from kivy.uix.textinput import TextInput
 
     fontlari_yukle()
+    cok_satir = bool(kwargs.get('multiline', False))
+    guvenli_mod = _android_mi() or cok_satir
     temel = {
         'hint_text': hint_text,
         'multiline': False,
         'size_hint_y': None,
         'height': dp(44),
         'font_size': '15sp',
+        'write_tab': False,
     }
-    if _android_mi():
-        # font_name ve karmaşık renkler SDL2 TextInput'ta native crash yapabiliyor
+    if guvenli_mod:
         temel.update({
             'padding': [12, 10, 12, 10],
             'background_normal': '',
@@ -604,6 +609,8 @@ def baslik_satir(ikon, metin, font_size='22sp', renk=None, height=None, **kwargs
         valign='middle',
         size_hint_x=1,
     ))
+    from kivy.uix.widget import Widget
+    satir.add_widget(Widget(size_hint_x=None, width=COIN_SAG_BOSLUK))
     return satir
 
 
@@ -1076,7 +1083,7 @@ def ust_baslik_bar(baslik, geri_callback=None):
         halign='center',
         size_hint_x=0.4,
     ))
-    bar.add_widget(BoxLayout(size_hint_x=0.3))
+    bar.add_widget(BoxLayout(size_hint_x=None, width=COIN_SAG_BOSLUK))
     return bar
 
 

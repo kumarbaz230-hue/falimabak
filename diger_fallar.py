@@ -202,7 +202,7 @@ class DigerFallarScreen(Screen):
                 self.sonuc_label.text = foto_fal_sonuc(metin, hata)
             self.tekrar_buton.disabled = False
 
-        yorum_al('diger', veri, _bitir)
+        yorum_al('diger', veri, _bitir, coin_dahil=False)
 
     def fal_sec(self, fal_type):
         """Seçilen fal türüne göre fal bak"""

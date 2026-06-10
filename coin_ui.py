@@ -1,18 +1,21 @@
 """Coin göstergesi (sağ üst) ve reklam popup."""
 
+from kivy.animation import Animation
 from kivy.clock import Clock
 from kivy.graphics import Color, Line, RoundedRectangle
 from kivy.metrics import dp
+from kivy.uix.anchorlayout import AnchorLayout
 from kivy.uix.behaviors import ButtonBehavior
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.popup import Popup
 from kivy.utils import get_color_from_hex
 
 from coin import (
-    FAL_MALIYET, HOSGELDIN_BONUS, REKLAM_COIN_ODUL, REKLAM_GUNLUK_MAX,
-    coin_miktar, hosgeldin_kontrol, reklam_hakki_var, reklam_kalan, reklam_coin_kazan,
+    FAL_MALIYET, GUNLUK_GIRIS_BONUS, HOSGELDIN_BONUS, REKLAM_COIN_ODUL, REKLAM_GUNLUK_MAX,
+    coin_miktar, gunluk_giris_kontrol, hosgeldin_kontrol, reklam_hakki_var, reklam_kalan,
+    reklam_coin_kazan,
 )
-from theme import RENKLER, metin_label, siyah_buton
+from theme import RENKLER, kart_ikon_widget, metin_label, siyah_buton
 
 _CHIPLER = []
 
@@ -25,31 +28,54 @@ def coin_ui_yenile():
             pass
 
 
+def _coin_ikon_widget(boyut=None, **kwargs):
+    w = kart_ikon_widget(dosya='icon_coin.png', boyut=boyut or dp(28), **kwargs)
+    if w:
+        return w
+    return metin_label('★', font_size='18sp', bold=True, color=RENKLER['altin'], **kwargs)
+
+
 class CoinChip(ButtonBehavior, BoxLayout):
-    """Sağ üst coin butonu."""
+    """Sağ üst altın coin rozeti."""
 
     def __init__(self, **kwargs):
         super().__init__(orientation='horizontal', **kwargs)
         self.size_hint = (None, None)
-        self.size = (dp(72), dp(34))
-        self.padding = [dp(8), dp(4), dp(10), dp(4)]
+        self.size = (dp(76), dp(34))
+        self.padding = [dp(5), dp(3), dp(8), dp(3)]
         self.spacing = dp(4)
-        gold = get_color_from_hex(RENKLER['altin'])
+
+        altin = get_color_from_hex(RENKLER['altin'])
+        altin2 = get_color_from_hex(RENKLER['buton_altin'])
         with self.canvas.before:
-            Color(0.12, 0.08, 0.22, 0.92)
-            self._bg = RoundedRectangle(radius=[dp(16)])
-            Color(gold[0], gold[1], gold[2], 0.55)
-            self._kenar = Line(width=dp(1.2), rounded_rectangle=(0, 0, 0, 0, dp(16)))
+            Color(0, 0, 0, 0.35)
+            self._golge = RoundedRectangle(radius=[dp(17)])
+            Color(0.14, 0.10, 0.28, 0.96)
+            self._bg = RoundedRectangle(radius=[dp(17)])
+            Color(altin2[0], altin2[1], altin2[2], 0.22)
+            self._parilti = RoundedRectangle(radius=[dp(17)])
+            Color(altin[0], altin[1], altin[2], 0.75)
+            self._kenar = Line(width=dp(1.4), rounded_rectangle=(0, 0, 0, 0, dp(17)))
+        with self.canvas.after:
+            Color(altin[0], altin[1], altin[2], 0.18)
+            self._isik = Line(width=dp(0.8), rounded_rectangle=(0, 0, 0, 0, dp(17)))
+
         self.bind(pos=self._ciz, size=self._ciz)
-        self._ikon = metin_label(
-            '🪙', font_size='15sp', size_hint_x=None, width=dp(20),
+        Clock.schedule_once(lambda *_: self._ciz(), 0)
+
+        ikon_kutu = AnchorLayout(
+            size_hint_x=None, width=dp(28),
+            anchor_x='center', anchor_y='center',
         )
+        ikon_kutu.add_widget(_coin_ikon_widget(boyut=dp(24)))
+        self.add_widget(ikon_kutu)
+
         self._sayi = metin_label(
-            '0', font_size='14sp', bold=True, color=RENKLER['altin_parlak'],
-            halign='left', size_hint_x=1,
+            '0', font_size='16sp', bold=True, color=RENKLER['altin_parlak'],
+            halign='left', valign='middle', size_hint_x=1,
         )
-        self.add_widget(self._ikon)
         self.add_widget(self._sayi)
+
         _CHIPLER.append(self)
         Clock.schedule_once(lambda *_: self.guncelle(), 0)
 
@@ -58,14 +84,24 @@ class CoinChip(ButtonBehavior, BoxLayout):
         w, h = self.size
         if w < 1 or h < 1:
             return
+        r = dp(17)
+        self._golge.pos = (x + dp(1), y - dp(2))
+        self._golge.size = (w - dp(2), h)
         self._bg.pos = (x, y)
         self._bg.size = (w, h)
-        self._kenar.rounded_rectangle = (x, y, w, h, dp(16))
+        self._parilti.pos = (x + dp(2), y + h * 0.45)
+        self._parilti.size = (w - dp(4), h * 0.5)
+        self._kenar.rounded_rectangle = (x, y, w, h, r)
+        self._isik.rounded_rectangle = (x + dp(2), y + dp(2), w - dp(4), h - dp(4), r - dp(2))
 
     def guncelle(self):
         self._sayi.text = str(coin_miktar())
 
+    def on_press(self):
+        Animation(opacity=0.82, duration=0.06).start(self)
+
     def on_release(self):
+        Animation(opacity=1, duration=0.12).start(self)
         coin_popup_goster()
 
     def __del__(self):
@@ -77,16 +113,27 @@ class CoinChip(ButtonBehavior, BoxLayout):
 
 def coin_satir_ekle(ust_layout):
     """Sağ üste hizalı coin satırı (BoxLayout/vertical içine)."""
-    from kivy.uix.anchorlayout import AnchorLayout
-
-    satir = BoxLayout(size_hint_y=None, height=dp(38))
+    satir = BoxLayout(size_hint_y=None, height=dp(42))
     satir.add_widget(BoxLayout(size_hint_x=1))
-    anchor = AnchorLayout(size_hint_x=None, width=dp(80), anchor_x='right', anchor_y='center')
-    chip = CoinChip()
-    anchor.add_widget(chip)
+    anchor = AnchorLayout(size_hint_x=None, width=dp(96), anchor_x='right', anchor_y='center')
+    anchor.add_widget(CoinChip())
     satir.add_widget(anchor)
     ust_layout.add_widget(satir)
-    return chip
+    return anchor.children[0] if anchor.children else None
+
+
+def _popup_baslik_coin():
+    """Popup üstünde büyük coin ikonu."""
+    satir = BoxLayout(
+        orientation='horizontal', size_hint_y=None, height=dp(52),
+        padding=[0, 0, 0, dp(4)],
+    )
+    satir.add_widget(BoxLayout(size_hint_x=1))
+    ikon = AnchorLayout(size_hint_x=None, width=dp(52), anchor_x='center', anchor_y='center')
+    ikon.add_widget(_coin_ikon_widget(boyut=dp(44)))
+    satir.add_widget(ikon)
+    satir.add_widget(BoxLayout(size_hint_x=1))
+    return satir
 
 
 def coin_popup_goster():
@@ -97,21 +144,22 @@ def coin_popup_goster():
     kalan = reklam_kalan()
     bakiye = coin_miktar()
 
-    icerik = BoxLayout(orientation='vertical', padding=dp(16), spacing=dp(10))
+    icerik = BoxLayout(orientation='vertical', padding=dp(16), spacing=dp(8))
+    icerik.add_widget(_popup_baslik_coin())
     icerik.add_widget(metin_label(
         t('coin_balance', coin=bakiye),
-        font_size='16sp', bold=True, color=RENKLER['altin'],
-        halign='center', size_hint_y=None, height=dp(28),
+        font_size='17sp', bold=True, color=RENKLER['altin_parlak'],
+        halign='center', size_hint_y=None, height=dp(30),
     ))
     icerik.add_widget(metin_label(
         t('coin_fal_cost', cost=FAL_MALIYET),
         font_size='12sp', color=RENKLER['gri_acik'],
-        halign='center', size_hint_y=None, height=dp(40),
+        halign='center', size_hint_y=None, height=dp(36),
     ))
     icerik.add_widget(metin_label(
         t('coin_ad_info', odul=REKLAM_COIN_ODUL, kalan=kalan, max=REKLAM_GUNLUK_MAX),
         font_size='12sp', color=RENKLER['beyaz'],
-        halign='center', size_hint_y=None, height=dp(52),
+        halign='center', size_hint_y=None, height=dp(48),
     ))
     btn_satir = BoxLayout(size_hint_y=None, height=dp(44), spacing=dp(10))
     kapat = siyah_buton(t('coin_close'), font_size='14sp')
@@ -127,7 +175,7 @@ def coin_popup_goster():
         title=t('coin_title'),
         content=icerik,
         size_hint=(0.88, None),
-        height=dp(240),
+        height=dp(280),
         separator_color=get_color_from_hex(RENKLER['altin']),
         title_color=get_color_from_hex(RENKLER['altin']),
         auto_dismiss=False,
@@ -175,14 +223,24 @@ def _reklam_hata_popup():
     popup.open()
 
 
-def hosgeldin_popup_goster():
+def hosgeldin_popup_goster(gunluk_de=False):
     from dil import t
 
     icerik = BoxLayout(orientation='vertical', padding=dp(16), spacing=dp(10))
+    icerik.add_widget(_popup_baslik_coin())
+    if gunluk_de:
+        metin = t(
+            'coin_welcome_first',
+            bonus=HOSGELDIN_BONUS,
+            gunluk=GUNLUK_GIRIS_BONUS,
+            toplam=coin_miktar(),
+        )
+    else:
+        metin = t('coin_welcome', bonus=HOSGELDIN_BONUS)
     icerik.add_widget(metin_label(
-        t('coin_welcome', bonus=HOSGELDIN_BONUS),
+        metin,
         font_size='14sp', color=RENKLER['beyaz'],
-        halign='center', size_hint_y=None, height=dp(72),
+        halign='center', size_hint_y=None, height=dp(88),
     ))
     tamam = siyah_buton(t('coin_welcome_ok'), vurgu=True, font_size='14sp')
     icerik.add_widget(tamam)
@@ -190,7 +248,32 @@ def hosgeldin_popup_goster():
         title=t('coin_welcome_title'),
         content=icerik,
         size_hint=(0.88, None),
-        height=dp(200),
+        height=dp(260),
+        separator_color=get_color_from_hex(RENKLER['altin']),
+        title_color=get_color_from_hex(RENKLER['altin']),
+    )
+    tamam.bind(on_press=lambda *_: popup.dismiss())
+    popup.open()
+    coin_ui_yenile()
+
+
+def gunluk_giris_popup_goster():
+    from dil import t
+
+    icerik = BoxLayout(orientation='vertical', padding=dp(16), spacing=dp(10))
+    icerik.add_widget(_popup_baslik_coin())
+    icerik.add_widget(metin_label(
+        t('coin_daily', bonus=GUNLUK_GIRIS_BONUS, toplam=coin_miktar()),
+        font_size='14sp', color=RENKLER['beyaz'],
+        halign='center', size_hint_y=None, height=dp(72),
+    ))
+    tamam = siyah_buton(t('coin_welcome_ok'), vurgu=True, font_size='14sp')
+    icerik.add_widget(tamam)
+    popup = Popup(
+        title=t('coin_daily_title'),
+        content=icerik,
+        size_hint=(0.88, None),
+        height=dp(230),
         separator_color=get_color_from_hex(RENKLER['altin']),
         title_color=get_color_from_hex(RENKLER['altin']),
     )
@@ -200,9 +283,12 @@ def hosgeldin_popup_goster():
 
 
 def coin_baslangic_kontrol():
-    """Uygulama açılışında hoşgeldin bonusu popup."""
-    yeni, _ = hosgeldin_kontrol()
-    if yeni:
-        Clock.schedule_once(lambda *_: hosgeldin_popup_goster(), 0.6)
+    """Uygulama açılışında hoşgeldin + günlük giriş bonusu."""
+    yeni_hosgeldin, _ = hosgeldin_kontrol()
+    yeni_gunluk, _ = gunluk_giris_kontrol()
+    if yeni_hosgeldin:
+        Clock.schedule_once(lambda *_: hosgeldin_popup_goster(gunluk_de=yeni_gunluk), 0.6)
+    elif yeni_gunluk:
+        Clock.schedule_once(lambda *_: gunluk_giris_popup_goster(), 0.6)
     else:
         coin_ui_yenile()

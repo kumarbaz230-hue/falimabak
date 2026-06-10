@@ -400,4 +400,4 @@ class AstrolojiScreen(Screen):
         yorum_al('astroloji', {
             'burc': burc_adi,
             'dogum': f'{gun:02d}.{ay:02d}.{yil}',
-        }, _ai_bitir)
+        }, _ai_bitir, coin_dahil=False)
