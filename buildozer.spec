@@ -12,7 +12,7 @@ source.include_patterns = assets/*,assets/muzik/*,config.ornek.json,store/*
 source.exclude_dirs = tests,bin,.git,__pycache__,.buildozer,.venv,venv,env,.idea,user_photos,.github,recipes,tools,images,keystore
 source.exclude_patterns = license,images/*/*.jpg,*.bat,config.json,kullanici_veri.json,.env,secrets.json,secrets.ornek.json,assets/muzik/ambiyans.wav
 
-version = 1.2.17
+version = 1.2.18
 
 icon.filename = %(source.dir)s/assets/app_icon.png
 presplash.filename = %(source.dir)s/assets/splash_banner.png
@@ -22,7 +22,7 @@ requirements = python3,kivy==2.3.1,pillow,android,plyer,certifi
 orientation = portrait
 fullscreen = 0
 
-android.api = 34
+android.api = 35
 android.minapi = 24
 android.ndk = 25b
 android.ndk_api = 24
