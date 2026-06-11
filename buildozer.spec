@@ -29,7 +29,7 @@ android.ndk_api = 24
 
 android.permissions = INTERNET,ACCESS_NETWORK_STATE,AD_ID,CAMERA
 
-# Galeri intent ile açılır; plyer yok. Medya izinleri p4a hook ile manifest'ten silinir.
+# Galeri: sistem seçici (READ_MEDIA yok). Medya izinleri p4a hook ile manifest'ten silinir.
 p4a.hook = %(source.dir)s/hooks/p4a_manifest.py
 
 android.archs = arm64-v8a,armeabi-v7a
