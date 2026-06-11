@@ -50,7 +50,7 @@ from theme import (
     RENKLER, KART_MENU_AR,
     SAFE_UST, SAFE_ALT,
     fontlari_yukle, emoji_font_yukle, emoji_label,
-    fal_ikon_widget, guvenli_textinput,
+    fal_ikon_widget, guvenli_textinput, klavye_kapat,
     metin_label, gradient_arka_plan_ekle, asset_yolu,
     alt_nav_bar, ekran_icerik_sar, kart_zemin_bagla, baslik_satir,
     yorum_baslik_metin, gorsel_arkaplan_ekle, siyah_buton, kart_ikon_widget,
@@ -543,8 +543,19 @@ class OnboardingScreen(Screen):
             halign='center', size_hint_y=None, height=dp(60)))
 
         if self._adim == len(self.SLAYTLAR) - 1:
-            self._isim = guvenli_textinput(hint_text='Adınız (isteğe bağlı)')
-            self._ana.add_widget(self._isim)
+            isim_kutu = BoxLayout(
+                orientation='vertical',
+                size_hint_y=None,
+                height=dp(52),
+                padding=[0, dp(4), 0, 0],
+            )
+            self._isim = guvenli_textinput(
+                hint_text='Adınız (isteğe bağlı)',
+                size_hint_y=None,
+                height=dp(44),
+            )
+            isim_kutu.add_widget(self._isim)
+            self._ana.add_widget(isim_kutu)
 
         self._ana.add_widget(BoxLayout(size_hint_y=1))
 
@@ -563,13 +574,26 @@ class OnboardingScreen(Screen):
 
     def _ileri(self, *_):
         if self._adim < len(self.SLAYTLAR) - 1:
+            klavye_kapat()
             self._adim += 1
             self._goster()
             return
-        isim = getattr(self, '_isim', None)
-        onboarding_tamamla(isim.text if isim else '')
-        if self.manager and 'anasayfa' in self.manager.screen_names:
-            self.manager.current = 'anasayfa'
+        isim_metni = ''
+        isim_w = getattr(self, '_isim', None)
+        if isim_w:
+            try:
+                isim_metni = (isim_w.text or '').strip()
+                isim_w.focus = False
+            except Exception:
+                pass
+        klavye_kapat()
+        try:
+            onboarding_tamamla(isim_metni)
+        except Exception as e:
+            print(f'Onboarding kayit: {e}', flush=True)
+        sm = self.manager
+        if sm and 'anasayfa' in sm.screen_names:
+            Clock.schedule_once(lambda *_: setattr(sm, 'current', 'anasayfa'), 0.2)
 
 
 class GecmisScreen(Screen):
@@ -923,6 +947,11 @@ class FalimaBakApp(App):
                 pass
         self.title = 'FalımaBak'
         Window.clearcolor = get_color_from_hex(RENKLER['arka_plan'])
+        if _ANDROID:
+            try:
+                Window.softinput_mode = 'pan'
+            except Exception:
+                pass
         sm = ScreenManager(transition=FadeTransition(duration=0.25))
         with sm.canvas.before:
             Color(*get_color_from_hex(RENKLER['arka_plan']))

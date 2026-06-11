@@ -14,7 +14,7 @@ from kivy.metrics import dp
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 ASSETS_DIR = os.path.join(BASE_DIR, 'assets')
-APP_SURUM = '1.4.5'
+APP_SURUM = '1.4.6'
 
 # ============================================================
 #  PROFESYONEL RENK PALETİ
@@ -386,13 +386,43 @@ def kart_ikon_widget(anahtar=None, dosya=None, boyut=None, renk_hex=None, **kwar
     return metin_label('?', font_size='22sp', bold=True, color=renk_hex or RENKLER['altin'], **kwargs)
 
 
+def klavye_kapat():
+    """Açık klavyeyi kapat (TextInput odak çökmesi önleme)."""
+    try:
+        from kivy.core.window import Window
+        Window.release_all_keyboards()
+    except Exception:
+        pass
+    try:
+        from kivy.uix.textinput import TextInput
+        from kivy.app import App
+
+        app = App.get_running_app()
+        if not app or not app.root:
+            return
+
+        def _gez(w):
+            if isinstance(w, TextInput) and w.focus:
+                w.focus = False
+            for ch in w.children:
+                _gez(ch)
+
+        _gez(app.root)
+    except Exception:
+        pass
+
+
 def guvenli_textinput(hint_text='', **kwargs):
-    """Android/desktop güvenli TextInput — multiline ve mobilde font_name kullanmaz."""
+    """Android/desktop güvenli TextInput — mobilde font_name yok, IME uyumlu zemin."""
     from kivy.uix.textinput import TextInput
 
     fontlari_yukle()
+    android = _android_mi()
     cok_satir = bool(kwargs.get('multiline', False))
-    guvenli_mod = _android_mi() or cok_satir
+    guvenli_mod = android or cok_satir
+    if android:
+        kwargs.pop('font_name', None)
+
     temel = {
         'hint_text': hint_text,
         'multiline': False,
@@ -400,14 +430,18 @@ def guvenli_textinput(hint_text='', **kwargs):
         'height': dp(44),
         'font_size': '15sp',
         'write_tab': False,
+        'input_type': 'text',
+        'use_bubble': False,
+        'use_handles': False,
     }
     if guvenli_mod:
+        # background_normal='' bazı Android cihazlarda IME açılınca native crash yapar
         temel.update({
             'padding': [12, 10, 12, 10],
-            'background_normal': '',
-            'background_active': '',
             'background_color': get_color_from_hex(RENKLER['kart_arka']),
             'foreground_color': (1, 1, 1, 1),
+            'hint_text_color': (0.65, 0.65, 0.72, 1),
+            'cursor_color': (1, 1, 1, 1),
         })
     else:
         temel.update({
@@ -418,6 +452,10 @@ def guvenli_textinput(hint_text='', **kwargs):
             'hint_text_color': get_color_from_hex(RENKLER['gri']),
         })
     temel.update(kwargs)
+    if android:
+        temel.pop('font_name', None)
+        temel.pop('background_normal', None)
+        temel.pop('background_active', None)
     return TextInput(**temel)
 
 
