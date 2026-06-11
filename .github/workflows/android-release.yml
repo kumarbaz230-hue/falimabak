@@ -9,6 +9,8 @@ on:
     branches: [main]
     paths:
       - buildozer.spec
+      - hooks/**
+      - android_res/**
       - .github/workflows/android-release.yml
 
 jobs:
@@ -43,7 +45,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.buildozer
-          key: ${{ runner.os }}-bz-release-${{ hashFiles('buildozer.spec', 'recipes/**') }}
+          key: ${{ runner.os }}-bz-release-v2-${{ hashFiles('buildozer.spec', 'recipes/**', 'hooks/**', 'android_res/**') }}
           restore-keys: |
             ${{ runner.os }}-bz-release-
             ${{ runner.os }}-bz-global-
@@ -154,6 +156,24 @@ jobs:
             tail -n 30 buildozer-release.log || true
           fi
           ls -la bin/ 2>/dev/null || echo "bin/ yok"
+
+      - name: Verify AAB manifest permissions
+        if: success()
+        run: |
+          set -e
+          curl -fL -o /tmp/bundletool.jar \
+            "https://github.com/google/bundletool/releases/download/1.17.2/bundletool-all-1.17.2.jar"
+          AAB=$(ls bin/*release*.aab | head -1)
+          java -jar /tmp/bundletool.jar dump manifest --bundle="$AAB" > /tmp/aab-manifest.xml
+          echo "=== AAB izinleri ==="
+          grep -E "uses-permission|permission" /tmp/aab-manifest.xml || true
+          for BAD in READ_MEDIA_IMAGES READ_MEDIA_VIDEO READ_MEDIA_AUDIO READ_EXTERNAL_STORAGE WRITE_EXTERNAL_STORAGE; do
+            if grep -q "$BAD" /tmp/aab-manifest.xml; then
+              echo "HATA: $BAD AAB manifestinde var!"
+              exit 1
+            fi
+          done
+          echo "OK: Yasak medya izinleri yok"
 
       - name: Upload AAB
         if: success()

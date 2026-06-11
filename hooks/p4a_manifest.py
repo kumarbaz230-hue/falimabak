@@ -1,4 +1,4 @@
-"""p4a hook — gradle merge öncesi medya izinlerini manifest'ten kaldır."""
+"""p4a hook — gradle merge oncesi/sonrasi medya izinlerini manifest'ten kaldir."""
 
 import glob
 import os
@@ -10,6 +10,8 @@ _STRIP = (
     'android.permission.READ_MEDIA_AUDIO',
     'android.permission.READ_EXTERNAL_STORAGE',
     'android.permission.WRITE_EXTERNAL_STORAGE',
+    'android.permission.ACCESS_MEDIA_LOCATION',
+    'android.permission.MANAGE_EXTERNAL_STORAGE',
 )
 
 
@@ -63,12 +65,15 @@ def _patch_manifest(path):
                 f'    <uses-permission android:name="{perm}" tools:node="remove" />'
             )
 
-    if inserts and '<application' in text:
-        text = text.replace(
-            '<application',
-            '\n'.join(inserts) + '\n    <application',
-            1,
-        )
+    if inserts:
+        if '<application' in text:
+            text = text.replace(
+                '<application',
+                '\n'.join(inserts) + '\n    <application',
+                1,
+            )
+        elif '</manifest>' in text:
+            text = text.replace('</manifest>', '\n'.join(inserts) + '\n</manifest>', 1)
 
     if text != orig:
         with open(path, 'w', encoding='utf-8') as f:
@@ -77,14 +82,18 @@ def _patch_manifest(path):
 
 
 def _manifest_paths(dist_dir):
-    paths = [
-        os.path.join(dist_dir, 'AndroidManifest.xml'),
-        os.path.join(dist_dir, 'src', 'main', 'AndroidManifest.xml'),
-    ]
-    paths.extend(glob.glob(
-        os.path.join(dist_dir, 'build', 'intermediates', 'merged_manifests', '**', 'AndroidManifest.xml'),
-        recursive=True,
-    ))
+    patterns = (
+        'AndroidManifest.xml',
+        os.path.join('src', 'main', 'AndroidManifest.xml'),
+        os.path.join('build', 'intermediates', '**', 'AndroidManifest.xml'),
+    )
+    paths = []
+    for pattern in patterns:
+        full = os.path.join(dist_dir, pattern)
+        if '**' in pattern:
+            paths.extend(glob.glob(full, recursive=True))
+        else:
+            paths.append(full)
     seen = set()
     out = []
     for path in paths:
@@ -139,6 +148,7 @@ def before_apk_assemble(toolchain):
 
 
 def after_apk_assemble(toolchain):
+    _run(toolchain)
     dist_dir = _dist_dir(toolchain)
     if dist_dir:
         _verify_no_media_perms(dist_dir)
