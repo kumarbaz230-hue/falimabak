@@ -8,6 +8,7 @@ _STRIP = (
     'android.permission.READ_MEDIA_IMAGES',
     'android.permission.READ_MEDIA_VIDEO',
     'android.permission.READ_MEDIA_AUDIO',
+    'android.permission.READ_MEDIA_VISUAL_USER_SELECTED',
     'android.permission.READ_EXTERNAL_STORAGE',
     'android.permission.WRITE_EXTERNAL_STORAGE',
     'android.permission.ACCESS_MEDIA_LOCATION',
@@ -82,18 +83,14 @@ def _patch_manifest(path):
 
 
 def _manifest_paths(dist_dir):
-    patterns = (
-        'AndroidManifest.xml',
-        os.path.join('src', 'main', 'AndroidManifest.xml'),
-        os.path.join('build', 'intermediates', '**', 'AndroidManifest.xml'),
-    )
-    paths = []
-    for pattern in patterns:
-        full = os.path.join(dist_dir, pattern)
-        if '**' in pattern:
-            paths.extend(glob.glob(full, recursive=True))
-        else:
-            paths.append(full)
+    paths = [
+        os.path.join(dist_dir, 'AndroidManifest.xml'),
+        os.path.join(dist_dir, 'src', 'main', 'AndroidManifest.xml'),
+    ]
+    paths.extend(glob.glob(
+        os.path.join(dist_dir, 'build', 'intermediates', '**', 'AndroidManifest.xml'),
+        recursive=True,
+    ))
     seen = set()
     out = []
     for path in paths:
@@ -112,6 +109,17 @@ def _run(toolchain):
         _patch_manifest(path)
 
 
+def _active_perm_in_line(line):
+    if 'uses-permission' not in line:
+        return None
+    if 'tools:node="remove"' in line:
+        return None
+    for perm in _STRIP:
+        if perm in line:
+            return perm
+    return None
+
+
 def _verify_no_media_perms(dist_dir):
     bad = []
     for path in _manifest_paths(dist_dir):
@@ -121,14 +129,9 @@ def _verify_no_media_perms(dist_dir):
         except OSError:
             continue
         for line in lines:
-            if 'uses-permission' not in line:
-                continue
-            if 'tools:node="remove"' in line:
-                continue
-            for perm in _STRIP:
-                if perm in line:
-                    bad.append((path, perm, line.strip()))
-                    break
+            perm = _active_perm_in_line(line)
+            if perm:
+                bad.append((path, perm, line.strip()))
     if bad:
         for path, perm, line in bad:
             print(f'p4a_manifest HATA: {perm} -> {path} :: {line}', flush=True)

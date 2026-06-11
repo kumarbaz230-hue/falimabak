@@ -164,16 +164,21 @@ jobs:
           curl -fL -o /tmp/bundletool.jar \
             "https://github.com/google/bundletool/releases/download/1.17.2/bundletool-all-1.17.2.jar"
           AAB=$(ls bin/*release*.aab | head -1)
-          java -jar /tmp/bundletool.jar dump manifest --bundle="$AAB" > /tmp/aab-manifest.xml
-          echo "=== AAB izinleri ==="
-          grep -E "uses-permission|permission" /tmp/aab-manifest.xml || true
-          for BAD in READ_MEDIA_IMAGES READ_MEDIA_VIDEO READ_MEDIA_AUDIO READ_EXTERNAL_STORAGE WRITE_EXTERNAL_STORAGE; do
-            if grep -q "$BAD" /tmp/aab-manifest.xml; then
-              echo "HATA: $BAD AAB manifestinde var!"
+          java -jar /tmp/bundletool.jar build-apks \
+            --bundle="$AAB" --output=/tmp/falimabak.apks --mode=universal --overwrite
+          unzip -o /tmp/falimabak.apks -d /tmp/falimabak-apk
+          APK=/tmp/falimabak-apk/universal.apk
+          SDK="$HOME/.buildozer/android/platform/android-sdk"
+          BT=$(ls -d "$SDK"/build-tools/*/ | sort -V | tail -1)
+          echo "=== aapt2 dump permissions (Play ile ayni kaynak) ==="
+          "$BT"aapt2 dump permissions "$APK" | tee /tmp/aapt-perms.txt
+          for BAD in READ_MEDIA_IMAGES READ_MEDIA_VIDEO READ_MEDIA_AUDIO READ_EXTERNAL_STORAGE WRITE_EXTERNAL_STORAGE ACCESS_MEDIA_LOCATION; do
+            if grep -q "$BAD" /tmp/aapt-perms.txt; then
+              echo "HATA: $BAD universal.apk icinde aktif izin!"
               exit 1
             fi
           done
-          echo "OK: Yasak medya izinleri yok"
+          echo "OK: Yasak medya izinleri yok (aapt2)"
 
       - name: Upload AAB
         if: success()
