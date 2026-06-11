@@ -100,14 +100,17 @@ def kamera_izni_iste(callback):
         _ana_thread(lambda: callback(True))
 
 
-def _activity_bagla():
+def _activity_bagla(zorla=False):
     global _activity_baglandi
-    if _activity_baglandi or not _android_mi():
+    if not _android_mi():
+        return
+    if _activity_baglandi and not zorla:
         return
     try:
         from android import activity as android_activity
         android_activity.bind(on_activity_result=_on_activity_result)
         _activity_baglandi = True
+        print('Activity result baglandi', flush=True)
     except Exception as e:
         print(f'Kamera activity bind: {e}', flush=True)
 
@@ -143,15 +146,31 @@ def _galeri_sonuc_gonder(cb, yol=None, hata=None):
 
 def _ui_thread(fn):
     try:
-        from android.runnable import run_on_ui_thread
+        from jnius import autoclass, PythonJavaClass, java_method
+        PythonActivity = autoclass('org.kivy.android.PythonActivity')
+        activity = PythonActivity.mActivity
+        if activity is None:
+            raise RuntimeError('activity yok')
 
-        @run_on_ui_thread
-        def _wrap():
-            fn()
+        class _Run(PythonJavaClass):
+            __javaclasses__ = ['java/lang/Runnable']
 
-        _wrap()
+            @java_method('()V')
+            def run(self):
+                fn()
+
+        activity.runOnUiThread(_Run())
     except Exception:
-        Clock.schedule_once(lambda *_: fn(), 0)
+        try:
+            from android.runnable import run_on_ui_thread
+
+            @run_on_ui_thread
+            def _wrap():
+                fn()
+
+            _wrap()
+        except Exception:
+            Clock.schedule_once(lambda *_: fn(), 0)
 
 
 def _dosya_bekle(cb, yol, deneme=0):
@@ -188,54 +207,79 @@ def _intent_gorsel_uri(intent):
     return None
 
 
-def _intent_cozulebilir(activity, intent):
-    try:
-        from jnius import autoclass
-        PackageManager = autoclass('android.content.pm.PackageManager')
-        return intent.resolveActivity(activity.getPackageManager()) is not None
-    except Exception:
-        return False
+_GALERI_PAKETLER = (
+    'com.miui.gallery',
+    'com.google.android.apps.photos',
+    'com.sec.android.gallery3d',
+    'com.android.gallery3d',
+    'com.coloros.gallery3d',
+    'com.oneplus.gallery',
+)
+
+
+def _get_content_intent(Intent):
+    intent = Intent(Intent.ACTION_GET_CONTENT)
+    intent.setType('image/*')
+    intent.addCategory(Intent.CATEGORY_OPENABLE)
+    intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+    return intent
 
 
 def _galeri_intent_listesi(activity):
-    """İzinsiz galeri — chooser yok (Redmi/Xiaomi uyumu), READ_MEDIA gerekmez."""
+    """READ_MEDIA yok — Redmi/MIUI resolveActivity yalan soyler, filtre kullanma."""
     from jnius import autoclass
     Intent = autoclass('android.content.Intent')
     MediaStore = autoclass('android.provider.MediaStore')
     Build = autoclass('android.os.Build')
 
     sira = []
-    read_flag = Intent.FLAG_GRANT_READ_URI_PERMISSION
+    seen = set()
+
+    def ekle(intent, etiket):
+        if etiket in seen:
+            return
+        seen.add(etiket)
+        sira.append(intent)
+        print(f'Galeri intent eklendi: {etiket}', flush=True)
+
+    baslik = _dil('tus_galeri')
+    if not baslik or baslik == 'tus_galeri':
+        baslik = 'Fotoğraf seç'
+
+    # MIUI/Redmi: chooser genelde tek calisan yol
+    ekle(Intent.createChooser(_get_content_intent(Intent), baslik), 'chooser')
+    ekle(_get_content_intent(Intent), 'get_content')
 
     open_doc = Intent(Intent.ACTION_OPEN_DOCUMENT)
     open_doc.setType('image/*')
     open_doc.addCategory(Intent.CATEGORY_OPENABLE)
-    open_doc.addFlags(read_flag | Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION)
-    if _intent_cozulebilir(activity, open_doc):
-        sira.append(open_doc)
-
-    get_content = Intent(Intent.ACTION_GET_CONTENT)
-    get_content.setType('image/*')
-    get_content.addCategory(Intent.CATEGORY_OPENABLE)
-    get_content.addFlags(read_flag)
-    if _intent_cozulebilir(activity, get_content):
-        sira.append(get_content)
+    open_doc.addFlags(
+        Intent.FLAG_GRANT_READ_URI_PERMISSION
+        | Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION,
+    )
+    ekle(open_doc, 'open_document')
 
     try:
         if int(Build.VERSION.SDK_INT) >= 33:
             pick = Intent('android.provider.action.PICK_IMAGES')
             pick.putExtra('android.provider.extra.PICK_IMAGES_MAX', 1)
-            pick.addFlags(read_flag)
-            if _intent_cozulebilir(activity, pick):
-                sira.append(pick)
+            pick.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            ekle(pick, 'pick_images')
     except Exception:
         pass
 
     pick_one = Intent(Intent.ACTION_PICK)
     pick_one.setDataAndType(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, 'image/*')
-    pick_one.addFlags(read_flag)
-    if _intent_cozulebilir(activity, pick_one):
-        sira.append(pick_one)
+    pick_one.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+    ekle(pick_one, 'action_pick')
+
+    for pkg in _GALERI_PAKETLER:
+        try:
+            pkg_intent = _get_content_intent(Intent)
+            pkg_intent.setPackage(pkg)
+            ekle(pkg_intent, f'pkg_{pkg}')
+        except Exception:
+            pass
 
     return sira
 
@@ -271,7 +315,7 @@ def _galeri_android_picker(callback):
     global _galeri_callback, _galeri_intent_sira, _galeri_intent_idx
     activity = None
     try:
-        _activity_bagla()
+        _activity_bagla(zorla=True)
         from jnius import autoclass
         PythonActivity = autoclass('org.kivy.android.PythonActivity')
         activity = PythonActivity.mActivity
@@ -282,7 +326,8 @@ def _galeri_android_picker(callback):
         _galeri_intent_sira = _galeri_intent_listesi(activity)
         _galeri_intent_idx = 0
         if not _galeri_intent_sira:
-            raise RuntimeError('Galeri intent yok')
+            raise RuntimeError('Galeri intent listesi bos')
+        print(f'Galeri: {len(_galeri_intent_sira)} yontem hazir', flush=True)
         _galeri_sonraki_intent(activity)
     except Exception as e:
         print(f'Galeri picker: {e}', flush=True)
