@@ -313,7 +313,7 @@ class ElFaliScreen(Screen):
         Clock.schedule_once(lambda dt: self.remove_widget(flash) if flash in self.children else None, 0.2)
     
     def fal_bak(self, instance):
-        """El falı yorumu — fotoğraflar AI ile doğrulanır ve yorumlanır."""
+        """El falı yorumu — fotoğraflar doğrulanır ve yorumlanır."""
         if not self.foto_panel.tamam_mi():
             eksik = ', '.join(self.foto_panel.eksik_basliklar())
             self.sonuc_label.markup = True
@@ -321,6 +321,18 @@ class ElFaliScreen(Screen):
                 f"[color={RENKLER['kirmizi']}]Eksik fotoğraflar: {eksik}[/color]\n"
                 f"[color={RENKLER['gri_acik']}]Her kutuya dokunup kamera ile fotoğraf çekin.[/color]"
             )
+            return
+
+        foto_veri = self.foto_panel.tum_veri()
+        from foto_analiz import fotolar_dogrula
+        ok, hata, _ = fotolar_dogrula(
+            'elfali',
+            foto_veri.get('foto_yollari'),
+            foto_veri.get('foto_aciklamalari'),
+        )
+        if not ok:
+            self.sonuc_label.markup = True
+            self.sonuc_label.text = foto_fal_sonuc(None, hata)
             return
 
         from fal_limit import yorum_baslat

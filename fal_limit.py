@@ -37,6 +37,19 @@ def fal_kullanildi_kaydet(tip):
     return
 
 
+def fal_basarisiz_iade(tip):
+    """Fal tamamlanmadıysa (hata / geçersiz foto) coin iade."""
+    if fal_ucretsiz(tip):
+        return
+    try:
+        from coin import coin_iade
+        coin_iade(FAL_MALIYET)
+        from coin_ui import coin_ui_yenile
+        coin_ui_yenile()
+    except Exception:
+        pass
+
+
 def yorum_baslat(tip, devam_fn):
     if not fal_izinli(tip):
         _coin_yetersiz_popup(tip)

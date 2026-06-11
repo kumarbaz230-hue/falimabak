@@ -1205,7 +1205,13 @@ def yorum_al(tip, veri, callback, coin_dahil=True):
 def _yorum_al_calistir(tip, veri, callback):
 
     def _sonuc(metin, ai_kullanildi, hata, kaynak=None, fotograf=False):
-        if metin:
+        if hata and not metin:
+            try:
+                from fal_limit import fal_basarisiz_iade
+                fal_basarisiz_iade(tip)
+            except Exception:
+                pass
+        elif metin:
             try:
                 from gecmis import baslik_olustur, fal_kaydet
                 fal_kaydet(tip, baslik_olustur(tip, veri), metin)

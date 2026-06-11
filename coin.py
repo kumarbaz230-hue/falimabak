@@ -44,6 +44,11 @@ def coin_harca(miktar=FAL_MALIYET):
     return True
 
 
+def coin_iade(miktar=FAL_MALIYET):
+    """Başarısız fal — harcanan coin geri ver."""
+    return coin_ekle(miktar)
+
+
 def hosgeldin_kontrol():
     """İlk kurulumda hoşgeldin bonusu. (yeni_verildi, miktar) döner."""
     veri = _yukle()

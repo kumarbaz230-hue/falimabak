@@ -1,6 +1,6 @@
 """
 FalımaBak — Cihaz içi fotoğraf doğrulama (Pillow, API yok).
-El falında el/ten görünmeden, kahve falında fincan/telve görünmeden yorum yapılmaz.
+Kahve falı: fincan (her renk) + telve görülmeden yorum yapılmaz.
 """
 
 import os
@@ -24,19 +24,24 @@ def _ten_rengi(r, g, b):
 
 
 def _kahve_telve(r, g, b):
-    if r < 22 and g < 22 and b < 22:
+    """Kahve telvesi — koyu kahverengi / siyahımsı (ışık farkına dayanıklı)."""
+    if r < 28 and g < 28 and b < 28:
+        return True
+    toplam = r + g + b
+    if toplam < 95 and r >= g >= b:
         return True
     return (
-        30 <= r <= 175
-        and 18 <= g <= 125
-        and 8 <= b <= 95
+        25 <= r <= 190
+        and 15 <= g <= 140
+        and 8 <= b <= 110
         and r >= g >= b
-        and (r - b) > 10
+        and (r - b) > 8
+        and toplam < 320
     )
 
 
 def _fincan_seramik(r, g, b):
-    """Beyaz / krem fincan kenarı ve tabak."""
+    """Beyaz / krem fincan (renk şartı değil, ek sinyal)."""
     if _kahve_telve(r, g, b):
         return False
     return (
@@ -48,7 +53,24 @@ def _fincan_seramik(r, g, b):
     )
 
 
-def _analiz_et(yol, max_kenar=280):
+def _fincan_kap(r, g, b):
+    """Fincan/tabağın gövdesi — mavi, kırmızı, yeşil, beyaz, her renk."""
+    if _ten_rengi(r, g, b) or _kahve_telve(r, g, b):
+        return False
+    toplam = r + g + b
+    if toplam < 55 or toplam > 740:
+        return False
+    mx, mn = max(r, g, b), min(r, g, b)
+    doygunluk = mx - mn
+    # Renkli seramik (mavi fincan vb.) veya açık nötr yüzey
+    if doygunluk >= 12:
+        return True
+    if doygunluk >= 6 and 80 <= toplam / 3 <= 240:
+        return True
+    return _fincan_seramik(r, g, b)
+
+
+def _analiz_et(yol, max_kenar=320):
     from PIL import Image, ImageStat
 
     if not yol or not os.path.isfile(yol):
@@ -63,7 +85,7 @@ def _analiz_et(yol, max_kenar=280):
                 return None
 
             n = len(px)
-            ten = kahve = seramik = koyu = 0
+            ten = kahve = seramik = kap = koyu = 0
             for r, g, b in px:
                 if _ten_rengi(r, g, b):
                     ten += 1
@@ -71,20 +93,24 @@ def _analiz_et(yol, max_kenar=280):
                     kahve += 1
                 if _fincan_seramik(r, g, b):
                     seramik += 1
-                if r + g + b < 75:
+                if _fincan_kap(r, g, b):
+                    kap += 1
+                if r + g + b < 80:
                     koyu += 1
 
-            ten_bolge, kahve_bolge, seramik_bolge = _bolge_say(pixels=px, w=w, h=h)
+            ten_b, kahve_b, seramik_b, kap_b = _bolge_say(pixels=px, w=w, h=h)
 
             stat = ImageStat.Stat(img)
             return {
                 'ten_orani': ten / n,
                 'kahve_orani': kahve / n,
                 'seramik_orani': seramik / n,
+                'kap_orani': kap / n,
                 'koyu_orani': koyu / n,
-                'ten_bolge': ten_bolge,
-                'kahve_bolge': kahve_bolge,
-                'seramik_bolge': seramik_bolge,
+                'ten_bolge': ten_b,
+                'kahve_bolge': kahve_b,
+                'seramik_bolge': seramik_b,
+                'kap_bolge': kap_b,
                 'kontrast': sum(stat.stddev) / 3.0,
                 'parlaklik': sum(stat.mean) / 3.0,
                 'genislik': w,
@@ -95,19 +121,19 @@ def _analiz_et(yol, max_kenar=280):
         return None
 
 
-def _bolge_say(pixels, w, h, esik=0.10):
-    """3x3 ızgarada ten / kahve / seramik görünen bölge sayısı."""
+def _bolge_say(pixels, w, h, esik=0.08):
+    """3x3 ızgarada ten / kahve / seramik / kap bölge sayısı."""
     cols, rows = 3, 3
     cw = max(w // cols, 1)
     rh = max(h // rows, 1)
-    ten_b = kahve_b = seramik_b = 0
+    ten_b = kahve_b = seramik_b = kap_b = 0
 
     for row in range(rows):
         for col in range(cols):
             x0, y0 = col * cw, row * rh
             x1 = min(x0 + cw, w)
             y1 = min(y0 + rh, h)
-            toplam = ten = kahve = seramik = 0
+            toplam = ten = kahve = seramik = kap = 0
             for y in range(y0, y1):
                 satir = y * w
                 for x in range(x0, x1):
@@ -119,19 +145,20 @@ def _bolge_say(pixels, w, h, esik=0.10):
                         kahve += 1
                     if _fincan_seramik(r, g, b):
                         seramik += 1
+                    if _fincan_kap(r, g, b):
+                        kap += 1
             if not toplam:
                 continue
-            oran_t = ten / toplam
-            oran_k = kahve / toplam
-            oran_s = seramik / toplam
-            if oran_t >= esik:
+            if ten / toplam >= esik:
                 ten_b += 1
-            if oran_k >= esik:
+            if kahve / toplam >= esik:
                 kahve_b += 1
-            if oran_s >= esik:
+            if seramik / toplam >= esik:
                 seramik_b += 1
+            if kap / toplam >= esik:
+                kap_b += 1
 
-    return ten_b, kahve_b, seramik_b
+    return ten_b, kahve_b, seramik_b, kap_b
 
 
 def _el_gorunuyor_mu(oz):
@@ -149,32 +176,54 @@ def _el_gorunuyor_mu(oz):
     return True
 
 
-def _fincan_gorunuyor_mu(oz, tabak_mi=False):
-    """Fotoğrafta kahve fincanı / telve / tabak var mı?"""
+def _telve_var_mi(oz):
+    """Fotoğrafta kahve telvesi / koyu telve lekeleri var mı?"""
     kahve = oz.get('kahve_orani', 0)
-    seramik = oz.get('seramik_orani', 0)
     koyu = oz.get('koyu_orani', 0)
-    kontrast = oz.get('kontrast', 0)
     kahve_b = oz.get('kahve_bolge', 0)
+    kontrast = oz.get('kontrast', 0)
+    return (
+        kahve >= 0.035
+        or kahve_b >= 1
+        or (koyu >= 0.09 and kontrast >= 4)
+        or (koyu >= 0.14)
+    )
+
+
+def _kap_var_mi(oz):
+    """Fincan veya tabak gövdesi — renk fark etmez."""
+    kap = oz.get('kap_orani', 0)
+    kap_b = oz.get('kap_bolge', 0)
+    seramik = oz.get('seramik_orani', 0)
     seramik_b = oz.get('seramik_bolge', 0)
+    return (
+        kap >= 0.04
+        or kap_b >= 1
+        or seramik >= 0.04
+        or seramik_b >= 1
+    )
+
+
+def _fincan_gorunuyor_mu(oz, tabak_mi=False):
+    """
+    Kahve falı fotoğrafı geçerli mi?
+    Şart: telve + (fincan/tabağın herhangi bir rengi) birlikte görünsün.
+    """
+    if not _telve_var_mi(oz):
+        return False
 
     if tabak_mi:
-        tabak_var = (kahve >= 0.06 and seramik >= 0.10) or (kahve >= 0.08 and koyu >= 0.12)
-        return tabak_var and (kahve_b >= 1 or seramik_b >= 1)
+        return _kap_var_mi(oz) or oz.get('kahve_bolge', 0) >= 2
 
-    telve_var = kahve >= 0.09 or (koyu >= 0.22 and kontrast >= 8)
-    fincan_var = seramik >= 0.08 or seramik_b >= 1
-    bolgesel = kahve_b >= 1 or (telve_var and koyu >= 0.18)
-
-    if not telve_var:
-        return False
-    if not bolgesel:
-        return False
-    if not fincan_var and kahve < 0.14 and koyu < 0.28:
-        return False
-    if kontrast < 6 and kahve < 0.12:
-        return False
-    return True
+    # Fincan içi: telveyi net gör + fincan duvarı/kenarı (mavi, beyaz, her renk)
+    if _kap_var_mi(oz):
+        return True
+    # Sadece iç çekim — telvenin yoğun ve dağınık olması fincan içi imzası
+    if oz.get('kahve_orani', 0) >= 0.06 and oz.get('kahve_bolge', 0) >= 2:
+        return True
+    if oz.get('koyu_orani', 0) >= 0.12 and oz.get('kontrast', 0) >= 7:
+        return True
+    return False
 
 
 def _el_slot_gecerli(ozellik, baslik):
@@ -226,5 +275,6 @@ def foto_tohum(ozellikler):
             continue
         parca += int(o.get('ten_orani', 0) * 1000)
         parca += int(o.get('kahve_orani', 0) * 1000)
+        parca += int(o.get('kap_orani', 0) * 1000)
         parca += int(o.get('kontrast', 0) * 10)
     return parca % 999983
