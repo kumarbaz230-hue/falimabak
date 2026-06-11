@@ -132,6 +132,28 @@ def _sonuc_gonder(cb, yol, hata=None):
         _ana_thread(lambda: cb(None, _dil('cam_fail')))
 
 
+def _galeri_sonuc_gonder(cb, yol=None, hata=None):
+    if yol and os.path.isfile(yol) and os.path.getsize(yol) > 0:
+        _ana_thread(lambda p=yol: cb(os.path.normpath(p), None))
+    elif hata:
+        _ana_thread(lambda h=hata: cb(None, h))
+    else:
+        _ana_thread(lambda: cb(None, _dil('galeri_fail')))
+
+
+def _ui_thread(fn):
+    try:
+        from android.runnable import run_on_ui_thread
+
+        @run_on_ui_thread
+        def _wrap():
+            fn()
+
+        _wrap()
+    except Exception:
+        Clock.schedule_once(lambda *_: fn(), 0)
+
+
 def _dosya_bekle(cb, yol, deneme=0):
     if yol and os.path.isfile(yol) and os.path.getsize(yol) > 0:
         _sonuc_gonder(cb, yol)
@@ -176,23 +198,34 @@ def _intent_cozulebilir(activity, intent):
 
 
 def _galeri_intent_listesi(activity):
-    """İzinsiz galeri — en uyumlu yöntemler önce (GET_CONTENT)."""
+    """İzinsiz galeri — chooser yok (Redmi/Xiaomi uyumu), READ_MEDIA gerekmez."""
     from jnius import autoclass
     Intent = autoclass('android.content.Intent')
     MediaStore = autoclass('android.provider.MediaStore')
     Build = autoclass('android.os.Build')
 
     sira = []
+    read_flag = Intent.FLAG_GRANT_READ_URI_PERMISSION
+
+    open_doc = Intent(Intent.ACTION_OPEN_DOCUMENT)
+    open_doc.setType('image/*')
+    open_doc.addCategory(Intent.CATEGORY_OPENABLE)
+    open_doc.addFlags(read_flag | Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION)
+    if _intent_cozulebilir(activity, open_doc):
+        sira.append(open_doc)
 
     get_content = Intent(Intent.ACTION_GET_CONTENT)
     get_content.setType('image/*')
     get_content.addCategory(Intent.CATEGORY_OPENABLE)
-    sira.append(Intent.createChooser(get_content, 'Fotoğraf seç'))
+    get_content.addFlags(read_flag)
+    if _intent_cozulebilir(activity, get_content):
+        sira.append(get_content)
 
     try:
         if int(Build.VERSION.SDK_INT) >= 33:
             pick = Intent('android.provider.action.PICK_IMAGES')
             pick.putExtra('android.provider.extra.PICK_IMAGES_MAX', 1)
+            pick.addFlags(read_flag)
             if _intent_cozulebilir(activity, pick):
                 sira.append(pick)
     except Exception:
@@ -200,6 +233,7 @@ def _galeri_intent_listesi(activity):
 
     pick_one = Intent(Intent.ACTION_PICK)
     pick_one.setDataAndType(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, 'image/*')
+    pick_one.addFlags(read_flag)
     if _intent_cozulebilir(activity, pick_one):
         sira.append(pick_one)
 
@@ -211,25 +245,25 @@ _galeri_intent_idx = 0
 
 
 def _galeri_sonraki_intent(activity):
-    """Bir intent açılamazsa sıradakini dene (kullanıcı iptal ederse deneme)."""
+    """Bir intent açılamazsa sıradakini dene."""
     global _galeri_callback, _galeri_intent_sira, _galeri_intent_idx
     cb = _galeri_callback
     if not cb or _galeri_intent_idx >= len(_galeri_intent_sira):
         _galeri_callback = None
         if cb:
-            _ana_thread(lambda: cb(None, _dil('cam_fail')))
+            _galeri_sonuc_gonder(cb, hata=_dil('galeri_fail'))
         return
     intent = _galeri_intent_sira[_galeri_intent_idx]
     _galeri_intent_idx += 1
 
-    def _ac(*_):
+    def _ac():
         try:
             activity.startActivityForResult(intent, _GALERI_ISTEK)
         except Exception as e:
             print(f'Galeri intent hatasi: {e}', flush=True)
             _galeri_sonraki_intent(activity)
 
-    Clock.schedule_once(_ac, 0)
+    _ui_thread(_ac)
 
 
 def _galeri_android_picker(callback):
@@ -253,7 +287,7 @@ def _galeri_android_picker(callback):
     except Exception as e:
         print(f'Galeri picker: {e}', flush=True)
         _galeri_callback = None
-        _ana_thread(lambda: callback(None, _dil('cam_fail')))
+        _galeri_sonuc_gonder(callback, hata=_dil('galeri_fail'))
 
 
 def _on_activity_result(request_code, result_code, intent):
@@ -267,19 +301,31 @@ def _on_activity_result(request_code, result_code, intent):
         try:
             from jnius import autoclass
             Activity = autoclass('android.app.Activity')
+            PythonActivity = autoclass('org.kivy.android.PythonActivity')
+            activity = PythonActivity.mActivity
+
             if result_code != Activity.RESULT_OK:
-                _sonuc_gonder(cb, None, _dil('cam_cancel'))
+                _galeri_sonuc_gonder(cb, hata=_dil('galeri_cancel'))
                 return
+
             uri = _intent_gorsel_uri(intent)
             if uri:
-                kayit = _kopyala(uri)
+                kayit = _kopyala(uri, intent)
                 if kayit:
-                    _sonuc_gonder(cb, kayit)
+                    _galeri_sonuc_gonder(cb, yol=kayit)
                     return
-            _sonuc_gonder(cb, None, _dil('cam_fail'))
+
+            # Chooser/URI sorunu — sıradaki galeri yöntemini dene
+            _galeri_callback = cb
+            if activity is not None and _galeri_intent_idx < len(_galeri_intent_sira):
+                print('Galeri: URI alinamadi, sonraki yontem deneniyor', flush=True)
+                _galeri_sonraki_intent(activity)
+                return
+
+            _galeri_sonuc_gonder(cb, hata=_dil('galeri_fail'))
         except Exception:
             print(traceback.format_exc(), flush=True)
-            _sonuc_gonder(cb, None)
+            _galeri_sonuc_gonder(cb, hata=_dil('galeri_fail'))
         return
 
     if request_code != _KAMERA_ISTEK or not _kamera_callback:
@@ -344,7 +390,7 @@ def uygulama_izinlerini_iste():
     kamera_hazirla()
 
 
-def _kopyala(kaynak):
+def _kopyala(kaynak, result_intent=None):
     if not kaynak:
         return None
     kaynak = str(kaynak).strip()
@@ -353,12 +399,28 @@ def _kopyala(kaynak):
     if kaynak.startswith('content://'):
         try:
             from jnius import autoclass
+            Intent = autoclass('android.content.Intent')
             PythonActivity = autoclass('org.kivy.android.PythonActivity')
             context = PythonActivity.mActivity
             resolver = context.getContentResolver()
             FileOutputStream = autoclass('java.io.FileOutputStream')
             uri = autoclass('android.net.Uri').parse(kaynak)
+
+            if result_intent is not None:
+                try:
+                    flags = int(result_intent.getFlags())
+                    read = int(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    if flags & read:
+                        try:
+                            resolver.takePersistableUriPermission(uri, flags & read)
+                        except Exception:
+                            pass
+                except Exception:
+                    pass
+
             stream = resolver.openInputStream(uri)
+            if stream is None:
+                return None
             hedef = os.path.join(
                 _foto_dir(),
                 f'foto_{datetime.now().strftime("%Y%m%d_%H%M%S")}.jpg',
@@ -372,7 +434,9 @@ def _kopyala(kaynak):
                 out.write(bytes(buf[:n]))
             stream.close()
             out.close()
-            return os.path.normpath(hedef)
+            if os.path.getsize(hedef) > 0:
+                return os.path.normpath(hedef)
+            return None
         except Exception as e:
             print(f'content:// kopyalama: {e}', flush=True)
             return None
