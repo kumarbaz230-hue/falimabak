@@ -14,7 +14,7 @@ from kivy.metrics import dp
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 ASSETS_DIR = os.path.join(BASE_DIR, 'assets')
-APP_SURUM = '1.4.1'
+APP_SURUM = '1.4.2'
 
 # ============================================================
 #  PROFESYONEL RENK PALETİ

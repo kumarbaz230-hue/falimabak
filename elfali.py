@@ -25,7 +25,7 @@ from theme import (
     tus_buton, baslik_satir, buton_metin_guncelle,
     kaydirici_metin, FotoKutucukPanel, yorum_bekle_markup, foto_fal_sonuc,
 )
-from kamera import galeriden_sec, kameradan_cek
+from kamera import galeriden_sec, kameradan_cek, galeri_aktif
 from ai_yorum import yorum_al
 
 fontlari_yukle()
@@ -233,7 +233,7 @@ class ElFaliScreen(Screen):
         ana_layout.add_widget(baslik_satir('✋', 'EL FALI', font_size='24sp', height=dp(44)))
         
         ana_layout.add_widget(metin_label(
-            'Avuç içi ve el dışı fotoğrafı ekleyin. Kutuya dokunup galeri/kamera ile yükleyin.',
+            'Avuç içi ve el dışı fotoğrafı ekleyin. Kutuya dokunup kamera ile çekin.',
             font_size='12sp',
             color=RENKLER['gri_acik'],
             halign='center',
@@ -250,16 +250,17 @@ class ElFaliScreen(Screen):
             spacing=8,
         )
 
-        galeri_btn = tus_buton('galeri', font_size='13sp')
-        galeri_btn.bind(on_press=lambda *_: galeriden_sec(self._foto_sonuc))
+        if galeri_aktif():
+            galeri_btn = tus_buton('galeri', font_size='13sp')
+            galeri_btn.bind(on_press=lambda *_: galeriden_sec(self._foto_sonuc))
+            btn_layout1.add_widget(galeri_btn)
 
         kamera_btn = tus_buton('kamera', vurgu=True, font_size='13sp')
         kamera_btn.bind(on_press=lambda *_: kameradan_cek(self._foto_sonuc))
 
         self.fal_bak_btn = tus_buton('fal_bak', vurgu=True, font_size='13sp')
         self.fal_bak_btn.bind(on_press=self.fal_bak)
-        
-        btn_layout1.add_widget(galeri_btn)
+
         btn_layout1.add_widget(kamera_btn)
         btn_layout1.add_widget(self.fal_bak_btn)
         ana_layout.add_widget(btn_layout1)
@@ -318,7 +319,7 @@ class ElFaliScreen(Screen):
             self.sonuc_label.markup = True
             self.sonuc_label.text = (
                 f"[color={RENKLER['kirmizi']}]Eksik fotoğraflar: {eksik}[/color]\n"
-                f"[color={RENKLER['gri_acik']}]Her kutuya dokunup galeri veya kamera ile ekleyin.[/color]"
+                f"[color={RENKLER['gri_acik']}]Her kutuya dokunup kamera ile fotoğraf çekin.[/color]"
             )
             return
 

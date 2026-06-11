@@ -123,7 +123,7 @@ _METINLER = {
             '• Dil tercihi\n'
             '• Reklam kimliği (Google AdMob)\n\n'
             'Üçüncü taraf: Google AdMob (reklamlar), bulut yorum servisi (internet gerekir).\n\n'
-            'İzinler: Kamera, galeri, internet.\n\n'
+            'İzinler: Kamera, internet.\n\n'
             'Uygulama 13 yaş altına yönelik değildir. Fal yorumları eğlence amaçlıdır.\n\n'
             'İletişim: github.com/kumarbaz230-hue/falimabak'
         ),
@@ -178,7 +178,7 @@ _METINLER = {
     'daily_fal': {'tr': 'Günlük Fal', 'en': 'Daily Reading', 'de': 'Tagesorakel', 'fr': 'Oracle du jour', 'es': 'Lectura diaria', 'ar': 'قراءة اليوم', 'ru': 'На сегодня', 'pt': 'Leitura diária', 'it': 'Del giorno', 'hi': 'दैनिक', 'id': 'Harian', 'zh': '每日占卜'},
     'luck': {'tr': 'Şans', 'en': 'Luck', 'de': 'Glück', 'fr': 'Chance', 'es': 'Suerte', 'ar': 'حظ', 'ru': 'Удача', 'pt': 'Sorte', 'it': 'Fortuna', 'hi': 'भाग्य', 'id': 'Keberuntungan', 'zh': '幸运'},
     'cam_denied': {'tr': 'Kamera izni kapalı. Ayarlar > Uygulamalar > FalımaBak > İzinler', 'en': 'Camera permission denied. Enable in Settings > Apps > FalımaBak', 'de': 'Kamera verweigert.', 'fr': 'Caméra refusée.', 'es': 'Permiso denegado.', 'ar': 'تم رفض الكamera.', 'ru': 'Нет доступа к камере.', 'pt': 'Permissão negada.', 'it': 'Permesso negato.', 'hi': 'अनुमति नहीं.', 'id': 'Izin ditolak.', 'zh': '相机权限被拒绝。'},
-    'cam_fail': {'tr': 'Kamera hatası. Galeriden seçmeyi deneyin.', 'en': 'Camera error. Try gallery.', 'de': 'Kamerafehler.', 'fr': 'Erreur caméra.', 'es': 'Error de cámara.', 'ar': 'خطأ في الكamera.', 'ru': 'Ошибка камеры.', 'pt': 'Erro na câmera.', 'it': 'Errore fotocamera.', 'hi': 'कैमरा त्रुटि.', 'id': 'Error kamera.', 'zh': '相机错误。'},
+    'cam_fail': {'tr': 'Kamera hatası. Tekrar deneyin.', 'en': 'Camera error. Try again.', 'de': 'Kamerafehler.', 'fr': 'Erreur caméra.', 'es': 'Error de cámara.', 'ar': 'خطأ في الكamera.', 'ru': 'Ошибка камеры.', 'pt': 'Erro na câmera.', 'it': 'Errore fotocamera.', 'hi': 'कैमरा त्रुटि.', 'id': 'Error kamera.', 'zh': '相机错误。'},
     'cam_no_app': {'tr': 'Kamera uygulaması bulunamadı', 'en': 'No camera app found', 'de': 'Keine Kamera-App', 'fr': 'Pas d\'appareil photo', 'es': 'Sin app de cámara', 'ar': 'لا تطبيق كamera', 'ru': 'Нет приложения', 'pt': 'Sem app', 'it': 'Nessuna app', 'hi': 'ऐप नहीं', 'id': 'Tidak ada app', 'zh': '无相机应用'},
     'cam_cancel': {'tr': 'Fotoğraf çekilmedi', 'en': 'Photo not taken', 'de': 'Kein Foto', 'fr': 'Photo annulée', 'es': 'Sin foto', 'ar': 'لم تُلتقط', 'ru': 'Не снято', 'pt': 'Não capturada', 'it': 'Non scattata', 'hi': 'नहीं ली', 'id': 'Tidak diambil', 'zh': '未拍摄'},
     'galeri_fail': {'tr': 'Galeri açılamadı. Tekrar deneyin veya kamerayı kullanın.', 'en': 'Gallery failed. Try again or use camera.', 'de': 'Galerie fehlgeschlagen.', 'fr': 'Galerie indisponible.', 'es': 'Galería no disponible.', 'ar': 'تعذر فتح المعرض.', 'ru': 'Галерея недоступна.', 'pt': 'Galeria indisponível.', 'it': 'Galleria non disponibile.', 'hi': 'गैलरी नहीं खुली.', 'id': 'Galeri gagal.', 'zh': '无法打开相册。'},

@@ -19,7 +19,7 @@ from theme import (
     tus_buton, baslik_satir, buton_metin_guncelle,
     kaydirici_metin, FotoKutucukPanel, yorum_bekle_markup, foto_fal_sonuc,
 )
-from kamera import galeriden_sec, kameradan_cek
+from kamera import galeriden_sec, kameradan_cek, galeri_aktif
 from ai_yorum import yorum_al
 
 fontlari_yukle()
@@ -184,7 +184,7 @@ class KahveScreen(Screen):
         ana_layout.add_widget(baslik_layout)
         
         ana_layout.add_widget(metin_label(
-            'Fincan içini 2 kez + tabağı fotoğraflayın. Kutuya dokunup galeri/kamera ile ekleyin.',
+            'Fincan içini 2 kez + tabağı fotoğraflayın. Kutuya dokunup kamera ile çekin.',
             font_size='12sp',
             color=RENKLER['gri_acik'],
             halign='center',
@@ -202,13 +202,13 @@ class KahveScreen(Screen):
             padding=[12, 0, 12, 0],
         )
 
-        galeri_btn = tus_buton('galeri', font_size='13sp')
-        galeri_btn.bind(on_press=lambda *_: galeriden_sec(self._foto_sonuc))
+        if galeri_aktif():
+            galeri_btn = tus_buton('galeri', font_size='13sp')
+            galeri_btn.bind(on_press=lambda *_: galeriden_sec(self._foto_sonuc))
+            kamera_btn_layout.add_widget(galeri_btn)
 
         kamera_btn = tus_buton('kamera', vurgu=True, font_size='13sp')
         kamera_btn.bind(on_press=lambda *_: kameradan_cek(self._foto_sonuc))
-
-        kamera_btn_layout.add_widget(galeri_btn)
         kamera_btn_layout.add_widget(kamera_btn)
         ana_layout.add_widget(kamera_btn_layout)
         
@@ -272,7 +272,7 @@ class KahveScreen(Screen):
             self.yorum_label.markup = True
             self.yorum_label.text = (
                 f"[color={RENKLER['kirmizi']}]Eksik fotoğraflar: {eksik}[/color]\n"
-                f"[color={RENKLER['gri_acik']}]Her kutuya dokunup galeri veya kamera ile ekleyin.[/color]"
+                f"[color={RENKLER['gri_acik']}]Her kutuya dokunup kamera ile fotoğraf çekin.[/color]"
             )
             return
 

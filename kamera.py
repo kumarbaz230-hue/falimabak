@@ -523,11 +523,15 @@ def _galeri_masaustu(callback):
     threading.Thread(target=_islem, daemon=True).start()
 
 
+def galeri_aktif():
+    """Android: galeri kapali (Play/Redmi). Masaustu: dosya secici acik."""
+    return not _android_mi()
+
+
 def galeriden_sec(callback):
-    if _android_mi():
-        _ana_thread(lambda: _galeri_android_picker(callback), 0.05)
-    else:
-        _galeri_masaustu(callback)
+    if not galeri_aktif():
+        return
+    _galeri_masaustu(callback)
 
 
 def _intent_uri_kamera(callback):
