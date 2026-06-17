@@ -28,6 +28,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Free disk space
+        uses: jlumbroso/free-disk-space@main
+        with:
+          tool-cache: true
+          android: true
+          dotnet: true
+          haskell: true
+          large-packages: true
+          docker-images: true
+
       - name: Prepare config
         run: cp config.ornek.json config.json
 
@@ -127,8 +137,9 @@ jobs:
         run: |
           export JAVA_HOME="${JAVA_HOME_17_X64:-$JAVA_HOME}"
           export ORG_GRADLE_JAVA_HOME="$JAVA_HOME"
-          export GRADLE_OPTS="-Xmx4096m -XX:MaxMetaspaceSize=1024m"
+          export GRADLE_OPTS="-Xmx3072m -XX:MaxMetaspaceSize=768m"
           export PATH="$JAVA_HOME/bin:$PATH"
+          df -h
           Xvfb :99 -screen 0 1280x720x24 &
           export DISPLAY=:99
           set +o pipefail
@@ -138,8 +149,10 @@ jobs:
             yes 2>/dev/null | buildozer -v android release 2>&1 | tee buildozer-release.log
             EC=${PIPESTATUS[1]}
             [ "$EC" -eq 0 ] && break
-            if grep -qE "502|Bad Gateway|Download failed" buildozer-release.log; then
-              echo "Transient download error, retrying in 45s..."
+            if grep -qE "502|Bad Gateway|Download failed|No space left" buildozer-release.log; then
+              echo "Transient error, cleaning and retrying in 45s..."
+              rm -rf .buildozer/android/platform/build-*/build 2>/dev/null || true
+              df -h
               sleep 45
               continue
             fi
@@ -147,6 +160,13 @@ jobs:
           done
           set -o pipefail
           exit $EC
+
+      - name: Cleanup build intermediates
+        if: always()
+        run: |
+          rm -rf .buildozer/android/platform/build-*/build/intermediates 2>/dev/null || true
+          rm -rf .buildozer/android/platform/build-*/build/tmp 2>/dev/null || true
+          df -h
 
       - name: Show errors if failed
         if: failure()

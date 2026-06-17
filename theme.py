@@ -14,7 +14,7 @@ from kivy.metrics import dp
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 ASSETS_DIR = os.path.join(BASE_DIR, 'assets')
-APP_SURUM = '1.5.0'
+APP_SURUM = '1.5.1'
 
 # ============================================================
 #  PROFESYONEL RENK PALETİ
@@ -421,6 +421,14 @@ def klavye_kaydir_bagla(scroll=None, root=None, *widgets):
             p = p.parent
         return None
 
+    def _scroll_iceriginde(sv, w):
+        p = w
+        while p is not None:
+            if p is sv:
+                return True
+            p = p.parent
+        return False
+
     def _focus_cb(instance, focused):
         if not focused:
             return
@@ -428,7 +436,7 @@ def klavye_kaydir_bagla(scroll=None, root=None, *widgets):
         def _kaydir(*_):
             try:
                 sv = _scrollview_bul(instance)
-                if sv:
+                if sv and _scroll_iceriginde(sv, instance):
                     sv.scroll_to(instance, padding=dp(56), animate=True)
             except Exception:
                 pass

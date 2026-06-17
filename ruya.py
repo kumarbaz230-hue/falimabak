@@ -2,6 +2,7 @@
 
 from kivy.uix.screenmanager import Screen
 from kivy.uix.boxlayout import BoxLayout
+from kivy.uix.scrollview import ScrollView
 from kivy.metrics import dp
 
 from ai_yorum import _yorum_al_calistir
@@ -40,15 +41,24 @@ class RuyaScreen(Screen):
         )
         ana.add_widget(baslik_satir('🌙', t('ruya_title'), font_size='22sp', height=dp(40)))
 
+        self._form_kaydir = ScrollView(
+            size_hint_y=None,
+            height=dp(210),
+            do_scroll_x=False,
+            bar_width=dp(3),
+        )
+        form = BoxLayout(orientation='vertical', size_hint_y=None, spacing=dp(8))
+        form.bind(minimum_height=form.setter('height'))
+
         aciklama = metin_label(
             t('ruya_aciklama'),
             font_size='12sp', color=RENKLER['gri_acik'],
             halign='left', size_hint_y=None,
         )
         aciklama.bind(texture_size=lambda i, v: setattr(i, 'height', max(v[1], dp(36))))
-        ana.add_widget(aciklama)
+        form.add_widget(aciklama)
 
-        ana.add_widget(metin_label(
+        form.add_widget(metin_label(
             t('ruya_input_label'),
             font_size='13sp', bold=True, color=RENKLER['mor'],
             halign='left', size_hint_y=None, height=dp(20),
@@ -59,7 +69,10 @@ class RuyaScreen(Screen):
             size_hint_y=None,
             height=dp(120),
         )
-        ana.add_widget(self._ruya_input)
+        form.add_widget(self._ruya_input)
+
+        self._form_kaydir.add_widget(form)
+        ana.add_widget(self._form_kaydir)
 
         self._durum = metin_label(
             '', font_size='13sp', color=RENKLER['beyaz'],
@@ -81,7 +94,7 @@ class RuyaScreen(Screen):
         ana.add_widget(btn)
 
         ekran_icerik_sar(self, ana)
-        klavye_kaydir_bagla(None, ana, self._ruya_input)
+        klavye_kaydir_bagla(self._form_kaydir, self._ruya_input)
 
     def _tabir_et(self, *_):
         from dil import t
