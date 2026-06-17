@@ -827,6 +827,19 @@ class FalimaBakApp(App):
             Clock.schedule_once(lambda *_: muzik_uygula(), 1.5)
         except Exception:
             pass
+        try:
+            from bildirim import bildirim_baslat
+            Clock.schedule_once(lambda *_: bildirim_baslat(), 2.0)
+        except Exception as e:
+            print(f'Bildirim baslat: {e}', flush=True)
+
+    def on_pause(self):
+        try:
+            from bildirim import bildirim_baslat
+            bildirim_baslat()
+        except Exception:
+            pass
+        return False
 
     def on_resume(self):
         if _ANDROID:

@@ -9,6 +9,7 @@ GUNLUK_GIRIS_BONUS = 3  # Her gün ilk açılışta
 FAL_MALIYET = 1
 REKLAM_COIN_ODUL = 3
 REKLAM_GUNLUK_MAX = 5
+DEGERLENDIRME_COIN = 3
 SINIRSIZ_TIPLER = frozenset()
 
 
@@ -101,3 +102,12 @@ def fal_izinli(tip):
     if fal_ucretsiz(tip):
         return True
     return coin_miktar() >= FAL_MALIYET
+
+
+def degerlendirme_odulu_ver():
+    """Play Store değerlendirmesi için tek seferlik coin ödülü."""
+    from gecmis import degerlendirme_odulu_alindi, degerlendirme_odulu_isaretle
+    if degerlendirme_odulu_alindi():
+        return False, coin_miktar()
+    degerlendirme_odulu_isaretle()
+    return True, coin_ekle(DEGERLENDIRME_COIN)

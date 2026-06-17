@@ -2,7 +2,6 @@
 
 from kivy.uix.screenmanager import Screen
 from kivy.uix.boxlayout import BoxLayout
-from kivy.uix.scrollview import ScrollView
 from kivy.metrics import dp
 
 from ai_yorum import _yorum_al_calistir
@@ -47,12 +46,9 @@ class RuyaScreen(Screen):
             halign='left', size_hint_y=None,
         )
         aciklama.bind(texture_size=lambda i, v: setattr(i, 'height', max(v[1], dp(36))))
+        ana.add_widget(aciklama)
 
-        self._kaydir = ScrollView(size_hint_y=1, do_scroll_x=False, bar_width=dp(3))
-        form = BoxLayout(orientation='vertical', size_hint_y=None, spacing=dp(8))
-        form.bind(minimum_height=form.setter('height'))
-        form.add_widget(aciklama)
-        form.add_widget(metin_label(
+        ana.add_widget(metin_label(
             t('ruya_input_label'),
             font_size='13sp', bold=True, color=RENKLER['mor'],
             halign='left', size_hint_y=None, height=dp(20),
@@ -61,11 +57,9 @@ class RuyaScreen(Screen):
             hint_text=t('ruya_input_hint'),
             multiline=True,
             size_hint_y=None,
-            height=dp(140),
+            height=dp(120),
         )
-        form.add_widget(self._ruya_input)
-        self._kaydir.add_widget(form)
-        ana.add_widget(self._kaydir)
+        ana.add_widget(self._ruya_input)
 
         self._durum = metin_label(
             '', font_size='13sp', color=RENKLER['beyaz'],
@@ -74,7 +68,7 @@ class RuyaScreen(Screen):
         self._durum.bind(texture_size=lambda i, v: setattr(i, 'height', max(v[1], dp(24))))
         ana.add_widget(self._durum)
 
-        self._yorum_alani, self._yorum_label = kaydirici_metin(0.32)
+        self._yorum_alani, self._yorum_label = kaydirici_metin(1)
         ana.add_widget(self._yorum_alani)
 
         btn = BoxLayout(orientation='horizontal', size_hint_y=None, height=dp(48), spacing=dp(8))
@@ -87,7 +81,7 @@ class RuyaScreen(Screen):
         ana.add_widget(btn)
 
         ekran_icerik_sar(self, ana)
-        klavye_kaydir_bagla(self._kaydir, self._ruya_input)
+        klavye_kaydir_bagla(None, ana, self._ruya_input)
 
     def _tabir_et(self, *_):
         from dil import t

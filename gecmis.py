@@ -231,6 +231,37 @@ def fal_kaydet(tip, baslik, yorum):
         'tarih': datetime.now().strftime('%d.%m.%Y %H:%M'),
     })
     veri['gecmis'] = kayitlar[:MAX_GECMIS]
+    veri['son_fal_tarih'] = date.today().isoformat()
+    _kaydet(veri)
+
+
+def bildirim_acik_al():
+    return bool(_yukle().get('bildirim_acik', True))
+
+
+def bildirim_acik_kaydet(acik):
+    veri = _yukle()
+    veri['bildirim_acik'] = bool(acik)
+    _kaydet(veri)
+
+
+def bildirim_saati_al():
+    ham = _yukle().get('bildirim_saati')
+    if isinstance(ham, dict):
+        return {
+            'saat': int(ham.get('saat', 20)),
+            'dakika': int(ham.get('dakika', 0)),
+        }
+    return {'saat': 20, 'dakika': 0}
+
+
+def degerlendirme_odulu_alindi():
+    return bool(_yukle().get('degerlendirme_odul'))
+
+
+def degerlendirme_odulu_isaretle():
+    veri = _yukle()
+    veri['degerlendirme_odul'] = True
     _kaydet(veri)
 
 

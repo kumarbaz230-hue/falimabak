@@ -47,3 +47,13 @@ def magaza_degerlendir():
         return True
     except Exception:
         return False
+
+
+def magaza_degerlendir_odullu():
+    """Play Store aç; ilk kez değerlendiren kullanıcıya coin ver."""
+    acildi = magaza_degerlendir()
+    if not acildi:
+        return False, False, 0
+    from coin import degerlendirme_odulu_ver
+    verildi, miktar = degerlendirme_odulu_ver()
+    return acildi, verildi, miktar

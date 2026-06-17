@@ -13,7 +13,10 @@ from theme import (
     metin_label, baslik_satir, siyah_buton, alt_nav_bar, ekran_icerik_sar,
     guvenli_textinput, kart_zemin_bagla, klavye_kaydir_bagla,
 )
-from gecmis import kullanici_ismi, isim_guncelle, gecmis_temizle, dil_al, muzik_acik_al, muzik_seviye_al
+from gecmis import (
+    kullanici_ismi, isim_guncelle, gecmis_temizle, dil_al, muzik_acik_al, muzik_seviye_al,
+    bildirim_acik_al, bildirim_acik_kaydet,
+)
 from dil import t, dil_listesi, dil_etiket, dil_degistir
 
 _SURUM = APP_SURUM
@@ -99,6 +102,19 @@ class AyarlarScreen(Screen):
         islem.add_widget(temizle_btn)
         icerik.add_widget(islem)
 
+        bildirim_kart = _ayar_karti(t('settings_notif'), t('settings_notif_hint'))
+        from kivy.uix.switch import Switch
+        bildirim_satir = BoxLayout(size_hint_y=None, height=dp(44), spacing=dp(8))
+        bildirim_satir.add_widget(metin_label(
+            t('settings_notif_on'), font_size='14sp', color=RENKLER['beyaz'],
+            halign='left', valign='middle', size_hint_x=1,
+        ))
+        self._bildirim_switch = Switch(active=bildirim_acik_al(), size_hint_x=None, width=dp(64))
+        self._bildirim_switch.bind(active=self._bildirim_degisti)
+        bildirim_satir.add_widget(self._bildirim_switch)
+        bildirim_kart.add_widget(bildirim_satir)
+        icerik.add_widget(bildirim_kart)
+
         hukuk = _ayar_karti(t('settings_legal'), t('settings_legal_hint'))
         gizlilik_btn = siyah_buton(t('settings_privacy'), font_size='14sp')
         gizlilik_btn.bind(on_press=self._gizlilik_ac)
@@ -106,7 +122,22 @@ class AyarlarScreen(Screen):
         deger_btn = siyah_buton(t('settings_rate'), vurgu=True, font_size='14sp')
         deger_btn.bind(on_press=self._degerlendir)
         hukuk.add_widget(deger_btn)
+        rate_ipucu = metin_label(
+            t('settings_rate_hint'), font_size='11sp', color=RENKLER['gri_acik'],
+            halign='left', size_hint_y=None, height=dp(32),
+        )
+        rate_ipucu.bind(texture_size=lambda i, v: setattr(i, 'height', max(v[1], dp(24))))
+        hukuk.add_widget(rate_ipucu)
         icerik.add_widget(hukuk)
+
+        yardim = _ayar_karti(t('settings_help'), t('settings_help_hint'))
+        faq = metin_label(
+            t('settings_faq'), font_size='11sp', color=RENKLER['gri_acik'],
+            halign='left', size_hint_y=None,
+        )
+        faq.bind(texture_size=lambda i, v: setattr(i, 'height', max(v[1], dp(80))))
+        yardim.add_widget(faq)
+        icerik.add_widget(yardim)
 
         muzik_kart = _ayar_karti(t('settings_music'), t('settings_music_hint'))
         self._muzik_btn = siyah_buton(t('settings_music_off'), font_size='14sp')
@@ -178,6 +209,7 @@ class AyarlarScreen(Screen):
         self._isim_input.text = kullanici_ismi()
         self._dil_spinner.text = dil_etiket(dil_al())
         self._mesaj.text = ''
+        self._bildirim_switch.active = bildirim_acik_al()
         self._slider_guncelle(muzik_seviye_al() * 100, ses_uygula=False)
         self._muzik_btn_guncelle()
         try:
@@ -242,10 +274,36 @@ class AyarlarScreen(Screen):
             if self.manager and 'gizlilik' in self.manager.screen_names:
                 self.manager.current = 'gizlilik'
 
+    def _bildirim_degisti(self, _, acik):
+        bildirim_acik_kaydet(acik)
+        try:
+            from bildirim import bildirim_baslat, bildirim_iptal
+            if acik:
+                bildirim_baslat()
+                self._mesaj.text = t('settings_notif_on_msg')
+            else:
+                bildirim_iptal()
+                self._mesaj.text = t('settings_notif_off_msg')
+            self._mesaj.color = get_color_from_hex(RENKLER['yesil'])
+        except Exception:
+            pass
+
     def _degerlendir(self, *_):
         try:
-            from play_store import magaza_degerlendir
-            magaza_degerlendir()
+            from play_store import magaza_degerlendir_odullu
+            from coin import DEGERLENDIRME_COIN
+            from coin_ui import coin_ui_yenile
+            acildi, verildi, _ = magaza_degerlendir_odullu()
+            if not acildi:
+                self._mesaj.text = t('settings_rate_fail')
+                self._mesaj.color = get_color_from_hex(RENKLER['kirmizi'])
+                return
+            if verildi:
+                coin_ui_yenile()
+                self._mesaj.text = t('settings_rate_reward', coin=DEGERLENDIRME_COIN)
+            else:
+                self._mesaj.text = t('settings_rate_done')
+            self._mesaj.color = get_color_from_hex(RENKLER['yesil'])
         except Exception:
             pass
 
