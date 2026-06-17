@@ -2,6 +2,7 @@
 
 from kivy.uix.screenmanager import Screen
 from kivy.uix.boxlayout import BoxLayout
+from kivy.uix.scrollview import ScrollView
 from kivy.metrics import dp
 
 from ai_yorum import _yorum_al_calistir
@@ -11,6 +12,7 @@ from theme import (
     metin_label, guvenli_textinput, tus_buton, baslik_satir,
     buton_metin_guncelle, ekran_icerik_sar, kaydirici_metin,
     yorum_bekle_metin, yorum_sonuc_metni, tus_metin, fontlari_yukle,
+    klavye_kaydir_bagla,
 )
 
 fontlari_yukle()
@@ -45,21 +47,25 @@ class RuyaScreen(Screen):
             halign='left', size_hint_y=None,
         )
         aciklama.bind(texture_size=lambda i, v: setattr(i, 'height', max(v[1], dp(36))))
-        ana.add_widget(aciklama)
 
-        ana.add_widget(metin_label(
+        self._kaydir = ScrollView(size_hint_y=1, do_scroll_x=False, bar_width=dp(3))
+        form = BoxLayout(orientation='vertical', size_hint_y=None, spacing=dp(8))
+        form.bind(minimum_height=form.setter('height'))
+        form.add_widget(aciklama)
+        form.add_widget(metin_label(
             t('ruya_input_label'),
             font_size='13sp', bold=True, color=RENKLER['mor'],
             halign='left', size_hint_y=None, height=dp(20),
         ))
-        # TextInput ScrollView içinde olursa klavye/focus çökmesi yapabiliyor — dışarıda tut.
         self._ruya_input = guvenli_textinput(
             hint_text=t('ruya_input_hint'),
             multiline=True,
             size_hint_y=None,
-            height=dp(120),
+            height=dp(140),
         )
-        ana.add_widget(self._ruya_input)
+        form.add_widget(self._ruya_input)
+        self._kaydir.add_widget(form)
+        ana.add_widget(self._kaydir)
 
         self._durum = metin_label(
             '', font_size='13sp', color=RENKLER['beyaz'],
@@ -81,6 +87,7 @@ class RuyaScreen(Screen):
         ana.add_widget(btn)
 
         ekran_icerik_sar(self, ana)
+        klavye_kaydir_bagla(self._kaydir, self._ruya_input)
 
     def _tabir_et(self, *_):
         from dil import t

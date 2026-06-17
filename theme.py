@@ -14,7 +14,7 @@ from kivy.metrics import dp
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 ASSETS_DIR = os.path.join(BASE_DIR, 'assets')
-APP_SURUM = '1.4.7'
+APP_SURUM = '1.4.8'
 
 # ============================================================
 #  PROFESYONEL RENK PALETİ
@@ -384,6 +384,63 @@ def kart_ikon_widget(anahtar=None, dosya=None, boyut=None, renk_hex=None, **kwar
             w.size = b
         return w
     return metin_label('?', font_size='22sp', bold=True, color=renk_hex or RENKLER['altin'], **kwargs)
+
+
+def _textinput_topla(root):
+    from kivy.uix.textinput import TextInput
+
+    bulunan = []
+
+    def _gez(w):
+        if isinstance(w, TextInput):
+            bulunan.append(w)
+        for ch in w.children:
+            _gez(ch)
+
+    _gez(root)
+    return bulunan
+
+
+def klavye_kaydir_bagla(scroll=None, root=None, *widgets):
+    """TextInput odaklanınca klavye altında kalmaması için ScrollView kaydır."""
+    from kivy.clock import Clock
+    from kivy.uix.textinput import TextInput
+    from kivy.uix.scrollview import ScrollView
+
+    alanlar = list(widgets)
+    if root is not None:
+        alanlar.extend(_textinput_topla(root))
+
+    def _scrollview_bul(w):
+        if scroll is not None:
+            return scroll
+        p = w.parent
+        while p is not None:
+            if isinstance(p, ScrollView):
+                return p
+            p = p.parent
+        return None
+
+    def _focus_cb(instance, focused):
+        if not focused:
+            return
+
+        def _kaydir(*_):
+            try:
+                sv = _scrollview_bul(instance)
+                if sv:
+                    sv.scroll_to(instance, padding=dp(56), animate=True)
+            except Exception:
+                pass
+
+        Clock.schedule_once(_kaydir, 0.08)
+        Clock.schedule_once(_kaydir, 0.28)
+
+    goruldu = set()
+    for w in alanlar:
+        if isinstance(w, TextInput) and id(w) not in goruldu:
+            goruldu.add(id(w))
+            w.bind(focus=_focus_cb)
 
 
 def klavye_kapat():

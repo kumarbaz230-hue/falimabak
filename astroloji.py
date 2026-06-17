@@ -5,35 +5,19 @@
 from kivy.uix.screenmanager import Screen
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.scrollview import ScrollView
-from kivy.uix.button import Button
-from kivy.uix.label import Label
-from kivy.uix.textinput import TextInput
-from kivy.uix.floatlayout import FloatLayout
-from kivy.graphics import Color, Rectangle, RoundedRectangle, Ellipse
-from kivy.utils import get_color_from_hex
-from kivy.animation import Animation
 from kivy.metrics import dp
 import random
 from datetime import date
 
 from ai_yorum import yorum_al
-from theme import tus_metin, yorum_bekle_metin, tus_buton, baslik_satir, buton_metin_guncelle, yorum_sonuc_metni
+from theme import (
+    RENKLER, SAFE_UST, SAFE_ALT,
+    tus_metin, yorum_bekle_metin, tus_buton, baslik_satir, buton_metin_guncelle,
+    yorum_sonuc_metni, metin_label, guvenli_textinput, ekran_icerik_sar,
+    kaydirici_metin, klavye_kaydir_bagla, fontlari_yukle,
+)
 
-RENKLER = {
-    'arka_plan': '#0d0221',
-    'altin': '#ffd700',
-    'mor': '#7c4dff',
-    'mor_parlak': '#b388ff',
-    'mor_koyu': '#4a148c',
-    'beyaz': '#ffffff',
-    'gri_acik': '#e0e0e0',
-    'yesil': '#00e676',
-    'kirmizi': '#ff1744',
-    'lacivert': '#0d47a1',
-    'mavi_acik': '#40c4ff',
-    'pembe_acik': '#ff80ab',
-    'yesil_parlak': '#69f0ae',
-}
+fontlari_yukle()
 
 # Burç bilgileri (doğru tarih aralıklarıyla)
 BURCLAR = {
@@ -191,131 +175,82 @@ class AstrolojiScreen(Screen):
         return True
     
     def build_ui(self):
-        with self.canvas.before:
-            Color(*get_color_from_hex(RENKLER['arka_plan']))
-            self.rect = Rectangle(size=self.size, pos=self.pos)
-            self.bind(size=self._guncelle_rect, pos=self._guncelle_rect)
-            
-        ana_layout = BoxLayout(orientation='vertical', spacing=8, padding=[12, 10, 12, 10])
-        
+        ana_layout = BoxLayout(
+            orientation='vertical',
+            spacing=dp(8),
+            padding=[dp(12), SAFE_UST, dp(12), SAFE_ALT],
+        )
         ana_layout.add_widget(baslik_satir('🌟', 'YILDIZ FALI', font_size='24sp', height=dp(44)))
-        
-        # Giriş alanı
-        giris = FloatLayout(size_hint=(1, 0.25))
-        with giris.canvas:
-            Color(*get_color_from_hex(RENKLER['lacivert']), 0.3)
-            RoundedRectangle(pos=(15, 5), size=(giris.width-30, giris.height-10), radius=[15])
-        
-        aciklama = Label(
-            text='Doğum tarihinizi girin\nburcunuzu ve yorumunuzu öğrenin!',
-            font_size='15sp',
-            color=get_color_from_hex(RENKLER['mavi_acik']),
-            pos_hint={'center_x': 0.5, 'center_y': 0.75},
-            halign='center'
-        )
-        giris.add_widget(aciklama)
-        
+
+        self._kaydir = ScrollView(size_hint_y=1, do_scroll_x=False, bar_width=dp(3))
+        govde = BoxLayout(orientation='vertical', size_hint_y=None, spacing=dp(10))
+        govde.bind(minimum_height=govde.setter('height'))
+
+        govde.add_widget(metin_label(
+            'Doğum tarihinizi girin — burcunuzu ve yorumunuzu öğrenin!',
+            font_size='13sp', color=RENKLER['mavi_acik'],
+            halign='left', size_hint_y=None, height=dp(40),
+        ))
+
         tarih_layout = BoxLayout(
-            orientation='horizontal', 
-            spacing=8,
-            pos_hint={'center_x': 0.5, 'center_y': 0.35},
-            size_hint=(0.9, 0.35)
+            orientation='horizontal',
+            size_hint_y=None,
+            height=dp(44),
+            spacing=dp(8),
         )
-        
-        self.gun_input = TextInput(
-            hint_text='Gün',
-            text='',
-            font_size='18sp',
-            multiline=False,
-            input_filter='int',
-            size_hint=(0.3, 1),
-            background_color=get_color_from_hex(RENKLER['mor_koyu']),
-            foreground_color=get_color_from_hex(RENKLER['beyaz']),
-            hint_text_color=get_color_from_hex(RENKLER['gri_acik'])
+        self.gun_input = guvenli_textinput(
+            hint_text='Gün', input_filter='int', size_hint_x=0.28,
         )
-        
-        self.ay_input = TextInput(
-            hint_text='Ay',
-            text='',
-            font_size='18sp',
-            multiline=False,
-            input_filter='int',
-            size_hint=(0.3, 1),
-            background_color=get_color_from_hex(RENKLER['mor_koyu']),
-            foreground_color=get_color_from_hex(RENKLER['beyaz']),
-            hint_text_color=get_color_from_hex(RENKLER['gri_acik'])
+        self.ay_input = guvenli_textinput(
+            hint_text='Ay', input_filter='int', size_hint_x=0.28,
         )
-        
-        self.yil_input = TextInput(
-            hint_text='Yıl',
-            text='',
-            font_size='18sp',
-            multiline=False,
-            input_filter='int',
-            size_hint=(0.4, 1),
-            background_color=get_color_from_hex(RENKLER['mor_koyu']),
-            foreground_color=get_color_from_hex(RENKLER['beyaz']),
-            hint_text_color=get_color_from_hex(RENKLER['gri_acik'])
+        self.yil_input = guvenli_textinput(
+            hint_text='Yıl', input_filter='int', size_hint_x=0.44,
         )
-        
         tarih_layout.add_widget(self.gun_input)
         tarih_layout.add_widget(self.ay_input)
         tarih_layout.add_widget(self.yil_input)
-        giris.add_widget(tarih_layout)
-        
-        ana_layout.add_widget(giris)
-        
-        # Burç sonucu
-        self.sonuc_layout = BoxLayout(size_hint=(1, 0.12))
-        self.sonuc_label = Label(
-            text='',
-            font_size='17sp',
-            color=get_color_from_hex(RENKLER['beyaz']),
-            halign='center',
-            markup=True
+        govde.add_widget(tarih_layout)
+
+        self.sonuc_label = metin_label(
+            '',
+            font_size='15sp', color=RENKLER['beyaz'],
+            halign='center', markup=True,
+            size_hint_y=None, height=dp(48),
         )
-        self.sonuc_layout.add_widget(self.sonuc_label)
-        ana_layout.add_widget(self.sonuc_layout)
-        
-        # Butonlar
+        self.sonuc_label.bind(texture_size=lambda i, v: setattr(i, 'height', max(v[1], dp(24))))
+        govde.add_widget(self.sonuc_label)
+
+        self._kaydir.add_widget(govde)
+        ana_layout.add_widget(self._kaydir)
+
         buton_layout = BoxLayout(
             orientation='horizontal',
-            size_hint=(1, 0.08),
-            spacing=8
+            size_hint_y=None,
+            height=dp(48),
+            spacing=dp(8),
         )
-        
         self.fal_buton = tus_buton('fal_bak', vurgu=True, font_size='15sp')
         self.fal_buton.bind(on_press=self.fal_bak)
-        
         geri_buton = tus_buton('geri', font_size='13sp')
         geri_buton.bind(on_press=lambda x: setattr(self.manager, 'current', 'anasayfa'))
-        
         buton_layout.add_widget(self.fal_buton)
         buton_layout.add_widget(geri_buton)
         ana_layout.add_widget(buton_layout)
-        
-        # Yorum alanı
-        self.yorum_alani = ScrollView(size_hint=(1, 0.4))
-        self.yorum_label = Label(
-            text='[b][color={}]Doğum tarihinizi girip\n"Falıma Bak" butonuna tıklayın![/color][/b]'.format(RENKLER['gri_acik']),
-            font_size='14sp',
-            color=get_color_from_hex(RENKLER['beyaz']),
-            size_hint_y=None,
-            halign='center',
-            valign='top',
-            text_size=(370, None),
-            markup=True,
-            padding=(8, 8)
+
+        self.yorum_alani, self.yorum_label = kaydirici_metin(0.32)
+        self.yorum_label.text = (
+            f'[b][color={RENKLER["gri_acik"]}]Doğum tarihinizi girip\n'
+            f'"Falıma Bak" butonuna tıklayın![/color][/b]'
         )
-        self.yorum_label.bind(texture_size=self.yorum_label.setter('size'))
-        self.yorum_alani.add_widget(self.yorum_label)
+        self.yorum_label.markup = True
         ana_layout.add_widget(self.yorum_alani)
-        
-        self.add_widget(ana_layout)
-    
-    def _guncelle_rect(self, *args):
-        self.rect.size = self.size
-        self.rect.pos = self.pos
+
+        ekran_icerik_sar(self, ana_layout)
+        klavye_kaydir_bagla(
+            self._kaydir,
+            self.gun_input, self.ay_input, self.yil_input,
+        )
     
     def fal_bak(self, instance):
         """Doğum tarihine göre burç ve yorum göster"""

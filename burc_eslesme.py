@@ -12,6 +12,7 @@ from theme import (
     metin_label, guvenli_textinput, tus_buton, baslik_satir,
     buton_metin_guncelle, ekran_icerik_sar, kaydirici_metin,
     yorum_bekle_metin, yorum_sonuc_metni, tus_metin, fontlari_yukle,
+    klavye_kaydir_bagla,
 )
 
 fontlari_yukle()
@@ -154,6 +155,7 @@ class BurcEslesmeScreen(Screen):
         govde.add_widget(self._ozet)
 
         kaydir.add_widget(govde)
+        self._kaydir = kaydir
         ana.add_widget(kaydir)
 
         self._yorum_alani, self._yorum_label = kaydirici_metin(0.32)
@@ -169,6 +171,12 @@ class BurcEslesmeScreen(Screen):
         ana.add_widget(btn)
 
         ekran_icerik_sar(self, ana)
+
+        klavye_kaydir_bagla(
+            self._kaydir,
+            self._isim1, self._g1, self._a1, self._y1,
+            self._isim2, self._g2, self._a2, self._y2,
+        )
 
     def _parse_tarih(self, g_in, a_in, y_in):
         g, a, y = g_in.text.strip(), a_in.text.strip(), y_in.text.strip()

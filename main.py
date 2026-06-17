@@ -949,7 +949,7 @@ class FalimaBakApp(App):
         Window.clearcolor = get_color_from_hex(RENKLER['arka_plan'])
         if _ANDROID:
             try:
-                Window.softinput_mode = 'pan'
+                Window.softinput_mode = 'resize'
             except Exception:
                 pass
         sm = ScreenManager(transition=FadeTransition(duration=0.25))

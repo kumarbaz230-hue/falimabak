@@ -11,7 +11,7 @@ from kivy.metrics import dp
 from theme import (
     RENKLER, SAFE_UST, APP_SURUM,
     metin_label, baslik_satir, siyah_buton, alt_nav_bar, ekran_icerik_sar,
-    guvenli_textinput, kart_zemin_bagla,
+    guvenli_textinput, kart_zemin_bagla, klavye_kaydir_bagla,
 )
 from gecmis import kullanici_ismi, isim_guncelle, gecmis_temizle, dil_al, muzik_acik_al, muzik_seviye_al
 from dil import t, dil_listesi, dil_etiket, dil_degistir
@@ -103,6 +103,9 @@ class AyarlarScreen(Screen):
         gizlilik_btn = siyah_buton(t('settings_privacy'), font_size='14sp')
         gizlilik_btn.bind(on_press=self._gizlilik_ac)
         hukuk.add_widget(gizlilik_btn)
+        deger_btn = siyah_buton(t('settings_rate'), vurgu=True, font_size='14sp')
+        deger_btn.bind(on_press=self._degerlendir)
+        hukuk.add_widget(deger_btn)
         icerik.add_widget(hukuk)
 
         muzik_kart = _ayar_karti(t('settings_music'), t('settings_music_hint'))
@@ -156,6 +159,7 @@ class AyarlarScreen(Screen):
         ))
 
         kaydir.add_widget(icerik)
+        self._kaydir = kaydir
         ana.add_widget(kaydir)
 
         try:
@@ -165,6 +169,7 @@ class AyarlarScreen(Screen):
             pass
         ana.add_widget(alt_nav_bar('ayarlar', on_sec=self._nav))
         ekran_icerik_sar(self, ana)
+        klavye_kaydir_bagla(self._kaydir, self._isim_input)
 
     def on_enter(self, *_):
         self._yukle()
@@ -236,6 +241,13 @@ class AyarlarScreen(Screen):
         except Exception:
             if self.manager and 'gizlilik' in self.manager.screen_names:
                 self.manager.current = 'gizlilik'
+
+    def _degerlendir(self, *_):
+        try:
+            from play_store import magaza_degerlendir
+            magaza_degerlendir()
+        except Exception:
+            pass
 
     def _gecmis_temizle(self, *_):
         if gecmis_temizle():
