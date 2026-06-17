@@ -1,0 +1,287 @@
+# Tek job: once APK (test) + AAB (Play Store) — disk/paralel cakismasi yok
+name: Build Android APK and AAB
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '**.py'
+      - buildozer.spec
+      - hooks/**
+      - android_res/**
+      - java/**
+      - recipes/**
+      - .github/workflows/android-build.yml
+  workflow_dispatch:
+    inputs:
+      skip_apk:
+        description: 'AAB only (APK atla)'
+        required: false
+        default: 'false'
+      skip_aab:
+        description: 'APK only (AAB atla)'
+        required: false
+        default: 'false'
+
+concurrency:
+  group: falimabak-android-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 180
+
+    env:
+      GRADLE_HOME: ""
+      ANDROID_NDK: ""
+      ANDROID_NDK_HOME: ""
+      ANDROID_NDK_ROOT: ""
+      ANDROID_NDK_LATEST_HOME: ""
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Free disk space
+        uses: jlumbroso/free-disk-space@main
+        with:
+          tool-cache: true
+          android: true
+          dotnet: true
+          haskell: true
+          large-packages: true
+          docker-images: true
+          swap-storage-gb: 4
+
+      - name: Disk report (after cleanup)
+        run: df -h
+
+      - name: Prepare config
+        run: cp config.ornek.json config.json
+
+      - name: Decode keystore
+        id: keystore
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+        run: |
+          if [ -n "$KEYSTORE_BASE64" ]; then
+            echo "$KEYSTORE_BASE64" | base64 -d > /tmp/falimabak-release.keystore
+            echo "has=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has=false" >> "$GITHUB_OUTPUT"
+            echo "KEYSTORE_BASE64 yok — AAB atlanacak, APK uretilecek"
+          fi
+
+      - name: Setup Java 17 and system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            openjdk-17-jdk \
+            build-essential git zip unzip \
+            libsdl2-dev libsdl2-image-dev libsdl2-mixer-dev libsdl2-ttf-dev \
+            libportmidi-dev libswscale-dev libavformat-dev libavcodec-dev \
+            libunwind-dev zlib1g-dev autoconf-archive \
+            libsqlite3-dev sqlite3 bzip2 libbz2-dev openssl \
+            libgdbm-dev libgdbm-compat-dev liblzma-dev libreadline-dev uuid-dev \
+            libgstreamer1.0 gstreamer1.0-plugins-base gstreamer1.0-plugins-good \
+            autoconf libtool automake libltdl-dev m4 pkg-config \
+            libncurses5-dev libncursesw5-dev libtinfo6 cmake \
+            libffi-dev libssl-dev autopoint gettext \
+            libgl1-mesa-dev libgles2-mesa-dev libegl1-mesa-dev xvfb
+          echo "JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64" >> "$GITHUB_ENV"
+          java -version
+
+      - name: Setup Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Buildozer
+        run: |
+          python -m pip install --upgrade pip
+          pip install buildozer==1.5.0 "cython==3.0.11"
+
+      - name: Accept Android SDK licenses
+        run: |
+          mkdir -p "$HOME/.android/licenses"
+          echo "24333f8a63b6825ea9c5514f83c2829b004d1fee" > "$HOME/.android/licenses/android-sdk-license"
+          echo "84831b9409646a918e305718201e" >> "$HOME/.android/licenses/android-sdk-license"
+          echo "d97579ad9d454c3b62de4ce1053f43212e" >> "$HOME/.android/licenses/android-sdk-license"
+          echo "601085b94cd77f0b157e" >> "$HOME/.android/licenses/android-sdk-license"
+          echo "33b6a2b64607f11b759f220" >> "$HOME/.android/licenses/android-sdk-license"
+          echo "8403addf88ab4874007e1c" > "$HOME/.android/licenses/android-sdk-preview-license"
+
+      - name: Cache SDK and source packages (build ciktilari haric)
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.buildozer/android/platform/android-sdk
+            ~/.buildozer/android/platform/build-arm64-v8a_armeabi-v7a/packages
+            ~/.buildozer/android/platform/build-arm64-v8a/packages
+            ~/.buildozer/android/platform/build-armeabi-v7a/packages
+          key: ${{ runner.os }}-falimabak-sdk-v3-${{ hashFiles('buildozer.spec', 'recipes/**', 'hooks/**') }}
+          restore-keys: |
+            ${{ runner.os }}-falimabak-sdk-v3-
+            ${{ runner.os }}-falimabak-sdk-
+
+      - name: Prune cached build artifacts
+        run: |
+          rm -rf "$HOME/.buildozer/android/platform/build-"*/build 2>/dev/null || true
+          rm -rf "$HOME/.buildozer/android/platform/build-"*/dists/*/build 2>/dev/null || true
+          rm -rf "$GITHUB_WORKSPACE/.buildozer" 2>/dev/null || true
+          df -h
+
+      - name: Configure Gradle memory
+        run: |
+          mkdir -p "$HOME/.gradle"
+          cat > "$HOME/.gradle/gradle.properties" << 'EOF'
+          org.gradle.jvmargs=-Xmx2560m -XX:MaxMetaspaceSize=512m -XX:+HeapDumpOnOutOfMemoryError -Dfile.encoding=UTF-8
+          org.gradle.daemon=false
+          org.gradle.parallel=false
+          org.gradle.workers.max=1
+          org.gradle.caching=false
+          EOF
+
+      - name: Prefetch freetype
+        run: |
+          PKG="$GITHUB_WORKSPACE/.buildozer/android/platform/build-arm64-v8a_armeabi-v7a/packages/freetype"
+          mkdir -p "$PKG"
+          FT="$PKG/freetype-2.14.1.tar.gz"
+          MARK="$PKG/.mark-freetype-2.14.1.tar.gz"
+          if [ ! -f "$MARK" ]; then
+            for url in \
+              "https://github.com/freetype/freetype/releases/download/VER-2-14-1/freetype-2.14.1.tar.gz" \
+              "https://download.savannah.gnu.org/releases/freetype/freetype-2.14.1.tar.gz"; do
+              echo "Downloading freetype from $url"
+              if curl -fL --retry 8 --retry-delay 15 --retry-all-errors -o "$FT" "$url"; then
+                touch "$MARK"
+                break
+              fi
+            done
+          fi
+          test -f "$MARK" || (echo "freetype prefetch failed" && exit 1)
+          df -h
+
+      - name: Build debug APK
+        if: github.event.inputs.skip_apk != 'true'
+        run: |
+          export ORG_GRADLE_JAVA_HOME="$JAVA_HOME"
+          export GRADLE_OPTS="-Xmx2560m -XX:MaxMetaspaceSize=512m"
+          export PATH="$JAVA_HOME/bin:$PATH"
+          Xvfb :99 -screen 0 1280x720x24 &
+          export DISPLAY=:99
+          set +o pipefail
+          EC=1
+          for attempt in 1 2 3; do
+            echo "APK build attempt $attempt/3"
+            yes 2>/dev/null | buildozer -v android debug 2>&1 | tee buildozer-apk.log
+            EC=${PIPESTATUS[1]}
+            [ "$EC" -eq 0 ] && break
+            if grep -qE "502|Bad Gateway|Download failed|No space left|ENOSPC" buildozer-apk.log; then
+              echo "Transient/disk error — temizlik + yeniden deneme..."
+              rm -rf .buildozer/android/platform/build-*/build 2>/dev/null || true
+              rm -rf .buildozer/android/platform/build-*/dists/*/build/intermediates 2>/dev/null || true
+              df -h
+              sleep 30
+              continue
+            fi
+            break
+          done
+          set -o pipefail
+          exit $EC
+
+      - name: Upload debug APK
+        if: success() && github.event.inputs.skip_apk != 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: falimabak-debug-apk
+          path: bin/*.apk
+          if-no-files-found: error
+
+      - name: Prune before AAB
+        if: steps.keystore.outputs.has == 'true' && github.event.inputs.skip_aab != 'true'
+        run: |
+          rm -rf .buildozer/android/platform/build-*/dists/*/build/intermediates 2>/dev/null || true
+          rm -rf .buildozer/android/platform/build-*/dists/*/build/tmp 2>/dev/null || true
+          df -h
+
+      - name: Build signed AAB
+        if: steps.keystore.outputs.has == 'true' && github.event.inputs.skip_aab != 'true'
+        env:
+          P4A_RELEASE_KEYSTORE: /tmp/falimabak-release.keystore
+          P4A_RELEASE_KEYSTORE_PASSWD: ${{ secrets.KEYSTORE_PASSWORD }}
+          P4A_RELEASE_KEYALIAS: ${{ secrets.KEY_ALIAS }}
+          P4A_RELEASE_KEYALIAS_PASSWD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          export ORG_GRADLE_JAVA_HOME="$JAVA_HOME"
+          export GRADLE_OPTS="-Xmx2560m -XX:MaxMetaspaceSize=512m"
+          export PATH="$JAVA_HOME/bin:$PATH"
+          set +o pipefail
+          EC=1
+          for attempt in 1 2 3; do
+            echo "AAB build attempt $attempt/3"
+            yes 2>/dev/null | buildozer -v android release 2>&1 | tee buildozer-aab.log
+            EC=${PIPESTATUS[1]}
+            [ "$EC" -eq 0 ] && break
+            if grep -qE "502|Bad Gateway|Download failed|No space left|ENOSPC" buildozer-aab.log; then
+              rm -rf .buildozer/android/platform/build-*/build 2>/dev/null || true
+              df -h
+              sleep 30
+              continue
+            fi
+            break
+          done
+          set -o pipefail
+          exit $EC
+
+      - name: Verify AAB manifest permissions
+        if: success() && steps.keystore.outputs.has == 'true' && github.event.inputs.skip_aab != 'true'
+        run: |
+          set -e
+          curl -fL -o /tmp/bundletool.jar \
+            "https://github.com/google/bundletool/releases/download/1.17.2/bundletool-all-1.17.2.jar"
+          AAB=$(ls bin/*release*.aab | head -1)
+          java -jar /tmp/bundletool.jar build-apks \
+            --bundle="$AAB" --output=/tmp/falimabak.apks --mode=universal --overwrite
+          unzip -o /tmp/falimabak.apks -d /tmp/falimabak-apk
+          APK=/tmp/falimabak-apk/universal.apk
+          SDK="$HOME/.buildozer/android/platform/android-sdk"
+          BT=$(ls -d "$SDK"/build-tools/*/ | sort -V | tail -1)
+          "$BT"aapt2 dump permissions "$APK" | tee /tmp/aapt-perms.txt
+          for BAD in READ_MEDIA_IMAGES READ_MEDIA_VIDEO READ_MEDIA_AUDIO READ_EXTERNAL_STORAGE WRITE_EXTERNAL_STORAGE ACCESS_MEDIA_LOCATION; do
+            if grep -q "$BAD" /tmp/aapt-perms.txt; then
+              echo "HATA: $BAD universal.apk icinde aktif izin!"
+              exit 1
+            fi
+          done
+          echo "OK: Yasak medya izinleri yok"
+
+      - name: Upload release AAB
+        if: success() && steps.keystore.outputs.has == 'true' && github.event.inputs.skip_aab != 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: falimabak-release-aab
+          path: bin/*release*.aab
+          if-no-files-found: error
+
+      - name: Upload logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: buildozer-logs
+          path: |
+            buildozer-apk.log
+            buildozer-aab.log
+          if-no-files-found: ignore
+
+      - name: Show build errors
+        if: failure()
+        run: |
+          for f in buildozer-apk.log buildozer-aab.log; do
+            if [ -f "$f" ]; then
+              echo "=== $f ==="
+              grep -E "ERROR|Error|failed|Traceback|gradlew|No space|ENOSPC" "$f" | tail -n 30 || true
+            fi
+          done
+          ls -la bin/ 2>/dev/null || echo "bin/ yok"
+          df -h
