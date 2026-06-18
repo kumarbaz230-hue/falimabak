@@ -407,6 +407,10 @@ def _on_activity_result(request_code, result_code, intent):
                     )
                     try:
                         _bitmap_kaydet(bitmap, hedef)
+                        try:
+                            bitmap.recycle()
+                        except Exception:
+                            pass
                         if os.path.getsize(hedef) > 0:
                             _sonuc_gonder(cb, hedef)
                             return
@@ -534,10 +538,9 @@ def galeriden_sec(callback):
     _galeri_masaustu(callback)
 
 
-def _intent_uri_kamera(callback):
-    """FileProvider ile tam çözünürlük."""
+def _launch_uri_kamera(callback):
+    """FileProvider ile tam çözünürlük — yalnizca UI thread."""
     global _kamera_callback, _kamera_hedef, _kamera_mod
-    _activity_bagla()
     _kamera_callback = callback
     _kamera_mod = 'uri'
 
@@ -547,7 +550,10 @@ def _intent_uri_kamera(callback):
     PythonActivity = autoclass('org.kivy.android.PythonActivity')
     File = autoclass('java.io.File')
     FileProvider = autoclass('androidx.core.content.FileProvider')
+    PackageManager = autoclass('android.content.pm.PackageManager')
     activity = PythonActivity.mActivity
+    if activity is None:
+        raise RuntimeError('Activity yok')
 
     fname = f'cam_{datetime.now().strftime("%Y%m%d_%H%M%S")}.jpg'
     files_dir = activity.getFilesDir()
@@ -558,31 +564,42 @@ def _intent_uri_kamera(callback):
 
     intent = Intent(MediaStore.ACTION_IMAGE_CAPTURE)
     pkg = activity.getPackageName()
-    uri = FileProvider.getUriForFile(activity, pkg + '.fileprovider', photo_file)
+    authority = pkg + '.fileprovider'
+    uri = FileProvider.getUriForFile(activity, authority, photo_file)
     intent.putExtra(MediaStore.EXTRA_OUTPUT, uri)
-    intent.addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
-    intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+    intent.addFlags(
+        Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+        | Intent.FLAG_GRANT_READ_URI_PERMISSION,
+    )
 
     pm = activity.getPackageManager()
-    PackageManager = autoclass('android.content.pm.PackageManager')
-    liste = pm.queryIntentActivities(intent, PackageManager.MATCH_DEFAULT_ONLY)
+    try:
+        flags = int(PackageManager.MATCH_DEFAULT_ONLY)
+    except Exception:
+        flags = 0
+    try:
+        liste = pm.queryIntentActivities(intent, flags)
+    except Exception:
+        liste = pm.queryIntentActivities(intent, 0)
     if liste is None or liste.size() == 0:
         raise RuntimeError('Kamera uygulaması yok')
 
+    grant = Intent.FLAG_GRANT_WRITE_URI_PERMISSION | Intent.FLAG_GRANT_READ_URI_PERMISSION
     for i in range(liste.size()):
-        ri = liste.get(i)
-        activity.grantUriPermission(
-            ri.activityInfo.packageName, uri,
-            Intent.FLAG_GRANT_WRITE_URI_PERMISSION | Intent.FLAG_GRANT_READ_URI_PERMISSION,
-        )
+        try:
+            ri = liste.get(i)
+            if ri is None or ri.activityInfo is None:
+                continue
+            activity.grantUriPermission(ri.activityInfo.packageName, uri, grant)
+        except Exception as e:
+            print(f'grantUriPermission: {e}', flush=True)
 
     activity.startActivityForResult(intent, _KAMERA_ISTEK)
 
 
-def _intent_basit_kamera(callback):
-    """Thumbnail modu — FileProvider gerektirmez."""
+def _launch_basit_kamera(callback):
+    """Thumbnail modu — FileProvider gerektirmez, UI thread."""
     global _kamera_callback, _kamera_hedef, _kamera_mod
-    _activity_bagla()
     _kamera_callback = callback
     _kamera_mod = 'thumb'
     _kamera_hedef = os.path.join(
@@ -594,32 +611,55 @@ def _intent_basit_kamera(callback):
     Intent = autoclass('android.content.Intent')
     MediaStore = autoclass('android.provider.MediaStore')
     PythonActivity = autoclass('org.kivy.android.PythonActivity')
+    PackageManager = autoclass('android.content.pm.PackageManager')
     activity = PythonActivity.mActivity
+    if activity is None:
+        raise RuntimeError('Activity yok')
 
     intent = Intent(MediaStore.ACTION_IMAGE_CAPTURE)
     pm = activity.getPackageManager()
-    PackageManager = autoclass('android.content.pm.PackageManager')
-    if intent.resolveActivity(pm) is None:
-        raise RuntimeError('Kamera yok')
+    try:
+        flags = int(PackageManager.MATCH_DEFAULT_ONLY)
+    except Exception:
+        flags = 0
+    resolved = None
+    try:
+        resolved = intent.resolveActivity(pm)
+    except Exception:
+        pass
+    if resolved is None:
+        try:
+            liste = pm.queryIntentActivities(intent, flags)
+            if liste is None or liste.size() == 0:
+                raise RuntimeError('Kamera yok')
+        except Exception as e:
+            raise RuntimeError('Kamera yok') from e
 
     activity.startActivityForResult(intent, _KAMERA_ISTEK)
 
 
 def _android_kamera_ac(callback):
-    global _kamera_callback, _kamera_hedef
-    try:
-        _intent_uri_kamera(callback)
-    except Exception as e1:
-        print(f'URI kamera: {e1}', flush=True)
-        _kamera_callback = None
-        _kamera_hedef = None
+    _activity_bagla(zorla=True)
+
+    def _ui_ac():
+        global _kamera_callback, _kamera_hedef
         try:
-            _intent_basit_kamera(callback)
-        except Exception as e2:
-            print(f'Basit kamera: {e2}', flush=True)
+            _launch_uri_kamera(callback)
+        except Exception as e1:
+            print(f'URI kamera: {e1}', flush=True)
+            traceback.print_exc()
             _kamera_callback = None
             _kamera_hedef = None
-            _ana_thread(lambda: callback(None, _dil('cam_fail')))
+            try:
+                _launch_basit_kamera(callback)
+            except Exception as e2:
+                print(f'Basit kamera: {e2}', flush=True)
+                traceback.print_exc()
+                _kamera_callback = None
+                _kamera_hedef = None
+                _sonuc_gonder(callback, None, _dil('cam_fail'))
+
+    _ui_thread(_ui_ac)
 
 
 def _kamera_masaustu(callback):

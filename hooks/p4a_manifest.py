@@ -41,6 +41,36 @@ def _ensure_tools_ns(text):
     )
 
 
+_QUERIES_BLOCK = """
+    <queries>
+        <intent>
+            <action android:name="android.media.action.IMAGE_CAPTURE" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.GET_CONTENT" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.OPEN_DOCUMENT" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.PICK" />
+        </intent>
+        <intent>
+            <action android:name="android.provider.action.PICK_IMAGES" />
+        </intent>
+    </queries>
+"""
+
+
+def _inject_package_queries(text):
+    """Android 11+ kamera/galeri intent gorunurlugu."""
+    if 'android.media.action.IMAGE_CAPTURE' in text:
+        return text
+    if '</manifest>' in text:
+        return text.replace('</manifest>', _QUERIES_BLOCK + '\n</manifest>', 1)
+    return text
+
+
 def _patch_manifest(path):
     if not path or not os.path.isfile(path):
         return
@@ -48,6 +78,7 @@ def _patch_manifest(path):
         text = f.read()
     orig = text
     text = _ensure_tools_ns(text)
+    text = _inject_package_queries(text)
 
     kept = []
     for line in text.splitlines():
