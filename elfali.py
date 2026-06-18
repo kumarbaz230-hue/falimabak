@@ -24,7 +24,7 @@ from theme import (
     RENKLER, tus_metin, yorum_bekle_metin, fontlari_yukle, metin_label,
     tus_buton, baslik_satir, buton_metin_guncelle,
     kaydirici_metin, FotoKutucukPanel, yorum_bekle_markup, foto_fal_sonuc,
-    SAFE_UST, SAFE_ALT, ekran_icerik_sar,
+    SAFE_UST, SAFE_ALT, ekran_icerik_sar, yorum_panel_baslik,
 )
 from kamera import galeriden_sec, kameradan_cek, galeri_aktif
 from ai_yorum import yorum_al
@@ -266,6 +266,7 @@ class ElFaliScreen(Screen):
         btn_layout1.add_widget(self.fal_bak_btn)
         ana_layout.add_widget(btn_layout1)
 
+        ana_layout.add_widget(yorum_panel_baslik('El falı yorumunuz'))
         self.sonuc_alani, self.sonuc_label = kaydirici_metin(1)
         self.sonuc_label.halign = 'left'
         self.sonuc_label.text = (

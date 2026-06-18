@@ -14,7 +14,7 @@ from kivy.metrics import dp
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 ASSETS_DIR = os.path.join(BASE_DIR, 'assets')
-APP_SURUM = '1.5.4'
+APP_SURUM = '1.5.5'
 
 # ============================================================
 #  PROFESYONEL RENK PALETİ
@@ -790,8 +790,8 @@ def foto_fal_sonuc(metin, hata=None):
 
 
 def kaydirici_metin(yukseklik_hint=0.2, zemin_renk=None):
-    """Koyu zeminli kaydırılabilir metin alanı — beyaz flash / sızıntı yok."""
-    from kivy.graphics import Color, Rectangle
+    """Koyu zeminli kaydırılabilir metin alanı — yuvarlatılmış modern panel."""
+    from kivy.graphics import Color, RoundedRectangle, Line
     from kivy.uix.scrollview import ScrollView
 
     scroll = ScrollView(
@@ -802,13 +802,21 @@ def kaydirici_metin(yukseklik_hint=0.2, zemin_renk=None):
         bar_inactive_color=get_color_from_hex(RENKLER['gri_koyu'] + '66'),
     )
     renk = zemin_renk or RENKLER['kart_arka_cam']
+    radius = dp(14)
     with scroll.canvas.before:
         Color(*get_color_from_hex(renk))
-        scroll._kaydir_bg = Rectangle()
+        scroll._kaydir_bg = RoundedRectangle(radius=[radius])
+
+    with scroll.canvas.after:
+        Color(*get_color_from_hex(RENKLER['kart_kenar']))
+        scroll._kaydir_cerceve = Line(rounded_rectangle=(0, 0, 0, 0, radius), width=dp(1.2))
 
     def _kaydir_bg_guncelle(*_):
         scroll._kaydir_bg.pos = scroll.pos
         scroll._kaydir_bg.size = scroll.size
+        x, y = scroll.pos
+        w, h = scroll.size
+        scroll._kaydir_cerceve.rounded_rectangle = (x, y, w, h, radius)
 
     scroll.bind(pos=_kaydir_bg_guncelle, size=_kaydir_bg_guncelle)
     Clock.schedule_once(lambda *_: _kaydir_bg_guncelle(), 0)
@@ -838,6 +846,49 @@ def kaydirici_metin(yukseklik_hint=0.2, zemin_renk=None):
 
     scroll.add_widget(label)
     return scroll, label
+
+
+def fal_form_panel(yukseklik=None, esnek=False):
+    """Yuvarlatılmış form paneli — fal ekranları için modern giriş alanı."""
+    from kivy.uix.boxlayout import BoxLayout
+    from kivy.uix.scrollview import ScrollView
+
+    panel = BoxLayout(
+        orientation='vertical',
+        size_hint_y=1 if esnek else None,
+        height=0 if esnek else (yukseklik or dp(200)),
+        padding=dp(8),
+    )
+    if yukseklik and not esnek:
+        panel.height = yukseklik
+
+    koyu_zemin_ekle(panel, RENKLER['kart_arka_cam'], radius=14, vurgu_renk=RENKLER['mor'])
+
+    scroll = ScrollView(
+        size_hint=(1, 1),
+        do_scroll_x=False,
+        bar_width=dp(3),
+        bar_color=get_color_from_hex(RENKLER['mor_parlak'] + '99'),
+        bar_inactive_color=get_color_from_hex(RENKLER['gri_koyu'] + '66'),
+    )
+    form = BoxLayout(orientation='vertical', size_hint_y=None, spacing=dp(8))
+    form.bind(minimum_height=form.setter('height'))
+    scroll.add_widget(form)
+    panel.add_widget(scroll)
+    return panel, form, scroll
+
+
+def yorum_panel_baslik(metin='Yorum'):
+    """Yorum alanı üst etiketi."""
+    return metin_label(
+        metin,
+        font_size='11sp',
+        bold=True,
+        color=RENKLER['altin_parlak'],
+        halign='left',
+        size_hint_y=None,
+        height=dp(18),
+    )
 
 
 class FotoKutucukPanel(BoxLayout):

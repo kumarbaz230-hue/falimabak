@@ -193,10 +193,10 @@ def _dosya_bekle(cb, yol, deneme=0):
     if yol and os.path.isfile(yol) and os.path.getsize(yol) > 0:
         _sonuc_gonder(cb, yol)
         return
-    if deneme < 8:
-        Clock.schedule_once(lambda *_: _dosya_bekle(cb, yol, deneme + 1), 0.25)
+    if deneme < 15:
+        Clock.schedule_once(lambda *_: _dosya_bekle(cb, yol, deneme + 1), 0.3)
     else:
-        _sonuc_gonder(cb, None)
+        _sonuc_gonder(cb, None, _dil('cam_fail'))
 
 
 def _intent_gorsel_uri(intent):
@@ -415,10 +415,11 @@ def _on_activity_result_ic(request_code, result_code, intent):
             _sonuc_gonder(cb, None, _dil('cam_cancel'))
             return
 
+        if yol and os.path.isfile(yol) and os.path.getsize(yol) > 0:
+            _sonuc_gonder(cb, yol)
+            return
+
         if mod == 'uri' and yol:
-            if os.path.isfile(yol) and os.path.getsize(yol) > 0:
-                _sonuc_gonder(cb, yol)
-                return
             _dosya_bekle(cb, yol)
             return
 
@@ -445,12 +446,16 @@ def _on_activity_result_ic(request_code, result_code, intent):
 
             uri = _intent_gorsel_uri(intent)
             if uri:
-                kayit = _kopyala(uri)
+                kayit = _kopyala(uri, intent)
                 if kayit:
                     _sonuc_gonder(cb, kayit)
                     return
 
-        _sonuc_gonder(cb, None)
+        if yol:
+            _dosya_bekle(cb, yol)
+            return
+
+        _sonuc_gonder(cb, None, _dil('cam_fail'))
     except Exception:
         print(traceback.format_exc(), flush=True)
         _sonuc_gonder(cb, None)
@@ -564,18 +569,9 @@ def galeriden_sec(callback):
     _galeri_masaustu(callback)
 
 
-def _kamera_baslik():
-    baslik = _dil('tus_kamera')
-    if not baslik or baslik == 'tus_kamera':
-        baslik = 'Fotoğraf çek'
-    return baslik
-
-
-def _chooser_ile_ac(activity, intent, request_code):
-    from jnius import autoclass
-    Intent = autoclass('android.content.Intent')
-    chooser = Intent.createChooser(intent, _kamera_baslik())
-    activity.startActivityForResult(chooser, request_code)
+def _kamera_intent_ac(activity, intent):
+    """Doğrudan kamera aç — createChooser EXTRA_OUTPUT ile sonucu bozar (1.4.7 davranisi)."""
+    activity.startActivityForResult(intent, _KAMERA_ISTEK)
 
 
 def _launch_uri_kamera(callback):
@@ -634,7 +630,7 @@ def _launch_uri_kamera(callback):
         except Exception as e:
             print(f'grantUriPermission: {e}', flush=True)
 
-    _chooser_ile_ac(activity, intent, _KAMERA_ISTEK)
+    _kamera_intent_ac(activity, intent)
 
 
 def _launch_basit_kamera(callback):
@@ -675,7 +671,7 @@ def _launch_basit_kamera(callback):
         except Exception as e:
             raise RuntimeError('Kamera yok') from e
 
-    _chooser_ile_ac(activity, intent, _KAMERA_ISTEK)
+    _kamera_intent_ac(activity, intent)
 
 
 def _android_kamera_ac(callback):
@@ -685,16 +681,16 @@ def _android_kamera_ac(callback):
     def _ui_ac():
         global _kamera_callback, _kamera_hedef
         try:
-            _launch_basit_kamera(callback)
+            _launch_uri_kamera(callback)
         except Exception as e1:
-            print(f'Basit kamera: {e1}', flush=True)
+            print(f'URI kamera: {e1}', flush=True)
             traceback.print_exc()
             _kamera_callback = None
             _kamera_hedef = None
             try:
-                _launch_uri_kamera(callback)
+                _launch_basit_kamera(callback)
             except Exception as e2:
-                print(f'URI kamera: {e2}', flush=True)
+                print(f'Basit kamera: {e2}', flush=True)
                 traceback.print_exc()
                 _kamera_callback = None
                 _kamera_hedef = None
@@ -736,7 +732,7 @@ def kameradan_cek(callback):
     if _android_mi():
         def _izinli(ok):
             if ok:
-                _ana_thread(lambda: _android_kamera_ac(callback), 0.25)
+                _ana_thread(lambda: _android_kamera_ac(callback), 0.1)
             else:
                 _ana_thread(lambda: callback(None, _dil('cam_denied')))
 

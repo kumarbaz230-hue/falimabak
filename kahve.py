@@ -18,7 +18,7 @@ from theme import (
     RENKLER, tus_metin, yorum_bekle_metin, fontlari_yukle, metin_label,
     tus_buton, baslik_satir, buton_metin_guncelle,
     kaydirici_metin, FotoKutucukPanel, yorum_bekle_markup, foto_fal_sonuc,
-    SAFE_UST, SAFE_ALT, ekran_icerik_sar,
+    SAFE_UST, SAFE_ALT, ekran_icerik_sar, yorum_panel_baslik,
 )
 from kamera import galeriden_sec, kameradan_cek, galeri_aktif
 from ai_yorum import yorum_al
@@ -226,6 +226,7 @@ class KahveScreen(Screen):
         self.sekiller_label.halign = 'center'
         ana_layout.add_widget(self.sekiller_alani)
 
+        ana_layout.add_widget(yorum_panel_baslik('Fal yorumunuz'))
         self.yorum_alani, self.yorum_label = kaydirici_metin(1)
         self.yorum_label.halign = 'left'
         ana_layout.add_widget(self.yorum_alani)

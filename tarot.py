@@ -26,7 +26,7 @@ import unicodedata
 from theme import (
     RENKLER, FON_ADI, tus_metin, fontlari_yukle, metin_label, gradient_arka_plan_ekle, ASSETS_DIR,
     tus_buton, baslik_satir, buton_metin_guncelle, yorum_bekle_markup, yorum_sonuc_metni,
-    kaydirici_metin, SAFE_UST, SAFE_ALT, ekran_icerik_sar,
+    kaydirici_metin, SAFE_UST, SAFE_ALT, ekran_icerik_sar, yorum_panel_baslik,
 )
 from ai_yorum import yorum_al
 
@@ -222,6 +222,7 @@ class TarotScreen(Screen):
             )
         ana.add_widget(self.isim_satir)
 
+        ana.add_widget(yorum_panel_baslik('Tarot yorumunuz'))
         self.yorum_alani, self.yorum_label = kaydirici_metin(1)
         self.yorum_label.halign = 'left'
         self.yorum_label.text = (

@@ -12,7 +12,7 @@ from theme import (
     metin_label, guvenli_textinput, tus_buton, baslik_satir,
     buton_metin_guncelle, ekran_icerik_sar, kaydirici_metin,
     yorum_bekle_metin, yorum_sonuc_metni, tus_metin, fontlari_yukle,
-    klavye_kaydir_bagla,
+    klavye_kaydir_bagla, fal_form_panel, yorum_panel_baslik,
 )
 
 fontlari_yukle()
@@ -117,14 +117,7 @@ class BurcEslesmeScreen(Screen):
         )
         ana.add_widget(baslik_satir('💞', t('burc_eslesme_title'), font_size='22sp', height=dp(40)))
 
-        kaydir = ScrollView(
-            size_hint_y=None,
-            height=dp(280),
-            do_scroll_x=False,
-            bar_width=dp(3),
-        )
-        govde = BoxLayout(orientation='vertical', size_hint_y=None, spacing=dp(10), padding=[0, dp(4)])
-        govde.bind(minimum_height=govde.setter('height'))
+        form_panel, govde, self._kaydir = fal_form_panel(yukseklik=dp(280))
 
         aciklama_lbl = metin_label(
             t('burc_eslesme_aciklama'),
@@ -159,10 +152,9 @@ class BurcEslesmeScreen(Screen):
         self._ozet.bind(texture_size=lambda i, v: setattr(i, 'height', max(v[1], dp(40))))
         govde.add_widget(self._ozet)
 
-        kaydir.add_widget(govde)
-        self._kaydir = kaydir
-        ana.add_widget(kaydir)
+        ana.add_widget(form_panel)
 
+        ana.add_widget(yorum_panel_baslik('Uyum yorumu'))
         self._yorum_alani, self._yorum_label = kaydirici_metin(1)
         ana.add_widget(self._yorum_alani)
 

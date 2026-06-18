@@ -12,7 +12,7 @@ from theme import (
     metin_label, guvenli_textinput, tus_buton, baslik_satir,
     buton_metin_guncelle, ekran_icerik_sar, kaydirici_metin,
     yorum_bekle_metin, yorum_sonuc_metni, tus_metin, fontlari_yukle,
-    klavye_kaydir_bagla,
+    klavye_kaydir_bagla, fal_form_panel, yorum_panel_baslik,
 )
 
 fontlari_yukle()
@@ -41,14 +41,7 @@ class RuyaScreen(Screen):
         )
         ana.add_widget(baslik_satir('🌙', t('ruya_title'), font_size='22sp', height=dp(40)))
 
-        self._form_kaydir = ScrollView(
-            size_hint_y=None,
-            height=dp(210),
-            do_scroll_x=False,
-            bar_width=dp(3),
-        )
-        form = BoxLayout(orientation='vertical', size_hint_y=None, spacing=dp(8))
-        form.bind(minimum_height=form.setter('height'))
+        form_panel, form, self._form_kaydir = fal_form_panel(yukseklik=dp(210))
 
         aciklama = metin_label(
             t('ruya_aciklama'),
@@ -71,8 +64,7 @@ class RuyaScreen(Screen):
         )
         form.add_widget(self._ruya_input)
 
-        self._form_kaydir.add_widget(form)
-        ana.add_widget(self._form_kaydir)
+        ana.add_widget(form_panel)
 
         self._durum = metin_label(
             '', font_size='13sp', color=RENKLER['beyaz'],
@@ -81,6 +73,7 @@ class RuyaScreen(Screen):
         self._durum.bind(texture_size=lambda i, v: setattr(i, 'height', max(v[1], dp(24))))
         ana.add_widget(self._durum)
 
+        ana.add_widget(yorum_panel_baslik('Tabiriniz'))
         self._yorum_alani, self._yorum_label = kaydirici_metin(1)
         ana.add_widget(self._yorum_alani)
 

@@ -20,6 +20,7 @@ from theme import (
     TUS, tus_buton, siyah_buton, baslik_satir, buton_metin_guncelle,
     yorum_bekle_markup, foto_fal_sonuc, diger_fal_buton, emoji_temizle,
     SAFE_UST, SAFE_ALT, ekran_icerik_sar, kaydirici_metin, metin_label,
+    yorum_panel_baslik,
 )
 
 RENKLER = {
@@ -144,6 +145,7 @@ class DigerFallarScreen(Screen):
 
         ana_layout.add_widget(fal_turu_layout)
 
+        ana_layout.add_widget(yorum_panel_baslik('Fal sonucu'))
         self.sonuc_alani, self.sonuc_label = kaydirici_metin(1)
         self.sonuc_label.text = (
             f'[b][color={RENKLER["gri_acik"]}]Yukarıdan bir fal türü seçin![/color][/b]'

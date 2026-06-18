@@ -15,6 +15,7 @@ from theme import (
     tus_metin, yorum_bekle_metin, tus_buton, baslik_satir, buton_metin_guncelle,
     yorum_sonuc_metni, metin_label, guvenli_textinput, ekran_icerik_sar,
     kaydirici_metin, klavye_kaydir_bagla, fontlari_yukle,
+    fal_form_panel, yorum_panel_baslik,
 )
 
 fontlari_yukle()
@@ -182,14 +183,7 @@ class AstrolojiScreen(Screen):
         )
         ana_layout.add_widget(baslik_satir('🌟', 'YILDIZ FALI', font_size='24sp', height=dp(44)))
 
-        self._kaydir = ScrollView(
-            size_hint_y=None,
-            height=dp(200),
-            do_scroll_x=False,
-            bar_width=dp(3),
-        )
-        govde = BoxLayout(orientation='vertical', size_hint_y=None, spacing=dp(10))
-        govde.bind(minimum_height=govde.setter('height'))
+        form_panel, govde, self._kaydir = fal_form_panel(yukseklik=dp(200))
 
         govde.add_widget(metin_label(
             'Doğum tarihinizi girin — burcunuzu ve yorumunuzu öğrenin!',
@@ -226,8 +220,7 @@ class AstrolojiScreen(Screen):
         self.sonuc_label.bind(texture_size=lambda i, v: setattr(i, 'height', max(v[1], dp(24))))
         govde.add_widget(self.sonuc_label)
 
-        self._kaydir.add_widget(govde)
-        ana_layout.add_widget(self._kaydir)
+        ana_layout.add_widget(form_panel)
 
         buton_layout = BoxLayout(
             orientation='horizontal',
@@ -243,6 +236,7 @@ class AstrolojiScreen(Screen):
         buton_layout.add_widget(geri_buton)
         ana_layout.add_widget(buton_layout)
 
+        ana_layout.add_widget(yorum_panel_baslik('Burç yorumunuz'))
         self.yorum_alani, self.yorum_label = kaydirici_metin(1)
         self.yorum_label.text = (
             f'[b][color={RENKLER["gri_acik"]}]Doğum tarihinizi girip\n'
