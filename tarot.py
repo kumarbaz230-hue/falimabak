@@ -280,12 +280,13 @@ class TarotScreen(Screen):
             spacing=dp(8),
         )
         gb = tus_buton('geri', font_size='13sp', size_hint_x=0.28)
-        gb.bind(on_press=lambda *_: setattr(self.manager, 'current', 'anasayfa'))
+        self.geri_btn = gb
+        gb.bind(on_press=self._geri_bas)
         btsatir.add_widget(gb)
 
         self.adet_btn = tus_buton('kart_adet', font_size='13sp', altin_yazi=True, size_hint_x=0.34)
         buton_metin_guncelle(self.adet_btn, f'{self.kart_adet} Kart')
-        self.adet_btn.bind(on_press=self.adet_degistir)
+        self.adet_btn.bind(on_press=self._adet_veya_ana_sayfa)
         btsatir.add_widget(self.adet_btn)
 
         self.fal_btn = tus_buton('tekrar', font_size='13sp', size_hint_x=0.38)
@@ -303,11 +304,17 @@ class TarotScreen(Screen):
         )
         ana.add_widget(self._slot_satir)
 
+        self._secim_blok = BoxLayout(
+            orientation='vertical',
+            spacing=dp(4),
+            size_hint_y=1,
+        )
         self._durum = metin_label(
             '', font_size='12sp', color=RENKLER['altin_parlak'],
             halign='center', size_hint_y=None, height=dp(20),
+            markup=True,
         )
-        ana.add_widget(self._durum)
+        self._secim_blok.add_widget(self._durum)
 
         self.deste_grid = GridLayout(
             cols=GRID_COLS,
@@ -316,12 +323,22 @@ class TarotScreen(Screen):
             size_hint_y=None,
         )
         self.deste_grid.bind(minimum_height=self.deste_grid.setter('height'))
-        ana.add_widget(self.deste_grid)
+        self._deste_yukseklik_bagli = True
+        self._secim_blok.add_widget(self.deste_grid)
+        ana.add_widget(self._secim_blok)
 
-        ana.add_widget(yorum_panel_baslik('Tarot yorumunuz'))
+        self._yorum_blok = BoxLayout(
+            orientation='vertical',
+            spacing=dp(4),
+            size_hint_y=None,
+            height=0,
+            opacity=0,
+        )
+        self._yorum_blok.add_widget(yorum_panel_baslik('Tarot yorumunuz'))
         self.yorum_alani, self.yorum_label = kaydirici_metin(1)
         self.yorum_label.halign = 'left'
-        ana.add_widget(self.yorum_alani)
+        self._yorum_blok.add_widget(self.yorum_alani)
+        ana.add_widget(self._yorum_blok)
 
         ekran_icerik_sar(self, ana)
         self._yeni_desteye_basla()
@@ -348,26 +365,105 @@ class TarotScreen(Screen):
         else:
             self._durum.text = 'Yorumunuz hazırlanıyor…'
 
+    def _deste_grid_gizle(self):
+        if getattr(self, '_deste_yukseklik_bagli', False):
+            self.deste_grid.unbind(minimum_height=self.deste_grid.setter('height'))
+            self._deste_yukseklik_bagli = False
+        self.deste_grid.height = 0
+        self.deste_grid.opacity = 0
+        self.deste_grid.disabled = True
+
+    def _deste_grid_goster(self):
+        self.deste_grid.opacity = 1
+        self.deste_grid.disabled = False
+        if not getattr(self, '_deste_yukseklik_bagli', False):
+            self.deste_grid.bind(minimum_height=self.deste_grid.setter('height'))
+            self._deste_yukseklik_bagli = True
+
+    def _arayuz_modu_guncelle(self):
+        if self._mod == 'yorum':
+            buton_metin_guncelle(self.geri_btn, '← Deste')
+            buton_metin_guncelle(self.adet_btn, 'Ana Sayfa')
+            self.adet_btn.disabled = False
+            self.fal_btn.disabled = self._calisiyor
+        else:
+            buton_metin_guncelle(self.geri_btn, tus_metin('geri'))
+            buton_metin_guncelle(self.adet_btn, f'{self.kart_adet} Kart')
+            self.adet_btn.disabled = self._calisiyor
+            self.fal_btn.disabled = True
+
+    def _geri_bas(self, *_):
+        if self._calisiyor:
+            return
+        if self._mod == 'yorum':
+            self._yeni_desteye_basla()
+            return
+        if self.manager:
+            self.manager.current = 'anasayfa'
+
+    def _adet_veya_ana_sayfa(self, instance):
+        if self._mod == 'yorum':
+            if self._calisiyor:
+                return
+            if self.manager:
+                self.manager.current = 'anasayfa'
+            return
+        self.adet_degistir(instance)
+
+    def on_enter(self, *_):
+        if self._mod == 'yorum' and not self._calisiyor:
+            self._yeni_desteye_basla()
+
+    def _secim_modu_goster(self):
+        self._mod = 'secim'
+        self._secim_blok.size_hint_y = 1
+        self._secim_blok.height = dp(10)
+        self._secim_blok.opacity = 1
+        self._secim_blok.disabled = False
+        self._durum.size_hint_y = None
+        self._durum.height = dp(20)
+        self._durum.opacity = 1
+        self._deste_grid_goster()
+        self._yorum_blok.size_hint_y = None
+        self._yorum_blok.height = 0
+        self._yorum_blok.opacity = 0
+        self._yorum_blok.disabled = True
+        self._alt_baslik_guncelle()
+        self._arayuz_modu_guncelle()
+
+    def _yorum_modu_goster(self):
+        self._mod = 'yorum'
+        self._deste_grid_gizle()
+        self._durum.size_hint_y = None
+        self._durum.height = 0
+        self._durum.opacity = 0
+        self._secim_blok.size_hint_y = None
+        self._secim_blok.height = 0
+        self._secim_blok.opacity = 0
+        self._secim_blok.disabled = True
+        self._yorum_blok.size_hint_y = 1
+        self._yorum_blok.height = dp(10)
+        self._yorum_blok.opacity = 1
+        self._yorum_blok.disabled = False
+        self._alt_baslik.text = 'Tarot yorumunuz'
+        self._arayuz_modu_guncelle()
+
     def _yeni_desteye_basla(self, *_):
         if self._calisiyor:
             return
-        self._mod = 'secim'
         self.secilen = []
         self._calisiyor = False
         self.fal_btn.disabled = True
         buton_metin_guncelle(self.adet_btn, f'{self.kart_adet} Kart')
+        buton_metin_guncelle(self.fal_btn, tus_metin('tekrar'))
         self.adet_btn.disabled = False
 
-        self.deste_grid.opacity = 1
-        self.deste_grid.disabled = False
+        self._deste_grid_goster()
 
-        self._alt_baslik_guncelle()
+        self._secim_modu_goster()
         self._slotlari_kur()
         self.yorum_label.markup = True
-        self.yorum_label.text = (
-            f'[color={RENKLER["gri_acik"]}]Aşağıdaki kapalı kartlara dokunun. '
-            f'Seçtikleriniz üstte görünür ve yorum otomatik başlar.[/color]'
-        )
+        self.yorum_label.text = ''
         self._deste_hazirla()
         self._deste_goster()
         self._durum_guncelle()
@@ -420,16 +516,21 @@ class TarotScreen(Screen):
 
     def _secim_hata(self):
         self._calisiyor = False
-        self.adet_btn.disabled = False
-        self.yorum_label.text = (
-            f'[color={RENKLER["kirmizi"]}]Bir hata oluştu. Tekrar deneyin.[/color]'
-        )
+        self._arayuz_modu_guncelle()
+        if self._mod == 'yorum':
+            self.yorum_label.text = (
+                f'[color={RENKLER["kirmizi"]}]Bir hata oluştu. Tekrar deneyin.[/color]'
+            )
+        else:
+            self._durum.text = (
+                f'[color={RENKLER["kirmizi"]}]Bir hata oluştu. Tekrar deneyin.[/color]'
+            )
 
     def _secim_tamam(self):
         if self._calisiyor:
             return
         self._calisiyor = True
-        self.adet_btn.disabled = True
+        self._arayuz_modu_guncelle()
         for w in self._kart_widgetlari:
             if not w.secildi:
                 w.pasif_yap()
@@ -448,28 +549,22 @@ class TarotScreen(Screen):
 
     def _coin_yok(self):
         self._calisiyor = False
-        self.adet_btn.disabled = False
-        for w in self._kart_widgetlari:
-            if not w.secildi:
-                w.disabled = False
-                w.opacity = 1.0
-        self.secilen = []
-        for s in self._slotlar:
-            s.bosalt()
-        self._durum_guncelle()
+        self._yorum_modu_goster()
+        self.yorum_label.markup = True
         self.yorum_label.text = (
             f'[color={RENKLER["kirmizi"]}]Yorum için yeterli coin yok. '
             f'Ana sayfadan coin kazanabilirsiniz.[/color]'
         )
+        self.fal_btn.disabled = False
 
     def _fal_ac_devam(self):
         try:
-            self._mod = 'yorum'
+            self._yorum_modu_goster()
             self._yorumu_goster()
             self._ai_tarot_yorum()
             self.fal_btn.disabled = False
             buton_metin_guncelle(self.fal_btn, tus_metin('tekrar'))
-            self._durum.text = 'Kartlarınız açıldı ✦'
+            self._arayuz_modu_guncelle()
         except Exception:
             print(traceback.format_exc(), flush=True)
             self._secim_hata()
