@@ -57,7 +57,7 @@ class RuyaScreen(Screen):
             hint_text=t('ruya_input_hint'),
             multiline=True,
             size_hint_y=None,
-            height=dp(96),
+            height=dp(88),
         )
         form.add_widget(self._ruya_input)
 

@@ -190,20 +190,20 @@ class AstrolojiScreen(Screen):
             halign='left', size_hint_y=None, height=dp(28),
         ))
 
+        self.gun_input = guvenli_textinput(
+            hint_text='Gün', input_filter='int', size_hint_x=0.28, height=dp(42),
+        )
+        self.ay_input = guvenli_textinput(
+            hint_text='Ay', input_filter='int', size_hint_x=0.28, height=dp(42),
+        )
+        self.yil_input = guvenli_textinput(
+            hint_text='Yıl', input_filter='int', size_hint_x=0.44, height=dp(42),
+        )
         tarih_layout = BoxLayout(
             orientation='horizontal',
             size_hint_y=None,
-            height=dp(40),
+            height=dp(42),
             spacing=dp(8),
-        )
-        self.gun_input = guvenli_textinput(
-            hint_text='Gün', input_filter='int', size_hint_x=0.28,
-        )
-        self.ay_input = guvenli_textinput(
-            hint_text='Ay', input_filter='int', size_hint_x=0.28,
-        )
-        self.yil_input = guvenli_textinput(
-            hint_text='Yıl', input_filter='int', size_hint_x=0.44,
         )
         tarih_layout.add_widget(self.gun_input)
         tarih_layout.add_widget(self.ay_input)

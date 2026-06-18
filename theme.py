@@ -14,7 +14,7 @@ from kivy.metrics import dp
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 ASSETS_DIR = os.path.join(BASE_DIR, 'assets')
-APP_SURUM = '1.5.6'
+APP_SURUM = '1.5.7'
 
 # ============================================================
 #  PROFESYONEL RENK PALETİ
@@ -848,28 +848,46 @@ def kaydirici_metin(yukseklik_hint=0.2, zemin_renk=None):
 
 
 def fal_form_duz():
-    """Düz, kaydırmasız kompakt form paneli — tek ekrana sığar."""
+    """Düz, kaydırmasız form paneli — zemin canvas'ta, içerik ezilmez."""
+    from kivy.graphics import Color, RoundedRectangle, Rectangle
     from kivy.uix.boxlayout import BoxLayout
 
     panel = BoxLayout(
         orientation='vertical',
         size_hint_y=None,
-        padding=dp(10),
-        spacing=dp(4),
+        padding=dp(12),
+        spacing=dp(6),
     )
+    radius = dp(14)
+    with panel.canvas.before:
+        Color(*get_color_from_hex(RENKLER['kart_arka_cam']))
+        panel._form_bg = RoundedRectangle(radius=[radius])
+        Color(*get_color_from_hex(RENKLER['mor']))
+        panel._form_serit = Rectangle()
+
+    def _form_zemin(*_):
+        x, y = panel.pos
+        w, h = panel.size
+        panel._form_bg.pos = (x, y)
+        panel._form_bg.size = (w, h)
+        panel._form_serit.pos = (x + dp(8), y + dp(10))
+        panel._form_serit.size = (dp(3), max(h - dp(20), dp(8)))
+
+    panel.bind(pos=_form_zemin, size=_form_zemin)
+
     form = BoxLayout(
         orientation='vertical',
         size_hint_y=None,
-        spacing=dp(5),
+        spacing=dp(8),
     )
     form.bind(minimum_height=form.setter('height'))
 
     def _panel_h(*_):
-        panel.height = form.height + dp(20)
+        panel.height = form.height + dp(24)
+        _form_zemin()
 
     form.bind(height=_panel_h)
     panel.add_widget(form)
-    koyu_zemin_ekle(panel, RENKLER['kart_arka_cam'], radius=14, vurgu_renk=RENKLER['mor'])
     Clock.schedule_once(lambda *_: _panel_h(), 0)
     return panel, form
 

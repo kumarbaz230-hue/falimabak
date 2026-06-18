@@ -2,6 +2,7 @@
 
 from kivy.uix.screenmanager import Screen
 from kivy.uix.boxlayout import BoxLayout
+from kivy.uix.widget import Widget
 from kivy.metrics import dp
 
 from astroloji import BURCLAR
@@ -15,6 +16,8 @@ from theme import (
 )
 
 fontlari_yukle()
+
+_INP_H = dp(42)
 
 
 def _burc_bul(gun, ay):
@@ -88,58 +91,73 @@ class BurcEslesmeScreen(Screen):
         super().__init__(**kwargs)
         self._kur()
 
-    def _kisi_blok(self, baslik, renk):
+    def _tarih_satiri(self):
         from dil import t
-        blok = BoxLayout(
-            orientation='vertical',
-            size_hint_y=None,
-            height=dp(76),
-            spacing=dp(2),
-        )
-        blok.add_widget(metin_label(
-            baslik, font_size='12sp', bold=True, color=renk,
-            halign='left', size_hint_y=None, height=dp(16),
-        ))
-        isim = guvenli_textinput(
-            hint_text=t('burc_isim1') if '1' in baslik else t('burc_isim2'),
-            size_hint_y=None,
-            height=dp(34),
-        )
-        blok.add_widget(isim)
         satir = BoxLayout(
             orientation='horizontal',
             size_hint_y=None,
-            height=dp(36),
+            height=_INP_H,
             spacing=dp(6),
         )
-        g = guvenli_textinput(hint_text=t('burc_gun'), input_filter='int', size_hint_x=0.28)
-        a = guvenli_textinput(hint_text=t('burc_ay'), input_filter='int', size_hint_x=0.28)
-        y = guvenli_textinput(hint_text=t('burc_yil'), input_filter='int', size_hint_x=0.44)
+        g = guvenli_textinput(
+            hint_text=t('burc_gun'), input_filter='int',
+            size_hint_x=0.28, height=_INP_H,
+        )
+        a = guvenli_textinput(
+            hint_text=t('burc_ay'), input_filter='int',
+            size_hint_x=0.28, height=_INP_H,
+        )
+        y = guvenli_textinput(
+            hint_text=t('burc_yil'), input_filter='int',
+            size_hint_x=0.44, height=_INP_H,
+        )
         satir.add_widget(g)
         satir.add_widget(a)
         satir.add_widget(y)
-        blok.add_widget(satir)
-        return blok, isim, g, a, y
+        return satir, g, a, y
 
     def _kur(self):
         from dil import t
         ana = BoxLayout(
             orientation='vertical',
             padding=[dp(12), SAFE_UST, dp(12), SAFE_ALT],
-            spacing=dp(4),
+            spacing=dp(6),
         )
         ana.add_widget(baslik_satir('💞', t('burc_eslesme_title'), font_size='22sp', height=dp(36)))
 
         form_panel, govde = fal_form_duz()
 
-        k1, self._isim1, self._g1, self._a1, self._y1 = self._kisi_blok(
-            t('burc_kisi1'), RENKLER['pembe_acik'],
+        govde.add_widget(metin_label(
+            t('burc_kisi1'), font_size='13sp', bold=True, color=RENKLER['pembe_acik'],
+            halign='left', size_hint_y=None, height=dp(18),
+        ))
+        self._isim1 = guvenli_textinput(
+            hint_text=t('burc_isim1'), height=_INP_H,
         )
-        govde.add_widget(k1)
-        k2, self._isim2, self._g2, self._a2, self._y2 = self._kisi_blok(
-            t('burc_kisi2'), RENKLER['mavi_acik'],
+        govde.add_widget(self._isim1)
+        govde.add_widget(metin_label(
+            t('burc_dogum_tarihi'), font_size='11sp', color=RENKLER['gri_acik'],
+            halign='left', size_hint_y=None, height=dp(16),
+        ))
+        t1, self._g1, self._a1, self._y1 = self._tarih_satiri()
+        govde.add_widget(t1)
+
+        govde.add_widget(Widget(size_hint_y=None, height=dp(6)))
+
+        govde.add_widget(metin_label(
+            t('burc_kisi2'), font_size='13sp', bold=True, color=RENKLER['mavi_acik'],
+            halign='left', size_hint_y=None, height=dp(18),
+        ))
+        self._isim2 = guvenli_textinput(
+            hint_text=t('burc_isim2'), height=_INP_H,
         )
-        govde.add_widget(k2)
+        govde.add_widget(self._isim2)
+        govde.add_widget(metin_label(
+            t('burc_dogum_tarihi'), font_size='11sp', color=RENKLER['gri_acik'],
+            halign='left', size_hint_y=None, height=dp(16),
+        ))
+        t2, self._g2, self._a2, self._y2 = self._tarih_satiri()
+        govde.add_widget(t2)
 
         ana.add_widget(form_panel)
 
