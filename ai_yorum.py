@@ -11,6 +11,7 @@ import platform
 import random
 import threading
 import time
+import traceback
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -1225,6 +1226,17 @@ def _yorum_al_calistir(tip, veri, callback):
         callback(metin, ai_kullanildi, hata, kaynak, fotograf)
 
     def _calistir():
+        try:
+            _calistir_ic()
+        except Exception as e:
+            print(traceback.format_exc(), flush=True)
+            _ana_thread(
+                lambda err=str(e): _sonuc(
+                    None, False, 'Yorum sırasında bir hata oluştu. Tekrar deneyin.', None,
+                ),
+            )
+
+    def _calistir_ic():
         ayar = _ayar_yukle()
         foto_yollari = list(veri.get('foto_yollari') or [])
         if not foto_yollari:
@@ -1283,7 +1295,7 @@ def _yorum_al_calistir(tip, veri, callback):
                 _ana_thread(lambda h=foto_hata: _sonuc(None, False, h, kaynak, False))
                 return
             _ana_thread(
-                lambda m=metin, k=kaynak, f=fotograf_ai and k == 'gemini':
+                lambda m=metin, k=kaynak, f=fotograf_ai and kaynak == 'gemini':
                 _sonuc(m, True, None, k, f),
             )
             return
