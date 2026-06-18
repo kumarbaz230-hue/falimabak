@@ -45,18 +45,27 @@ def _kahve_telve(r, g, b):
 def _sicak_kahve_telve(r, g, b):
     """Gerçek sıcak kahverengi telve — gri/siyah ekran pikselleri sayılmaz."""
     toplam = r + g + b
-    if toplam < 80 or toplam > 420:
+    if toplam < 70 or toplam > 450:
         return False
     mx, mn = max(r, g, b), min(r, g, b)
-    if mx - mn < 8:
+    if mx - mn < 6:
         return False
-    return (
+    if (
         40 <= r <= 175
         and 22 <= g <= 125
         and 8 <= b <= 85
         and r > g > b
         and (r - b) > 18
         and (r - g) > 6
+    ):
+        return True
+    # Koyu Türk kahvesi telvesi (fotoğrafta sık görülür)
+    return (
+        26 <= r <= 105
+        and 16 <= g <= 72
+        and 8 <= b <= 52
+        and r >= g >= b
+        and (r - b) >= 10
     )
 
 
@@ -239,17 +248,94 @@ def _sicak_kahve_bolge(pixels, w, h, esik=0.06):
 
 def _ekran_goruntusu_mu(oz):
     """Kod ekranı, arayüz ss veya koyu editör görüntüsü."""
+    kahve = oz.get('kahve_orani', 0)
+    sicak = oz.get('sicak_kahve_orani', 0)
+    seramik = oz.get('seramik_orani', 0)
+    if kahve >= 0.018 or sicak >= 0.006 or seramik >= 0.08:
+        if oz.get('ekran_ui_orani', 0) >= 0.42:
+            return True
+        return False
     ui = oz.get('ekran_ui_orani', 0)
     notr = oz.get('notr_koyu_orani', 0)
-    sicak = oz.get('sicak_kahve_orani', 0)
     kontrast = oz.get('kontrast', 0)
-    if ui >= 0.18:
+    if ui >= 0.22 and sicak < 0.006:
         return True
-    if notr >= 0.20 and sicak < 0.012:
+    if notr >= 0.26 and sicak < 0.006:
         return True
-    if notr >= 0.12 and kontrast >= 18 and sicak < 0.018:
+    if notr >= 0.16 and kontrast >= 22 and sicak < 0.008:
         return True
     return False
+
+
+def _telve_izleri_var_mi(oz):
+    """Fotoğrafta kahve telvesi / koyu leke var mı?"""
+    if _ekran_goruntusu_mu(oz):
+        return False
+    sicak = oz.get('sicak_kahve_orani', 0)
+    sicak_b = oz.get('sicak_kahve_bolge', 0)
+    kahve = oz.get('kahve_orani', 0)
+    kahve_b = oz.get('kahve_bolge', 0)
+    koyu = oz.get('koyu_orani', 0)
+    kontrast = oz.get('kontrast', 0)
+    if sicak >= 0.008 or sicak_b >= 1:
+        return True
+    if kahve >= 0.022 or kahve_b >= 1:
+        return True
+    if koyu >= 0.07 and kontrast >= 5 and kahve >= 0.012:
+        return True
+    return False
+
+
+def _fincan_ici_gecerli(oz):
+    """Fincan içi — belirgin telve kütleleri."""
+    if not _telve_izleri_var_mi(oz):
+        return False
+    kahve_b = oz.get('kahve_bolge', 0)
+    sicak_b = oz.get('sicak_kahve_bolge', 0)
+    koyu = oz.get('koyu_orani', 0)
+    kahve = oz.get('kahve_orani', 0)
+    if kahve_b >= 1 or sicak_b >= 1:
+        return True
+    if kahve >= 0.03 and koyu >= 0.05:
+        return True
+    return kahve >= 0.045
+
+
+def _tabak_gecerli(oz):
+    """Tabak — seramik yüzey + telve izleri (fincan içi şart değil)."""
+    if _ekran_goruntusu_mu(oz):
+        return False
+    seramik = oz.get('seramik_orani', 0)
+    kap = oz.get('kap_orani', 0)
+    kap_b = oz.get('kap_bolge', 0)
+    seramik_b = oz.get('seramik_bolge', 0)
+    parlaklik = oz.get('parlaklik', 0)
+
+    yuzey = (
+        seramik >= 0.05
+        or kap >= 0.10
+        or kap_b >= 1
+        or seramik_b >= 1
+        or parlaklik >= 110
+    )
+    if not yuzey:
+        return False
+
+    kahve = oz.get('kahve_orani', 0)
+    kahve_b = oz.get('kahve_bolge', 0)
+    sicak = oz.get('sicak_kahve_orani', 0)
+    sicak_b = oz.get('sicak_kahve_bolge', 0)
+    koyu = oz.get('koyu_orani', 0)
+    kontrast = oz.get('kontrast', 0)
+
+    telve_izi = (
+        kahve >= 0.008
+        or sicak >= 0.004
+        or kahve_b >= 1
+        or sicak_b >= 1
+        or (koyu >= 0.03 and kontrast >= 4)
+    )
+    return telve_izi
 
 
 def _el_gorunuyor_mu(oz):
@@ -268,60 +354,14 @@ def _el_gorunuyor_mu(oz):
 
 
 def _telve_var_mi(oz):
-    """Fotoğrafta gerçek kahve telvesi var mı?"""
-    if _ekran_goruntusu_mu(oz):
-        return False
-    sicak = oz.get('sicak_kahve_orani', 0)
-    sicak_b = oz.get('sicak_kahve_bolge', 0)
-    if sicak >= 0.018 or sicak_b >= 1:
-        return True
-    kahve = oz.get('kahve_orani', 0)
-    kahve_b = oz.get('kahve_bolge', 0)
-    koyu = oz.get('koyu_orani', 0)
-    kontrast = oz.get('kontrast', 0)
-    seramik = oz.get('seramik_orani', 0)
-    # Sadece koyu+kontrast yetmez; sıcak kahve tonu veya seramik de gerekli
-    if kahve >= 0.05 and kahve_b >= 2 and (seramik >= 0.03 or sicak >= 0.01):
-        return True
-    if koyu >= 0.14 and kontrast >= 8 and sicak >= 0.01:
-        return True
-    return False
-
-
-def _kap_var_mi(oz):
-    """Fincan veya tabak gövdesi — renk fark etmez."""
-    kap = oz.get('kap_orani', 0)
-    kap_b = oz.get('kap_bolge', 0)
-    seramik = oz.get('seramik_orani', 0)
-    seramik_b = oz.get('seramik_bolge', 0)
-    return (
-        kap >= 0.04
-        or kap_b >= 1
-        or seramik >= 0.04
-        or seramik_b >= 1
-    )
+    """Geriye dönük — fincan içi ile aynı."""
+    return _fincan_ici_gecerli(oz)
 
 
 def _fincan_gorunuyor_mu(oz, tabak_mi=False):
-    """
-    Kahve falı fotoğrafı geçerli mi?
-    Şart: gerçek telve + (fincan/tabağın herhangi bir rengi) birlikte görünsün.
-    """
-    if _ekran_goruntusu_mu(oz):
-        return False
-    if not _telve_var_mi(oz):
-        return False
-
     if tabak_mi:
-        return _kap_var_mi(oz) or oz.get('sicak_kahve_bolge', 0) >= 2
-
-    if _kap_var_mi(oz) and oz.get('sicak_kahve_orani', 0) >= 0.012:
-        return True
-    if oz.get('sicak_kahve_orani', 0) >= 0.035 and oz.get('sicak_kahve_bolge', 0) >= 2:
-        return True
-    if oz.get('seramik_orani', 0) >= 0.06 and oz.get('sicak_kahve_orani', 0) >= 0.015:
-        return True
-    return False
+        return _tabak_gecerli(oz)
+    return _fincan_ici_gecerli(oz)
 
 
 def _el_slot_gecerli(ozellik, baslik):
@@ -339,23 +379,65 @@ def _kahve_slot_gecerli(ozellik, baslik):
         return False, f'"{baslik}" okunamadı. Lütfen tekrar yükleyin.'
 
     tabak_mi = 'tabak' in (baslik or '').lower()
-    if not _fincan_gorunuyor_mu(ozellik, tabak_mi=tabak_mi):
-        from dil import t
-        return False, t('foto_kahve_yok', baslik=baslik)
-    return True, dict(ozellik, _baslik=baslik)
+    from dil import t
+    if tabak_mi:
+        if _tabak_gecerli(ozellik):
+            return True, dict(ozellik, _baslik=baslik)
+        return False, t('foto_tabak_yok', baslik=baslik)
+    if _fincan_ici_gecerli(ozellik):
+        return True, dict(ozellik, _baslik=baslik)
+    return False, t('foto_fincan_yok', baslik=baslik)
+
+
+def _kahve_fotolar_dogrula(yollar, aciklamalar):
+    """Tüm slotları değerlendir — en az 2 fincan içi yeterli, tabak bonus."""
+    from dil import t
+    ozellikler = []
+    fincan_ok = 0
+    tabak_ok = False
+    fincan_hata = None
+    tabak_hata = None
+
+    for i, yol in enumerate(yollar or []):
+        if not yol:
+            continue
+        baslik = aciklamalar[i] if i < len(aciklamalar) else f'Fotoğraf {i + 1}'
+        oz = _analiz_et(yol)
+        ok, sonuc = _kahve_slot_gecerli(oz, baslik)
+        if ok:
+            ozellikler.append(sonuc)
+            if 'tabak' in baslik.lower():
+                tabak_ok = True
+            else:
+                fincan_ok += 1
+        elif 'tabak' in baslik.lower():
+            tabak_hata = sonuc
+        else:
+            fincan_hata = sonuc
+
+    if fincan_ok >= 2:
+        return True, None, ozellikler
+    if fincan_ok >= 1 and tabak_ok:
+        return True, None, ozellikler
+
+    if fincan_ok == 0:
+        return False, fincan_hata or t('foto_fincan_yok', baslik='Fincan İçi'), []
+    if not tabak_ok:
+        return False, tabak_hata or t('foto_tabak_yok', baslik='Tabak'), []
+    return False, t('foto_kahve_yok', baslik='Fotoğraf'), []
 
 
 def fotolar_dogrula(tip, yollar, aciklamalar=None):
     """(ok, hata_mesaji, ozellikler_listesi)"""
     aciklamalar = aciklamalar or []
+    if tip == 'kahve':
+        return _kahve_fotolar_dogrula(yollar, aciklamalar)
     ozellikler = []
     for i, yol in enumerate(yollar or []):
         baslik = aciklamalar[i] if i < len(aciklamalar) else f'Fotoğraf {i + 1}'
         oz = _analiz_et(yol)
         if tip == 'elfali':
             ok, sonuc = _el_slot_gecerli(oz, baslik)
-        elif tip == 'kahve':
-            ok, sonuc = _kahve_slot_gecerli(oz, baslik)
         else:
             ok, sonuc = True, oz
         if not ok:
