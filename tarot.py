@@ -39,6 +39,8 @@ _ALIASES = {
 
 GRID_COLS = 4
 DESTE_GOSTER = 12
+GRID_SATIR = (DESTE_GOSTER + GRID_COLS - 1) // GRID_COLS
+MIN_DESTE_YUK = dp(108 * GRID_SATIR + 6 * (GRID_SATIR - 1) + 8)
 
 POZ_MAP = {
     1: ['Kart'],
@@ -256,6 +258,8 @@ class TarotScreen(Screen):
         self._deste_veri = []
         self._kart_widgetlari = []
         self._slotlar = []
+        self._kuruldu = False
+        self._deste_yukseklik_bagli = False
         Clock.schedule_once(lambda *_: self.kur(), 0)
 
     def kur(self):
@@ -322,8 +326,7 @@ class TarotScreen(Screen):
             padding=[dp(2), dp(4)],
             size_hint_y=None,
         )
-        self.deste_grid.bind(minimum_height=self.deste_grid.setter('height'))
-        self._deste_yukseklik_bagli = True
+        self._deste_yukseklik_bagla()
         self._secim_blok.add_widget(self.deste_grid)
         ana.add_widget(self._secim_blok)
 
@@ -341,7 +344,21 @@ class TarotScreen(Screen):
         ana.add_widget(self._yorum_blok)
 
         ekran_icerik_sar(self, ana)
+        self._kuruldu = True
         self._yeni_desteye_basla()
+
+    def _deste_yukseklik_ayarla(self, grid, minimum_height, *_):
+        grid.height = max(minimum_height, MIN_DESTE_YUK)
+
+    def _deste_yukseklik_bagla(self):
+        if not self._deste_yukseklik_bagli:
+            self.deste_grid.bind(minimum_height=self._deste_yukseklik_ayarla)
+            self._deste_yukseklik_bagli = True
+
+    def _deste_yukseklik_coz(self):
+        if self._deste_yukseklik_bagli:
+            self.deste_grid.unbind(minimum_height=self._deste_yukseklik_ayarla)
+            self._deste_yukseklik_bagli = False
 
     def _alt_baslik_guncelle(self):
         self._alt_baslik.text = (
@@ -366,9 +383,7 @@ class TarotScreen(Screen):
             self._durum.text = 'Yorumunuz hazırlanıyor…'
 
     def _deste_grid_gizle(self):
-        if getattr(self, '_deste_yukseklik_bagli', False):
-            self.deste_grid.unbind(minimum_height=self.deste_grid.setter('height'))
-            self._deste_yukseklik_bagli = False
+        self._deste_yukseklik_coz()
         self.deste_grid.height = 0
         self.deste_grid.opacity = 0
         self.deste_grid.disabled = True
@@ -376,9 +391,8 @@ class TarotScreen(Screen):
     def _deste_grid_goster(self):
         self.deste_grid.opacity = 1
         self.deste_grid.disabled = False
-        if not getattr(self, '_deste_yukseklik_bagli', False):
-            self.deste_grid.bind(minimum_height=self.deste_grid.setter('height'))
-            self._deste_yukseklik_bagli = True
+        self._deste_yukseklik_bagla()
+        self._deste_yukseklik_ayarla(self.deste_grid, self.deste_grid.minimum_height)
 
     def _arayuz_modu_guncelle(self):
         if self._mod == 'yorum':
@@ -411,8 +425,25 @@ class TarotScreen(Screen):
         self.adet_degistir(instance)
 
     def on_enter(self, *_):
-        if self._mod == 'yorum' and not self._calisiyor:
-            self._yeni_desteye_basla()
+        if not self._kuruldu or self._calisiyor:
+            return
+        Clock.schedule_once(lambda *_: self._ekrana_don(), 0)
+
+    def on_leave(self, *_):
+        self._calisiyor = False
+
+    def _ekrana_don(self):
+        if self._calisiyor:
+            return
+        self._yeni_desteye_basla()
+        Clock.schedule_once(lambda *_: self._layout_yenile(), 0.05)
+
+    def _layout_yenile(self):
+        self._deste_yukseklik_ayarla(self.deste_grid, self.deste_grid.minimum_height)
+        self._secim_blok.size_hint_y = 1
+        self._secim_blok.height = dp(10)
+        self._yorum_blok.size_hint_y = None
+        self._yorum_blok.height = 0
 
     def _secim_modu_goster(self):
         self._mod = 'secim'
@@ -479,6 +510,7 @@ class TarotScreen(Screen):
             w = TiklanabilirKart(kart, durum, self._kart_tiklandi)
             self._kart_widgetlari.append(w)
             self.deste_grid.add_widget(w)
+        self._deste_yukseklik_ayarla(self.deste_grid, self.deste_grid.minimum_height)
 
     def adet_degistir(self, instance):
         if self._mod != 'secim' or self._calisiyor:
