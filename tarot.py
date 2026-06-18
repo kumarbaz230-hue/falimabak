@@ -1,22 +1,23 @@
 """
-🎴 Tarot Falı — interaktif kart seçimi
+🎴 Tarot Falı — interaktif kart seçimi (grid + üst slot)
 Kapalı kartlara dokun → çevir → yorum al
 """
 
+import random
+import os
+import re
+import traceback
+import unicodedata
+
 from kivy.uix.screenmanager import Screen
 from kivy.uix.boxlayout import BoxLayout
-from kivy.uix.scrollview import ScrollView
+from kivy.uix.gridlayout import GridLayout
 from kivy.uix.image import Image
 from kivy.uix.relativelayout import RelativeLayout
 from kivy.uix.behaviors import ButtonBehavior
 from kivy.animation import Animation
 from kivy.clock import Clock
 from kivy.metrics import dp
-from kivy.cache import Cache
-import random
-import os
-import re
-import unicodedata
 
 from theme import (
     RENKLER, tus_metin, fontlari_yukle, metin_label, ASSETS_DIR,
@@ -36,7 +37,20 @@ _ALIASES = {
     'kilic_uclu': ('kilic_uclu', 'kilic_3', 'swords_three'),
 }
 
-DESTE_GOSTER = 9
+GRID_COLS = 4
+DESTE_GOSTER = 12
+
+POZ_MAP = {
+    1: ['Kart'],
+    3: ['Geçmiş', 'Şimdiki', 'Gelecek'],
+    5: ['Geçmiş', 'Şimdiki', 'Gelecek', 'Etkiler', 'Umut'],
+}
+
+POZ_EMOJI = {
+    1: ['✨'],
+    3: ['🌅', '🌞', '🌠'],
+    5: ['🌅', '🌞', '🌠', '💫', '🌟'],
+}
 
 
 def sanitize(adi):
@@ -64,26 +78,17 @@ def _dosya_adaylari(kart_adi):
             sonuc.append(ad)
     return sonuc
 
+
 CARD_BACK = os.path.normpath(os.path.join(ASSETS_DIR, 'card_back.png'))
 
 
 def kart_gorsel_yolu(kart_adi):
     for base in _dosya_adaylari(kart_adi):
         for ext in ('.png', '.jpg', '.jpeg', '.webp'):
-            gorsel_yolu = os.path.normpath(os.path.join(ASSETS_DIR, base + ext))
-            if os.path.exists(gorsel_yolu):
-                return gorsel_yolu
-    if os.path.exists(CARD_BACK):
-        return CARD_BACK
-    return CARD_BACK
-
-
-def cache_temizle():
-    try:
-        Cache.remove('kv.image')
-        Cache.remove('kv.texture')
-    except Exception:
-        pass
+            yol = os.path.normpath(os.path.join(ASSETS_DIR, base + ext))
+            if os.path.isfile(yol):
+                return yol
+    return CARD_BACK if os.path.isfile(CARD_BACK) else ''
 
 
 def krt(s, e, a, t):
@@ -130,20 +135,56 @@ PENTS = [krt(f'Tılsım {s}', e, a, t) for s, e, a, t in [
     ('Kraliçe', '👑', 'Bereket', 'İhmal'), ('Kral', '👑', 'Başarı', 'Açgözlülük')]]
 TUM_KARTLAR = MAJOR + WANDS + CUPS + SWORDS + PENTS
 
-POZ_MAP = {
-    1: ['✨ Kart'],
-    3: ['🌅 Geçmiş', '🌞 Şimdi', '🌠 Gelecek'],
-    5: ['🌅 Geçmiş', '🌞 Şimdi', '🌠 Gelecek', '💫 Etkiler', '🌟 Umut'],
-}
+
+class SecilenSlot(BoxLayout):
+    """Üstte seçilen kart slotu — Geçmiş / Şimdiki / Gelecek."""
+
+    def __init__(self, pozisyon='', **kwargs):
+        super().__init__(orientation='vertical', size_hint_x=1, spacing=dp(2), **kwargs)
+        arka = CARD_BACK if os.path.isfile(CARD_BACK) else ''
+        self._img = Image(
+            source=arka,
+            size_hint_y=None,
+            height=dp(92),
+            fit_mode='fill',
+            opacity=0.35,
+        )
+        self._poz = metin_label(
+            pozisyon, font_size='10sp', color=RENKLER['gri_acik'],
+            halign='center', size_hint_y=None, height=dp(16),
+        )
+        self._isim = metin_label(
+            '—', font_size='11sp', bold=True, color=RENKLER['altin'],
+            halign='center', size_hint_y=None, height=dp(18),
+        )
+        self.add_widget(self._img)
+        self.add_widget(self._poz)
+        self.add_widget(self._isim)
+
+    def bosalt(self):
+        arka = CARD_BACK if os.path.isfile(CARD_BACK) else ''
+        self._img.source = arka
+        self._img.opacity = 0.35
+        self._isim.text = '—'
+
+    def doldur(self, kart, durum):
+        yol = kart_gorsel_yolu(kart['isim'])
+        if yol:
+            self._img.source = yol
+        self._img.opacity = 1.0
+        ad = kart['isim']
+        if durum == 'Ters':
+            ad = f'{ad} (Ters)'
+        self._isim.text = ad
 
 
 class TiklanabilirKart(ButtonBehavior, RelativeLayout):
-    """Kapalı tarot kartı — dokununca çevrilir."""
+    """Griddeki kapalı kart — dokununca çevrilir (angle kullanılmaz, Android güvenli)."""
 
-    def __init__(self, kart, durum, tikla_cb, genislik=None, **kwargs):
+    def __init__(self, kart, durum, tikla_cb, **kwargs):
         super().__init__(
-            size_hint=(None, 1),
-            width=genislik or dp(74),
+            size_hint_y=None,
+            height=dp(108),
             **kwargs,
         )
         self.kart = kart
@@ -152,41 +193,57 @@ class TiklanabilirKart(ButtonBehavior, RelativeLayout):
         self.acik = False
         self.secildi = False
 
-        arka = CARD_BACK if os.path.exists(CARD_BACK) else ''
-        on = kart_gorsel_yolu(kart['isim'])
+        arka = CARD_BACK if os.path.isfile(CARD_BACK) else ''
+        on_yol = kart_gorsel_yolu(kart['isim']) or arka
 
-        self._arka = Image(source=arka, size_hint=(1, 1), fit_mode='fill')
-        self._on = Image(source=on, size_hint=(1, 1), fit_mode='fill', opacity=0)
-        if durum == 'Ters':
-            self._on.angle = 180
+        self._arka = Image(source=arka or on_yol, size_hint=(1, 1), fit_mode='fill')
+        self._on = Image(source=on_yol, size_hint=(1, 1), fit_mode='fill', opacity=0)
+
+        self._band = metin_label(
+            '', font_size='9sp', bold=True, color=RENKLER['beyaz'],
+            halign='center', size_hint=(1, None), height=dp(22),
+            pos_hint={'x': 0, 'y': 0},
+        )
+        self._band.opacity = 0
 
         self.add_widget(self._arka)
         self.add_widget(self._on)
+        self.add_widget(self._band)
 
     def on_press(self):
         if self.secildi or self.acik or self.disabled:
             return
-        self.tikla_cb(self)
+        try:
+            self.tikla_cb(self)
+        except Exception:
+            print(traceback.format_exc(), flush=True)
 
     def cevir(self, bitti=None):
         if self.acik:
             return
         self.acik = True
         self.secildi = True
-        anim_arka = Animation(opacity=0, duration=0.2)
-        anim_on = Animation(opacity=1, duration=0.2)
 
-        def _on_goster(*_):
-            anim_on.start(self._on)
+        etiket = self.kart['isim']
+        if self.durum == 'Ters':
+            etiket = f'{etiket} · Ters'
+        self._band.text = etiket
+
+        def _flip_done(*_):
+            self._on.opacity = 1
+            self._arka.opacity = 0
+            self._band.opacity = 0.92
             if bitti:
-                Clock.schedule_once(lambda *_: bitti(), 0.22)
+                Clock.schedule_once(lambda *_: bitti(), 0.05)
 
-        anim_arka.bind(on_complete=lambda *_: _on_goster())
-        anim_arka.start(self._arka)
+        Animation(opacity=0, duration=0.18).start(self._arka)
+        Clock.schedule_once(lambda *_: _flip_done(), 0.18)
 
     def pasif_yap(self):
+        if self.secildi:
+            return
         self.disabled = True
-        Animation(opacity=0.35, duration=0.15).start(self)
+        self.opacity = 0.38
 
 
 class TarotScreen(Screen):
@@ -198,6 +255,7 @@ class TarotScreen(Screen):
         self._mod = 'secim'
         self._deste_veri = []
         self._kart_widgetlari = []
+        self._slotlar = []
         Clock.schedule_once(lambda *_: self.kur(), 0)
 
     def kur(self):
@@ -208,6 +266,12 @@ class TarotScreen(Screen):
         )
 
         ana.add_widget(baslik_satir('🃏', 'TAROT FALI', font_size='20sp', height=dp(32)))
+
+        self._alt_baslik = metin_label(
+            '', font_size='12sp', color=RENKLER['gri_acik'],
+            halign='center', size_hint_y=None, height=dp(22),
+        )
+        ana.add_widget(self._alt_baslik)
 
         btsatir = BoxLayout(
             orientation='horizontal',
@@ -230,52 +294,29 @@ class TarotScreen(Screen):
         btsatir.add_widget(self.fal_btn)
         ana.add_widget(btsatir)
 
+        self._slot_satir = BoxLayout(
+            orientation='horizontal',
+            size_hint_y=None,
+            height=dp(132),
+            spacing=dp(8),
+            padding=[dp(4), dp(4)],
+        )
+        ana.add_widget(self._slot_satir)
+
         self._durum = metin_label(
             '', font_size='12sp', color=RENKLER['altin_parlak'],
-            halign='center', size_hint_y=None, height=dp(22),
+            halign='center', size_hint_y=None, height=dp(20),
         )
         ana.add_widget(self._durum)
 
-        self.deste_scroll = ScrollView(
+        self.deste_grid = GridLayout(
+            cols=GRID_COLS,
+            spacing=dp(6),
+            padding=[dp(2), dp(4)],
             size_hint_y=None,
-            height=dp(158),
-            do_scroll_x=True,
-            do_scroll_y=False,
-            bar_width=0,
         )
-        self.deste_satir = BoxLayout(
-            orientation='horizontal',
-            size_hint_x=None,
-            spacing=dp(8),
-            padding=[dp(6), dp(4)],
-        )
-        self.deste_satir.bind(minimum_width=self.deste_satir.setter('width'))
-        self.deste_scroll.add_widget(self.deste_satir)
-        ana.add_widget(self.deste_scroll)
-
-        self.kart_satir = BoxLayout(
-            orientation='horizontal',
-            size_hint_y=None,
-            height=dp(0),
-            spacing=dp(8),
-        )
-        ana.add_widget(self.kart_satir)
-
-        self.poz_satir = BoxLayout(
-            orientation='horizontal',
-            size_hint_y=None,
-            height=dp(0),
-            spacing=dp(8),
-        )
-        ana.add_widget(self.poz_satir)
-
-        self.isim_satir = BoxLayout(
-            orientation='horizontal',
-            size_hint_y=None,
-            height=dp(0),
-            spacing=dp(4),
-        )
-        ana.add_widget(self.isim_satir)
+        self.deste_grid.bind(minimum_height=self.deste_grid.setter('height'))
+        ana.add_widget(self.deste_grid)
 
         ana.add_widget(yorum_panel_baslik('Tarot yorumunuz'))
         self.yorum_alani, self.yorum_label = kaydirici_metin(1)
@@ -285,24 +326,31 @@ class TarotScreen(Screen):
         ekran_icerik_sar(self, ana)
         self._yeni_desteye_basla()
 
-    def _talimat_metni(self):
-        return (
-            f'[b][color={RENKLER["altin"]}]Kapalı kartlara dokunun[/color][/b]\n'
-            f'[color={RENKLER["gri_acik"]}]Üstten {self.kart_adet} kart seçin. '
-            f'Seçtiğiniz kartlar döner, ardından yorumunuz hazırlanır.[/color]'
+    def _alt_baslik_guncelle(self):
+        self._alt_baslik.text = (
+            f'Yolunuzu aydınlatmak için {self.kart_adet} kart seçin'
         )
+
+    def _slotlari_kur(self):
+        self._slot_satir.clear_widgets()
+        self._slotlar = []
+        pozlar = POZ_MAP.get(self.kart_adet, [f'Kart {i + 1}' for i in range(self.kart_adet)])
+        for i in range(self.kart_adet):
+            poz = pozlar[i] if i < len(pozlar) else f'Kart {i + 1}'
+            slot = SecilenSlot(pozisyon=poz)
+            self._slotlar.append(slot)
+            self._slot_satir.add_widget(slot)
 
     def _durum_guncelle(self):
         n = len(self.secilen)
         if self._mod == 'secim':
             self._durum.text = f'{n} / {self.kart_adet} kart seçildi'
-        elif self._mod == 'yorum':
-            self._durum.text = 'Kartlarınız açıldı ✦'
+        else:
+            self._durum.text = 'Yorumunuz hazırlanıyor…'
 
     def _yeni_desteye_basla(self, *_):
         if self._calisiyor:
             return
-        cache_temizle()
         self._mod = 'secim'
         self.secilen = []
         self._calisiyor = False
@@ -310,19 +358,16 @@ class TarotScreen(Screen):
         buton_metin_guncelle(self.adet_btn, f'{self.kart_adet} Kart')
         self.adet_btn.disabled = False
 
-        self.kart_satir.height = dp(0)
-        self.kart_satir.clear_widgets()
-        self.poz_satir.height = dp(0)
-        self.poz_satir.clear_widgets()
-        self.isim_satir.height = dp(0)
-        self.isim_satir.clear_widgets()
+        self.deste_grid.opacity = 1
+        self.deste_grid.disabled = False
 
-        self.deste_scroll.opacity = 1
-        self.deste_scroll.disabled = False
-        self.deste_scroll.height = dp(158)
-
+        self._alt_baslik_guncelle()
+        self._slotlari_kur()
         self.yorum_label.markup = True
-        self.yorum_label.text = self._talimat_metni()
+        self.yorum_label.text = (
+            f'[color={RENKLER["gri_acik"]}]Aşağıdaki kapalı kartlara dokunun. '
+            f'Seçtikleriniz üstte görünür ve yorum otomatik başlar.[/color]'
+        )
         self._deste_hazirla()
         self._deste_goster()
         self._durum_guncelle()
@@ -332,12 +377,12 @@ class TarotScreen(Screen):
         self._deste_veri = [(k, random.choice(['Düz', 'Ters'])) for k in havuz]
 
     def _deste_goster(self):
-        self.deste_satir.clear_widgets()
+        self.deste_grid.clear_widgets()
         self._kart_widgetlari = []
         for kart, durum in self._deste_veri:
             w = TiklanabilirKart(kart, durum, self._kart_tiklandi)
             self._kart_widgetlari.append(w)
-            self.deste_satir.add_widget(w)
+            self.deste_grid.add_widget(w)
 
     def adet_degistir(self, instance):
         if self._mod != 'secim' or self._calisiyor:
@@ -357,82 +402,93 @@ class TarotScreen(Screen):
         if len(self.secilen) >= self.kart_adet:
             return
 
+        idx = len(self.secilen)
         self.secilen.append((widget.kart, widget.durum))
 
         def _devam():
-            self._durum_guncelle()
-            if len(self.secilen) >= self.kart_adet:
-                self._secim_tamam()
+            try:
+                if idx < len(self._slotlar):
+                    self._slotlar[idx].doldur(widget.kart, widget.durum)
+                self._durum_guncelle()
+                if len(self.secilen) >= self.kart_adet:
+                    self._secim_tamam()
+            except Exception:
+                print(traceback.format_exc(), flush=True)
+                self._secim_hata()
 
         widget.cevir(bitti=_devam)
 
+    def _secim_hata(self):
+        self._calisiyor = False
+        self.adet_btn.disabled = False
+        self.yorum_label.text = (
+            f'[color={RENKLER["kirmizi"]}]Bir hata oluştu. Tekrar deneyin.[/color]'
+        )
+
     def _secim_tamam(self):
+        if self._calisiyor:
+            return
         self._calisiyor = True
         self.adet_btn.disabled = True
         for w in self._kart_widgetlari:
             if not w.secildi:
                 w.pasif_yap()
-
-        Clock.schedule_once(lambda *_: self._yorum_baslat(), 0.35)
+        Clock.schedule_once(lambda *_: self._yorum_baslat(), 0.4)
 
     def _yorum_baslat(self):
-        from fal_limit import yorum_baslat
-        yorum_baslat('tarot', self._fal_ac_devam)
+        try:
+            from fal_limit import fal_izinli, yorum_baslat
+            if not fal_izinli('tarot'):
+                self._coin_yok()
+                return
+            yorum_baslat('tarot', self._fal_ac_devam)
+        except Exception:
+            print(traceback.format_exc(), flush=True)
+            self._secim_hata()
+
+    def _coin_yok(self):
+        self._calisiyor = False
+        self.adet_btn.disabled = False
+        for w in self._kart_widgetlari:
+            if not w.secildi:
+                w.disabled = False
+                w.opacity = 1.0
+        self.secilen = []
+        for s in self._slotlar:
+            s.bosalt()
+        self._durum_guncelle()
+        self.yorum_label.text = (
+            f'[color={RENKLER["kirmizi"]}]Yorum için yeterli coin yok. '
+            f'Ana sayfadan coin kazanabilirsiniz.[/color]'
+        )
 
     def _fal_ac_devam(self):
-        self._mod = 'yorum'
-        self._secilen_satirlari_goster()
-        Animation(height=0, opacity=0, duration=0.25).start(self.deste_scroll)
-        self._yorumu_goster()
-        self._ai_tarot_yorum()
-        self.fal_btn.disabled = False
-        buton_metin_guncelle(self.fal_btn, tus_metin('tekrar'))
-        self._calisiyor = False
-        self._durum_guncelle()
-
-    def _secilen_satirlari_goster(self):
-        adet = len(self.secilen)
-        pay = 1.0 / max(adet, 1)
-
-        self.kart_satir.height = dp(118)
-        self.kart_satir.clear_widgets()
-        for kart, durum in self.secilen:
-            img = Image(
-                source=kart_gorsel_yolu(kart['isim']),
-                size_hint=(pay, 1),
-                fit_mode='fill',
-                angle=180 if durum == 'Ters' else 0,
-            )
-            self.kart_satir.add_widget(img)
-
-        etiketler = POZ_MAP.get(self.kart_adet, [f'Kart {i + 1}' for i in range(adet)])
-        self.poz_satir.height = dp(20)
-        self.poz_satir.clear_widgets()
-        for i in range(adet):
-            e = etiketler[i] if i < len(etiketler) else f'Kart {i + 1}'
-            self.poz_satir.add_widget(
-                metin_label(e, font_size='9sp', color=RENKLER['altin_parlak'], halign='center')
-            )
-
-        self.isim_satir.height = dp(32)
-        self.isim_satir.clear_widgets()
-        for kart, durum in self.secilen:
-            s = '🔴' if durum == 'Ters' else '🟢'
-            c = RENKLER['kirmizi_acik'] if durum == 'Ters' else RENKLER['yesil_parlak']
-            self.isim_satir.add_widget(metin_label(
-                f'{s} {kart["isim"]}\n{durum}',
-                font_size='7sp', bold=True, color=c, halign='center',
-            ))
+        try:
+            self._mod = 'yorum'
+            self._yorumu_goster()
+            self._ai_tarot_yorum()
+            self.fal_btn.disabled = False
+            buton_metin_guncelle(self.fal_btn, tus_metin('tekrar'))
+            self._durum.text = 'Kartlarınız açıldı ✦'
+        except Exception:
+            print(traceback.format_exc(), flush=True)
+            self._secim_hata()
+        finally:
+            self._calisiyor = False
 
     def _yorumu_goster(self):
+        em = POZ_EMOJI.get(self.kart_adet, ['✨'] * self.kart_adet)
+        poz = POZ_MAP.get(self.kart_adet, [f'Kart {i + 1}' for i in range(self.kart_adet)])
+
         y = f"[b][color={RENKLER['altin']}]🃏  TAROT YORUMUNUZ  🃏[/color][/b]\n\n"
-        et = POZ_MAP.get(self.kart_adet, [f'Kart {i + 1}' for i in range(self.kart_adet)])
         for i, (kart, durum) in enumerate(self.secilen):
-            p = et[i] if i < len(et) else f'Kart {i + 1}'
+            p = poz[i] if i < len(poz) else f'Kart {i + 1}'
+            e = em[i] if i < len(em) else '✨'
             a = kart['ters'] if durum == 'Ters' else kart['anlam']
             c = RENKLER['yesil_parlak'] if durum == 'Düz' else RENKLER['kirmizi_acik']
-            y += f"[b][color={RENKLER['mor_parlak']}]{p}:[/color][/b] {kart['sembol']} [b]{kart['isim']}[/b] "
+            y += f"[b][color={RENKLER['mor_parlak']}]{e} {p}:[/color][/b] [b]{kart['isim']}[/b] "
             y += f"[color={c}]({durum})[/color]\n[color={RENKLER['gri_acik']}]{a}[/color]\n\n"
+
         y += f"[color={RENKLER['altin']}]💫 Kart Mesajı:[/color]\n"
         y += f"[color={RENKLER['pembe_acik']}]{random.choice([
             'Hayatınızda önemli değişimlerin eşiğindesiniz. Sezgilerinize güvenin.',
@@ -448,10 +504,10 @@ class TarotScreen(Screen):
         self._son_temel_yorum = y
 
     def _ai_tarot_yorum(self):
-        et = POZ_MAP.get(self.kart_adet, [f'Kart {i + 1}' for i in range(self.kart_adet)])
+        poz = POZ_MAP.get(self.kart_adet, [f'Kart {i + 1}' for i in range(self.kart_adet)])
         kartlar = []
         for i, (kart, durum) in enumerate(self.secilen):
-            p = et[i] if i < len(et) else f'Kart {i + 1}'
+            p = poz[i] if i < len(poz) else f'Kart {i + 1}'
             anlam = kart['ters'] if durum == 'Ters' else kart['anlam']
             kartlar.append({
                 'pozisyon': p,
@@ -463,11 +519,14 @@ class TarotScreen(Screen):
         self.yorum_label.text = self._son_temel_yorum + f"\n\n{yorum_bekle_markup()}"
 
         def _bitir(metin, ai_kullanildi, hata, kaynak=None, fotograf=False):
-            self.yorum_label.text = (
-                yorum_sonuc_metni(
-                    self._son_temel_yorum, metin, ai_kullanildi, hata, kaynak, fotograf,
+            try:
+                self.yorum_label.text = (
+                    yorum_sonuc_metni(
+                        self._son_temel_yorum, metin, ai_kullanildi, hata, kaynak, fotograf,
+                    )
+                    + f"\n\n[color={RENKLER['gri']}]Siz {self.kart_adet} kart seçtiniz[/color]"
                 )
-                + f"\n\n[color={RENKLER['gri']}]Siz {self.kart_adet} kart seçtiniz[/color]"
-            )
+            except Exception:
+                print(traceback.format_exc(), flush=True)
 
         yorum_al('tarot', {'kartlar': kartlar}, _bitir, coin_dahil=False)
