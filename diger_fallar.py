@@ -19,6 +19,7 @@ from ai_yorum import yorum_al
 from theme import (
     TUS, tus_buton, siyah_buton, baslik_satir, buton_metin_guncelle,
     yorum_bekle_markup, foto_fal_sonuc, diger_fal_buton, emoji_temizle,
+    SAFE_UST, SAFE_ALT, ekran_icerik_sar, kaydirici_metin, metin_label,
 )
 
 RENKLER = {
@@ -114,74 +115,62 @@ class DigerFallarScreen(Screen):
         self.build_ui()
     
     def build_ui(self):
-        with self.canvas.before:
-            Color(*get_color_from_hex(RENKLER['arka_plan']))
-            self.rect = Rectangle(size=self.size, pos=self.pos)
-            self.bind(size=self._guncelle_rect, pos=self._guncelle_rect)
-        
-        ana_layout = BoxLayout(orientation='vertical', spacing=10, padding=15)
-        
         from kivy.metrics import dp
+        ana_layout = BoxLayout(
+            orientation='vertical',
+            spacing=dp(8),
+            padding=[dp(12), SAFE_UST, dp(12), SAFE_ALT],
+        )
+
         ana_layout.add_widget(baslik_satir('', 'DİĞER FALLAR', font_size='24sp', height=dp(44)))
-        
-        # Fal türü seçimi
-        fal_turu_layout = GridLayout(cols=2, spacing=10, size_hint=(1, 0.2))
-        
+
+        fal_turu_layout = GridLayout(
+            cols=2,
+            spacing=dp(10),
+            size_hint_y=None,
+            height=dp(100),
+        )
+
         fal_turleri = [
             ('İskambil', 'iskambil'),
             ('Çiçek Falı', 'cicek'),
             ('Nazar Falı', 'nazar'),
         ]
-        
+
         for text, fal_type in fal_turleri:
             btn = diger_fal_buton(text, fal_type, vurgu=True, font_size='13sp')
             btn.bind(on_press=lambda x, ft=fal_type: self.fal_sec(ft))
             fal_turu_layout.add_widget(btn)
-        
+
         ana_layout.add_widget(fal_turu_layout)
-        
-        # Fal sonucu alanı
-        self.sonuc_alani = ScrollView(size_hint=(1, 0.55))
-        self.sonuc_label = Label(
-            text='[b][color={}]Yukarıdan bir fal türü seçin![/color][/b]'.format(RENKLER['gri_acik']),
-            font_size='16sp',
-            color=get_color_from_hex(RENKLER['beyaz']),
-            size_hint_y=None,
-            halign='center',
-            valign='top',
-            text_size=(380, None),
-            markup=True,
-            padding=(10, 10)
+
+        self.sonuc_alani, self.sonuc_label = kaydirici_metin(1)
+        self.sonuc_label.text = (
+            f'[b][color={RENKLER["gri_acik"]}]Yukarıdan bir fal türü seçin![/color][/b]'
         )
-        self.sonuc_label.bind(texture_size=self.sonuc_label.setter('size'))
-        self.sonuc_alani.add_widget(self.sonuc_label)
-        
+        self.sonuc_label.markup = True
+        self.sonuc_label.halign = 'center'
         ana_layout.add_widget(self.sonuc_alani)
-        
-        # Butonlar
+
         buton_layout = BoxLayout(
             orientation='horizontal',
-            size_hint=(1, 0.08),
-            spacing=10
+            size_hint_y=None,
+            height=dp(48),
+            spacing=dp(10),
         )
-        
+
         self.tekrar_buton = tus_buton('tekrar', vurgu=True, font_size='14sp')
         self.tekrar_buton.bind(on_press=self.tekrar_bak)
         self.tekrar_buton.disabled = True
-        
+
         geri_buton = tus_buton('geri', font_size='13sp')
         geri_buton.bind(on_press=lambda x: setattr(self.manager, 'current', 'anasayfa'))
-        
+
         buton_layout.add_widget(self.tekrar_buton)
         buton_layout.add_widget(geri_buton)
-        
         ana_layout.add_widget(buton_layout)
-        
-        self.add_widget(ana_layout)
-    
-    def _guncelle_rect(self, *args):
-        self.rect.size = self.size
-        self.rect.pos = self.pos
+
+        ekran_icerik_sar(self, ana_layout)
 
     def _fal_baslat(self, veri):
         from fal_limit import yorum_baslat

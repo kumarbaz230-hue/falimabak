@@ -24,6 +24,7 @@ from theme import (
     RENKLER, tus_metin, yorum_bekle_metin, fontlari_yukle, metin_label,
     tus_buton, baslik_satir, buton_metin_guncelle,
     kaydirici_metin, FotoKutucukPanel, yorum_bekle_markup, foto_fal_sonuc,
+    SAFE_UST, SAFE_ALT, ekran_icerik_sar,
 )
 from kamera import galeriden_sec, kameradan_cek, galeri_aktif
 from ai_yorum import yorum_al
@@ -223,15 +224,14 @@ class ElFaliScreen(Screen):
         self.build_ui()
     
     def build_ui(self):
-        with self.canvas.before:
-            Color(*get_color_from_hex(RENKLER['arka_plan']))
-            self.rect = Rectangle(size=self.size, pos=self.pos)
-            self.bind(size=self._guncelle_rect, pos=self._guncelle_rect)
-            
-        ana_layout = BoxLayout(orientation='vertical', spacing=6, padding=10)
-        
+        ana_layout = BoxLayout(
+            orientation='vertical',
+            spacing=dp(6),
+            padding=[dp(12), SAFE_UST, dp(12), SAFE_ALT],
+        )
+
         ana_layout.add_widget(baslik_satir('✋', 'EL FALI', font_size='24sp', height=dp(44)))
-        
+
         ana_layout.add_widget(metin_label(
             'Avuç içi ve el dışı fotoğrafı ekleyin. Kutuya dokunup kamera ile çekin.',
             font_size='12sp',
@@ -246,8 +246,9 @@ class ElFaliScreen(Screen):
 
         btn_layout1 = BoxLayout(
             orientation='horizontal',
-            size_hint=(1, 0.08),
-            spacing=8,
+            size_hint_y=None,
+            height=dp(48),
+            spacing=dp(8),
         )
 
         if galeri_aktif():
@@ -264,33 +265,29 @@ class ElFaliScreen(Screen):
         btn_layout1.add_widget(kamera_btn)
         btn_layout1.add_widget(self.fal_bak_btn)
         ana_layout.add_widget(btn_layout1)
-        
-        self.sonuc_alani, self.sonuc_label = kaydirici_metin(0.48)
+
+        self.sonuc_alani, self.sonuc_label = kaydirici_metin(1)
         self.sonuc_label.halign = 'left'
         self.sonuc_label.text = (
             f'[b][color={RENKLER["gri_acik"]}]👐 Avuç içi + el dışı fotoğrafı ekleyin,\n'
             f'sonra el falı yorumunuzu alın![/color][/b]'
         )
         ana_layout.add_widget(self.sonuc_alani)
-        
-        # ALT BUTONLAR
+
         btn_layout2 = BoxLayout(
             orientation='horizontal',
-            size_hint=(1, 0.07),
-            spacing=8
+            size_hint_y=None,
+            height=dp(48),
+            spacing=dp(8),
         )
-        
+
         geri_buton = tus_buton('geri', font_size='13sp')
         geri_buton.bind(on_press=lambda x: setattr(self.manager, 'current', 'anasayfa'))
-        
+
         btn_layout2.add_widget(geri_buton)
         ana_layout.add_widget(btn_layout2)
-        
-        self.add_widget(ana_layout)
-    
-    def _guncelle_rect(self, *args):
-        self.rect.size = self.size
-        self.rect.pos = self.pos
+
+        ekran_icerik_sar(self, ana_layout)
     
     def _foto_sonuc(self, yol, hata):
         if hata:

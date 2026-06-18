@@ -71,6 +71,23 @@ def _inject_package_queries(text):
     return text
 
 
+_CAMERA_FEATURES = """
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
+    <uses-feature android:name="android.hardware.camera.autofocus" android:required="false" />
+    <uses-feature android:name="android.hardware.camera.front" android:required="false" />
+"""
+
+
+def _inject_camera_features(text):
+    if 'android.hardware.camera" android:required="false"' in text:
+        return text
+    if '<application' in text:
+        return text.replace('<application', _CAMERA_FEATURES + '    <application', 1)
+    if '</manifest>' in text:
+        return text.replace('</manifest>', _CAMERA_FEATURES + '</manifest>', 1)
+    return text
+
+
 def _patch_manifest(path):
     if not path or not os.path.isfile(path):
         return
@@ -79,6 +96,7 @@ def _patch_manifest(path):
     orig = text
     text = _ensure_tools_ns(text)
     text = _inject_package_queries(text)
+    text = _inject_camera_features(text)
 
     kept = []
     for line in text.splitlines():

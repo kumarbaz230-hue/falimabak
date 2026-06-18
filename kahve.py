@@ -18,6 +18,7 @@ from theme import (
     RENKLER, tus_metin, yorum_bekle_metin, fontlari_yukle, metin_label,
     tus_buton, baslik_satir, buton_metin_guncelle,
     kaydirici_metin, FotoKutucukPanel, yorum_bekle_markup, foto_fal_sonuc,
+    SAFE_UST, SAFE_ALT, ekran_icerik_sar,
 )
 from kamera import galeriden_sec, kameradan_cek, galeri_aktif
 from ai_yorum import yorum_al
@@ -165,24 +166,14 @@ class KahveScreen(Screen):
         self.build_ui()
     
     def build_ui(self):
-        with self.canvas.before:
-            Color(*get_color_from_hex(RENKLER['arka_plan']))
-            self.rect = Rectangle(size=self.size, pos=self.pos)
-            self.bind(size=self._guncelle_rect, pos=self._guncelle_rect)
-            
-            # Dekoratif efektler
-            Color(*get_color_from_hex(RENKLER['turuncu']), 0.03)
-            Ellipse(pos=(200, 500), size=(150, 150))
-            Color(*get_color_from_hex(RENKLER['kahve']), 0.05)
-            Ellipse(pos=(50, -30), size=(200, 200))
-        
-        ana_layout = BoxLayout(orientation='vertical', spacing=8, padding=12)
-        
-        # === BAŞLIK ===
-        baslik_layout = BoxLayout(size_hint=(1, 0.08), padding=[dp(8), 0])
-        baslik_layout.add_widget(baslik_satir('☕', 'KAHVE FALI', font_size='24sp', height=dp(44)))
-        ana_layout.add_widget(baslik_layout)
-        
+        ana_layout = BoxLayout(
+            orientation='vertical',
+            spacing=dp(8),
+            padding=[dp(12), SAFE_UST, dp(12), SAFE_ALT],
+        )
+
+        ana_layout.add_widget(baslik_satir('☕', 'KAHVE FALI', font_size='24sp', height=dp(44)))
+
         ana_layout.add_widget(metin_label(
             'Fincan içini 2 kez + tabağı fotoğraflayın. Kutuya dokunup kamera ile çekin.',
             font_size='12sp',
@@ -197,9 +188,9 @@ class KahveScreen(Screen):
 
         kamera_btn_layout = BoxLayout(
             orientation='horizontal',
-            size_hint=(1, 0.08),
-            spacing=8,
-            padding=[12, 0, 12, 0],
+            size_hint_y=None,
+            height=dp(48),
+            spacing=dp(8),
         )
 
         if galeri_aktif():
@@ -211,39 +202,35 @@ class KahveScreen(Screen):
         kamera_btn.bind(on_press=lambda *_: kameradan_cek(self._foto_sonuc))
         kamera_btn_layout.add_widget(kamera_btn)
         ana_layout.add_widget(kamera_btn_layout)
-        
-        # === ŞEKİLLER ALANI ===
-        self.sekiller_alani, self.sekiller_label = kaydirici_metin(0.16)
-        self.sekiller_label.halign = 'center'
-        ana_layout.add_widget(self.sekiller_alani)
-        
-        # === BUTONLAR ===
+
         buton_layout = BoxLayout(
             orientation='horizontal',
-            size_hint=(1, 0.08),
-            spacing=8
+            size_hint_y=None,
+            height=dp(48),
+            spacing=dp(8),
         )
-        
+
         self.fal_buton = tus_buton('yorumla', vurgu=True, font_size='15sp')
         self.fal_buton.bind(on_press=self.fal_yorumla)
-        
+
         geri_buton = tus_buton('geri', font_size='13sp')
         geri_buton.bind(on_press=lambda x: setattr(self.manager, 'current', 'anasayfa'))
-        
+
         buton_layout.add_widget(self.fal_buton)
         buton_layout.add_widget(geri_buton)
         ana_layout.add_widget(buton_layout)
-        
-        # === GENEL YORUM ALANI ===
-        self.yorum_alani, self.yorum_label = kaydirici_metin(0.24)
+
+        self.sekiller_alani, self.sekiller_label = kaydirici_metin(1)
+        self.sekiller_alani.size_hint_y = None
+        self.sekiller_alani.height = dp(56)
+        self.sekiller_label.halign = 'center'
+        ana_layout.add_widget(self.sekiller_alani)
+
+        self.yorum_alani, self.yorum_label = kaydirici_metin(1)
         self.yorum_label.halign = 'left'
         ana_layout.add_widget(self.yorum_alani)
-        
-        self.add_widget(ana_layout)
-    
-    def _guncelle_rect(self, *args):
-        self.rect.size = self.size
-        self.rect.pos = self.pos
+
+        ekran_icerik_sar(self, ana_layout)
     
     def _foto_sonuc(self, yol, hata):
         if hata:

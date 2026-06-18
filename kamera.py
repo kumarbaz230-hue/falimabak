@@ -21,6 +21,22 @@ _kamera_hedef = None
 _kamera_mod = 'uri'
 _galeri_callback = None
 _activity_baglandi = False
+_bekleyen_aktivite = False
+
+
+def bekleyen_aktivite():
+    """Kamera veya galeri acikken True — on_pause icin."""
+    return _bekleyen_aktivite
+
+
+def _bekleme_baslat():
+    global _bekleyen_aktivite
+    _bekleyen_aktivite = True
+
+
+def _bekleme_bitir():
+    global _bekleyen_aktivite
+    _bekleyen_aktivite = False
 
 
 def _foto_dir():
@@ -313,6 +329,7 @@ def _galeri_sonraki_intent(activity):
 def _galeri_android_picker(callback):
     """Android fotoğraf seçici — READ_MEDIA_IMAGES gerekmez."""
     global _galeri_callback, _galeri_intent_sira, _galeri_intent_idx
+    _bekleme_baslat()
     activity = None
     try:
         _activity_bagla(zorla=True)
@@ -332,10 +349,19 @@ def _galeri_android_picker(callback):
     except Exception as e:
         print(f'Galeri picker: {e}', flush=True)
         _galeri_callback = None
+        _bekleme_bitir()
         _galeri_sonuc_gonder(callback, hata=_dil('galeri_fail'))
 
 
 def _on_activity_result(request_code, result_code, intent):
+    global _kamera_callback, _kamera_hedef, _kamera_mod, _galeri_callback
+    try:
+        _on_activity_result_ic(request_code, result_code, intent)
+    finally:
+        _bekleme_bitir()
+
+
+def _on_activity_result_ic(request_code, result_code, intent):
     global _kamera_callback, _kamera_hedef, _kamera_mod, _galeri_callback
 
     if request_code == _GALERI_ISTEK:
@@ -538,6 +564,20 @@ def galeriden_sec(callback):
     _galeri_masaustu(callback)
 
 
+def _kamera_baslik():
+    baslik = _dil('tus_kamera')
+    if not baslik or baslik == 'tus_kamera':
+        baslik = 'Fotoğraf çek'
+    return baslik
+
+
+def _chooser_ile_ac(activity, intent, request_code):
+    from jnius import autoclass
+    Intent = autoclass('android.content.Intent')
+    chooser = Intent.createChooser(intent, _kamera_baslik())
+    activity.startActivityForResult(chooser, request_code)
+
+
 def _launch_uri_kamera(callback):
     """FileProvider ile tam çözünürlük — yalnizca UI thread."""
     global _kamera_callback, _kamera_hedef, _kamera_mod
@@ -594,7 +634,7 @@ def _launch_uri_kamera(callback):
         except Exception as e:
             print(f'grantUriPermission: {e}', flush=True)
 
-    activity.startActivityForResult(intent, _KAMERA_ISTEK)
+    _chooser_ile_ac(activity, intent, _KAMERA_ISTEK)
 
 
 def _launch_basit_kamera(callback):
@@ -635,28 +675,30 @@ def _launch_basit_kamera(callback):
         except Exception as e:
             raise RuntimeError('Kamera yok') from e
 
-    activity.startActivityForResult(intent, _KAMERA_ISTEK)
+    _chooser_ile_ac(activity, intent, _KAMERA_ISTEK)
 
 
 def _android_kamera_ac(callback):
     _activity_bagla(zorla=True)
+    _bekleme_baslat()
 
     def _ui_ac():
         global _kamera_callback, _kamera_hedef
         try:
-            _launch_uri_kamera(callback)
+            _launch_basit_kamera(callback)
         except Exception as e1:
-            print(f'URI kamera: {e1}', flush=True)
+            print(f'Basit kamera: {e1}', flush=True)
             traceback.print_exc()
             _kamera_callback = None
             _kamera_hedef = None
             try:
-                _launch_basit_kamera(callback)
+                _launch_uri_kamera(callback)
             except Exception as e2:
-                print(f'Basit kamera: {e2}', flush=True)
+                print(f'URI kamera: {e2}', flush=True)
                 traceback.print_exc()
                 _kamera_callback = None
                 _kamera_hedef = None
+                _bekleme_bitir()
                 _sonuc_gonder(callback, None, _dil('cam_fail'))
 
     _ui_thread(_ui_ac)
@@ -694,7 +736,7 @@ def kameradan_cek(callback):
     if _android_mi():
         def _izinli(ok):
             if ok:
-                _ana_thread(lambda: _android_kamera_ac(callback), 0.1)
+                _ana_thread(lambda: _android_kamera_ac(callback), 0.25)
             else:
                 _ana_thread(lambda: callback(None, _dil('cam_denied')))
 

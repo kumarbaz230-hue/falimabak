@@ -834,11 +834,19 @@ class FalimaBakApp(App):
             print(f'Bildirim baslat: {e}', flush=True)
 
     def on_pause(self):
-        try:
-            from bildirim import bildirim_baslat
-            bildirim_baslat()
-        except Exception:
-            pass
+        if _ANDROID:
+            try:
+                from kamera import bekleyen_aktivite
+                if bekleyen_aktivite():
+                    return True
+            except Exception:
+                pass
+            try:
+                from bildirim import bildirim_baslat
+                Clock.schedule_once(lambda *_: bildirim_baslat(), 0)
+            except Exception:
+                pass
+            return True
         return False
 
     def on_resume(self):

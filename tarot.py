@@ -26,6 +26,7 @@ import unicodedata
 from theme import (
     RENKLER, FON_ADI, tus_metin, fontlari_yukle, metin_label, gradient_arka_plan_ekle, ASSETS_DIR,
     tus_buton, baslik_satir, buton_metin_guncelle, yorum_bekle_markup, yorum_sonuc_metni,
+    kaydirici_metin, SAFE_UST, SAFE_ALT, ekran_icerik_sar,
 )
 from ai_yorum import yorum_al
 
@@ -160,20 +161,20 @@ class TarotScreen(Screen):
         Clock.schedule_once(lambda dt: self.kur(), 0)
 
     def kur(self):
-        gradient_arka_plan_ekle(self)
-        ana = BoxLayout(orientation='vertical', spacing=0, padding=[0,0,0,0])
+        ana = BoxLayout(
+            orientation='vertical',
+            spacing=dp(6),
+            padding=[dp(10), SAFE_UST, dp(10), SAFE_ALT],
+        )
 
-        # ==========================================
-        #  1. ÜST BAR (SABİT, scroll DIŞI)
-        # ==========================================
-        ust = BoxLayout(orientation='vertical', size_hint=(1, None),
-                        height=dp(96), spacing=dp(2),
-                        padding=[dp(10), dp(6), dp(10), dp(4)])
+        ana.add_widget(baslik_satir('🃏', 'TAROT FALI', font_size='20sp', height=dp(32)))
 
-        ust.add_widget(baslik_satir('🃏', 'TAROT FALI', font_size='20sp', height=dp(32)))
-
-        btsatir = BoxLayout(orientation='horizontal', size_hint=(1, None),
-                           height=dp(46), spacing=dp(8))
+        btsatir = BoxLayout(
+            orientation='horizontal',
+            size_hint_y=None,
+            height=dp(46),
+            spacing=dp(8),
+        )
         gb = tus_buton('geri', font_size='13sp', size_hint_x=0.28)
         gb.bind(on_press=lambda x: setattr(self.manager, 'current', 'anasayfa'))
         btsatir.add_widget(gb)
@@ -186,36 +187,20 @@ class TarotScreen(Screen):
         self.fal_btn = tus_buton('fal_ac', vurgu=True, size_hint_x=0.38)
         self.fal_btn.bind(on_press=self.fal_ac)
         btsatir.add_widget(self.fal_btn)
+        ana.add_widget(btsatir)
 
-        ust.add_widget(btsatir)
-        ana.add_widget(ust)
-
-        # ==========================================
-        #  2. SCROLLVIEW (kartlar + yorum)
-        # ==========================================
-        scroll = ScrollView(size_hint=(1, 1), do_scroll_x=False, bar_width=dp(3))
-
-        # scroll içi layout - size_hint_y=None CRITICAL
-        ic = BoxLayout(orientation='vertical', size_hint_y=None,
-                       height=dp(600), spacing=dp(8),
-                       padding=[dp(8), dp(4), dp(8), dp(24)])
-        ic.bind(minimum_height=ic.setter('height'))
-
-        # ----- 2a: KART GÖRSELLERİ (yatay, sabit yükseklik, eşit genişlik) -----
         self.kart_satir = BoxLayout(
             orientation='horizontal',
-            size_hint=(1, None),
             size_hint_y=None,
-            height=dp(200),
+            height=dp(180),
             spacing=dp(10),
         )
-        ic.add_widget(self.kart_satir)
+        ana.add_widget(self.kart_satir)
         self._kart_placeholder_ekle(3)
 
-        # ----- 2a-b: POZİSYON ETİKETLERİ -----
         self.poz_satir = BoxLayout(
             orientation='horizontal',
-            size_hint=(1, None),
+            size_hint_y=None,
             height=dp(24),
             spacing=dp(10),
         )
@@ -223,34 +208,28 @@ class TarotScreen(Screen):
             self.poz_satir.add_widget(
                 metin_label('—', font_size='9sp', color=RENKLER['altin_parlak'], halign='center')
             )
-        ic.add_widget(self.poz_satir)
+        ana.add_widget(self.poz_satir)
 
-        # ----- 2b: İSİM SATIRI -----
-        self.isim_satir = BoxLayout(orientation='horizontal', size_hint=(1, None),
-                                   height=dp(38), spacing=dp(6))
+        self.isim_satir = BoxLayout(
+            orientation='horizontal',
+            size_hint_y=None,
+            height=dp(38),
+            spacing=dp(6),
+        )
         for _ in range(3):
-            self.isim_satir.add_widget(metin_label('—', font_size='8sp',
-                color=RENKLER['gri'], halign='center'))
-        ic.add_widget(self.isim_satir)
+            self.isim_satir.add_widget(
+                metin_label('—', font_size='8sp', color=RENKLER['gri'], halign='center')
+            )
+        ana.add_widget(self.isim_satir)
 
-        # ----- 2c: SPACER -----
-        ic.add_widget(Widget(size_hint=(1, None), height=dp(10)))
+        self.yorum_alani, self.yorum_label = kaydirici_metin(1)
+        self.yorum_label.halign = 'left'
+        self.yorum_label.text = (
+            f'[b][color={RENKLER["gri_acik"]}]Fal başlatmak için\n"Fal Aç" butonuna tıklayın[/color][/b]'
+        )
+        ana.add_widget(self.yorum_alani)
 
-        # ----- 2d: YORUM -----
-        self.yorum = Label(
-            text=f'[b][color={RENKLER["gri_acik"]}]Fal başlatmak için\n"Fal Aç" butonuna tıklayın[/color][/b]',
-            font_name=FON_ADI, font_size='14sp',
-            color=get_color_from_hex(RENKLER['beyaz']),
-            size_hint_y=None, height=dp(120),
-            halign='left', valign='top',
-            text_size=(dp(360), None), markup=True, padding=[dp(4), dp(4)])
-        self.yorum.bind(texture_size=lambda *a: setattr(self.yorum, 'height',
-            max(self.yorum.texture_size[1] + dp(10), dp(80))))
-        ic.add_widget(self.yorum)
-
-        scroll.add_widget(ic)
-        ana.add_widget(scroll)
-        self.add_widget(ana)
+        ekran_icerik_sar(self, ana)
 
     def _kart_placeholder_ekle(self, adet):
         """Boş kart slotları — Image her zaman geçerli source ile kilitli yerleşimde."""
@@ -327,7 +306,7 @@ class TarotScreen(Screen):
     def _kartlari_goster(self):
         """Seçilen kartların görsellerini yatay BoxLayout'a eşit genişlikte yerleştirir."""
         self.kart_satir.clear_widgets()
-        self.kart_satir.height = dp(200)
+        self.kart_satir.height = dp(180)
 
         adet = len(self.secilen)
         genislik_pay = 1.0 / max(adet, 1)
@@ -379,9 +358,8 @@ class TarotScreen(Screen):
         y += f"[color={RENKLER['altin']}]💫 Kart Mesajı:[/color]\n"
         y += f"[color={RENKLER['pembe_acik']}]{random.choice(['Hayatınızda önemli değişimlerin eşiğindesiniz. Sezgilerinize güvenin.','Geçmişi bırakın, gelecek size gülümsüyor.','Aşk ve para sizi bekliyor.','İç sesinizi dinleyin.','Kariyerinizde büyük bir sıçrama yapmaya hazır olun!','Evren size işaretler gönderiyor.'])}[/color]\n\n"
         y += f"[color={RENKLER['gri']}]📚 78 karttan {self.kart_adet} kart çekildi[/color]"
-        self.yorum.markup = True
-        self.yorum.text = y
-        self.yorum.height = max(self.yorum.texture_size[1] + dp(10), dp(80))
+        self.yorum_label.markup = True
+        self.yorum_label.text = y
         self._son_temel_yorum = y
 
     def _ai_tarot_yorum(self):
@@ -399,15 +377,14 @@ class TarotScreen(Screen):
                 'anlam': anlam,
             })
 
-        self.yorum.text = self._son_temel_yorum + f"\n\n{yorum_bekle_markup()}"
+        self.yorum_label.text = self._son_temel_yorum + f"\n\n{yorum_bekle_markup()}"
 
         def _bitir(metin, ai_kullanildi, hata, kaynak=None, fotograf=False):
-            self.yorum.text = (
+            self.yorum_label.text = (
                 yorum_sonuc_metni(
                     self._son_temel_yorum, metin, ai_kullanildi, hata, kaynak, fotograf,
                 )
                 + f"\n\n[color={RENKLER['gri']}]78 karttan {self.kart_adet} kart çekildi[/color]"
             )
-            self.yorum.height = max(self.yorum.texture_size[1] + dp(10), dp(80))
 
         yorum_al('tarot', {'kartlar': kartlar}, _bitir, coin_dahil=False)

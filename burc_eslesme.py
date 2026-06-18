@@ -117,7 +117,12 @@ class BurcEslesmeScreen(Screen):
         )
         ana.add_widget(baslik_satir('💞', t('burc_eslesme_title'), font_size='22sp', height=dp(40)))
 
-        kaydir = ScrollView(size_hint_y=1, do_scroll_x=False, bar_width=dp(3))
+        kaydir = ScrollView(
+            size_hint_y=None,
+            height=dp(280),
+            do_scroll_x=False,
+            bar_width=dp(3),
+        )
         govde = BoxLayout(orientation='vertical', size_hint_y=None, spacing=dp(10), padding=[0, dp(4)])
         govde.bind(minimum_height=govde.setter('height'))
 
@@ -158,7 +163,7 @@ class BurcEslesmeScreen(Screen):
         self._kaydir = kaydir
         ana.add_widget(kaydir)
 
-        self._yorum_alani, self._yorum_label = kaydirici_metin(0.32)
+        self._yorum_alani, self._yorum_label = kaydirici_metin(1)
         ana.add_widget(self._yorum_alani)
 
         btn = BoxLayout(orientation='horizontal', size_hint_y=None, height=dp(48), spacing=dp(8))

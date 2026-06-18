@@ -182,7 +182,12 @@ class AstrolojiScreen(Screen):
         )
         ana_layout.add_widget(baslik_satir('🌟', 'YILDIZ FALI', font_size='24sp', height=dp(44)))
 
-        self._kaydir = ScrollView(size_hint_y=1, do_scroll_x=False, bar_width=dp(3))
+        self._kaydir = ScrollView(
+            size_hint_y=None,
+            height=dp(200),
+            do_scroll_x=False,
+            bar_width=dp(3),
+        )
         govde = BoxLayout(orientation='vertical', size_hint_y=None, spacing=dp(10))
         govde.bind(minimum_height=govde.setter('height'))
 
@@ -238,7 +243,7 @@ class AstrolojiScreen(Screen):
         buton_layout.add_widget(geri_buton)
         ana_layout.add_widget(buton_layout)
 
-        self.yorum_alani, self.yorum_label = kaydirici_metin(0.32)
+        self.yorum_alani, self.yorum_label = kaydirici_metin(1)
         self.yorum_label.text = (
             f'[b][color={RENKLER["gri_acik"]}]Doğum tarihinizi girip\n'
             f'"Falıma Bak" butonuna tıklayın![/color][/b]'
