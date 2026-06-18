@@ -31,6 +31,26 @@ def gomulu_api_anahtar():
     return _anahtar_cache
 
 
+_DS_B64 = 'c2stMDQ0YjNjZTRiNzQyNDE5MmJkZjcyYzI2ZDRkYTIzM2M='
+_ds_cache = None
+
+
+def gomulu_deepseek_anahtar():
+    """APK içi DeepSeek anahtarı."""
+    global _ds_cache
+    if _ds_cache is not None:
+        return _ds_cache
+    try:
+        metin = base64.b64decode(_DS_B64).decode('utf-8').strip()
+        if metin.startswith('sk-') and len(metin) >= 20:
+            _ds_cache = metin
+            return metin
+    except Exception:
+        pass
+    _ds_cache = ''
+    return ''
+
+
 def koruma_baslat():
     """Açılışta çağrılır — uygulamayı asla kapatmaz."""
     anahtar = gomulu_api_anahtar()

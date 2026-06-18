@@ -194,18 +194,46 @@ def _elfali_yorum(veri, ozellikler=None):
     return '\n'.join(bolum)
 
 
+def _kahve_sembol_sec(rng, sekiller_db, ipuclari, adet):
+    """Fotoğraf ipuçlarına uyan sembolleri önceliklendir."""
+    adet = min(adet, len(sekiller_db))
+    if not ipuclari:
+        return rng.sample(sekiller_db, adet)
+    eslesen = [
+        s for s in sekiller_db
+        if any(ip in s['isim'] for ip in ipuclari)
+    ]
+    if len(eslesen) >= adet:
+        return rng.sample(eslesen, adet)
+    secilen = list(eslesen)
+    kalan = [s for s in sekiller_db if s not in secilen]
+    rng.shuffle(kalan)
+    while len(secilen) < adet and kalan:
+        secilen.append(kalan.pop())
+    return secilen[:adet]
+
+
 def _kahve_yorum(veri, ozellikler=None):
     sekiller_db, genel_db = _kahve_veri()
     hitap = _hitap()
     foto_t = 0
+    ipuclari = []
     if ozellikler:
-        from foto_analiz import foto_tohum
+        from foto_analiz import foto_tohum, foto_sembol_ipuclari
         foto_t = foto_tohum(ozellikler)
+        yollar = veri.get('foto_yollari') or []
+        for i, oz in enumerate(ozellikler):
+            yol = yollar[i] if i < len(yollar) else None
+            if yol:
+                ipuclari.extend(foto_sembol_ipuclari(yol, oz))
+            elif oz:
+                ipuclari.extend(foto_sembol_ipuclari('', oz))
+        ipuclari = list(dict.fromkeys(ipuclari))
     rng = rng_olustur(veri, foto_t + 17)
     uzun = premium_uzun_mu(rng)
 
     adet = rng.randint(4, 7)
-    secilen = rng.sample(sekiller_db, min(adet, len(sekiller_db)))
+    secilen = _kahve_sembol_sec(rng, sekiller_db, ipuclari, adet)
     aciklamalar = veri.get('foto_aciklamalari') or []
 
     kategoriler = {}

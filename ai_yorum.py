@@ -1,7 +1,8 @@
 """
 FalımaBak - Fal yorumu motoru.
-Öncelik (metin): Gemini → OpenRouter → Groq → Ollama (PC) → offline.
-Görsel (kahve/el): yalnızca Gemini Vision → offline.
+Kahve (varsayılan): sembol kütüphanesi — API maliyeti yok.
+Kahve (AI Detaylı): Gemini Vision.
+Metin fallar: Ollama → DeepSeek → Groq → OpenRouter → xAI → Gemini → offline.
 """
 
 import base64
@@ -57,11 +58,21 @@ _varsayilan = {
         'gemini-2.0-flash',
         'gemini-1.5-flash',
     ],
-    # Masaüstü Ollama (mobilde atlanır)
+    # Kahve: sembol yorumu önce (Kaave tarzı, ücretsiz)
+    'kahve_sema_oncelik': True,
+    # Masaüstü Ollama (localhost)
     'ollama_url': 'http://127.0.0.1:11434/api/generate',
     'ollama_model': 'llama3.1:8b',
     'ollama_masaustu': True,
-    # OpenRouter — Gemini düşünce (DeepSeek / Qwen)
+    # Uzak Llama/Ollama sunucusu (HTTPS — Android dahil)
+    'ollama_sunucu_url': '',
+    'ollama_api_key': '',
+    # DeepSeek — doğrudan API (ucuz / ücretsiz kota)
+    # https://platform.deepseek.com/api_keys
+    'deepseek_api_key': '',
+    'deepseek_model': 'deepseek-chat',
+    'deepseek_yedek_modeller': ['deepseek-reasoner'],
+    # OpenRouter — DeepSeek / Qwen yedek
     # https://openrouter.ai/keys
     'openrouter_api_key': '',
     'openrouter_model': 'deepseek/deepseek-chat',
@@ -170,10 +181,12 @@ def mobil_ai_hazirla():
     _gomulu_anahtar_yukle()
     anahtar_var = bool(_gemini_anahtar(_ayar_yukle()))
     or_var = bool(_openrouter_anahtar(_ayar_yukle()))
+    ds_var = bool(_deepseek_anahtar(_ayar_yukle()))
     xai_var = bool(_xai_anahtar(_ayar_yukle()))
     groq_var = bool(_groq_anahtar(_ayar_yukle()))
     print(
         f'AI mobil: gemini={"hazır" if anahtar_var else "YOK"} '
+        f'deepseek={"hazır" if ds_var else "YOK"} '
         f'openrouter={"hazır" if or_var else "YOK"} '
         f'grok={"hazır" if xai_var else "YOK"} '
         f'groq={"hazır" if groq_var else "YOK"}',
@@ -306,21 +319,67 @@ def bulut_ai_hazir_mi():
     return bool(_gemini_anahtar(ayar)) and ayar.get('ai_aktif', True)
 
 
+def _ollama_sunucu_url_al(ayar=None):
+    return _api_anahtar_al(
+        ayar or _ayar_yukle(),
+        'ollama_sunucu_url',
+        'ollama_sunucu_url',
+        'OLLAMA_SUNUCU_URL',
+    )
+
+
+def _ollama_api_key_al(ayar=None):
+    return _api_anahtar_al(
+        ayar or _ayar_yukle(),
+        'ollama_api_key',
+        'ollama_api_key',
+        'OLLAMA_API_KEY',
+    )
+
+
+def _ollama_base_url(ayar=None):
+    ayar = ayar or _ayar_yukle()
+    uzak = (_ollama_sunucu_url_al(ayar) or '').strip()
+    if uzak:
+        return uzak.rstrip('/').replace('/api/generate', '')
+    yerel = (ayar.get('ollama_url') or 'http://127.0.0.1:11434/api/generate').strip()
+    return yerel.replace('/api/generate', '').rstrip('/')
+
+
+def _ollama_generate_url(ayar=None):
+    return _ollama_base_url(ayar) + '/api/generate'
+
+
+def _ollama_uzak_mi(ayar=None):
+    base = _ollama_base_url(ayar).lower()
+    return not any(h in base for h in ('127.0.0.1', 'localhost', '0.0.0.0', '[::1]'))
+
+
 def ollama_aktif_mi():
-    """Yerel Ollama çalışıyor mu? (masaüstü)"""
+    """Yerel Ollama (PC) veya yapılandırılmış uzak sunucu."""
     ayar = _ayar_yukle()
     if not ayar.get('ai_aktif', True):
         return False
-    if _android_mi():
+    uzak = _ollama_uzak_mi(ayar)
+    if _android_mi() and not uzak:
         return False
-    if platform.system() != 'Windows' and not ayar.get('ollama_masaustu', True):
-        return False
-    try:
-        url = ayar['ollama_url'].replace('/api/generate', '/api/tags')
-        with urllib.request.urlopen(url, timeout=3) as r:
-            return r.status == 200
-    except Exception:
-        return False
+    if uzak and _ollama_sunucu_url_al(ayar):
+        return True
+    if not uzak:
+        if platform.system() != 'Windows' and not ayar.get('ollama_masaustu', True):
+            return False
+        try:
+            url = _ollama_base_url(ayar) + '/api/tags'
+            req = urllib.request.Request(url, method='GET')
+            key = _ollama_api_key_al(ayar)
+            if key:
+                req.add_header('Authorization', f'Bearer {key}')
+            ctx = _ssl_context()
+            with urllib.request.urlopen(req, timeout=4, context=ctx) as r:
+                return r.status == 200
+        except Exception:
+            return False
+    return False
 
 
 def ai_kaynak():
@@ -329,6 +388,8 @@ def ai_kaynak():
     for kaynak in _kaynak_sirasi(ayar):
         if kaynak == 'gemini' and _gemini_anahtar(ayar):
             return 'bulut'
+        if kaynak == 'deepseek' and _deepseek_anahtar(ayar):
+            return 'deepseek'
         if kaynak == 'openrouter' and _openrouter_anahtar(ayar):
             return 'openrouter'
         if kaynak == 'xai' and _xai_anahtar(ayar):
@@ -375,6 +436,22 @@ def _api_anahtar_al(ayar, config_key, secret_key, env_key):
     return (os.environ.get(env_key) or '').strip()
 
 
+def _deepseek_anahtar(ayar=None):
+    v = _api_anahtar_al(
+        ayar or _ayar_yukle(),
+        'deepseek_api_key',
+        'deepseek_api_key',
+        'DEEPSEEK_API_KEY',
+    )
+    if v:
+        return v
+    try:
+        from koruma import gomulu_deepseek_anahtar
+        return (gomulu_deepseek_anahtar() or '').strip()
+    except Exception:
+        return ''
+
+
 def _openrouter_anahtar(ayar=None):
     return _api_anahtar_al(
         ayar or _ayar_yukle(), 'openrouter_api_key', 'openrouter_api_key', 'OPENROUTER_API_KEY',
@@ -402,7 +479,7 @@ def _xai_anahtar(ayar=None):
 
 
 def _kaynak_sirasi(ayar, gorsel_var=False):
-    """Görsel fallarda yalnızca Gemini; metin fallarda çoklu bulut zinciri."""
+    """Görsel: Gemini Vision. Metin: kendi sunucu → ucuz bulut → Gemini."""
     if gorsel_var:
         if _gemini_anahtar(ayar):
             return ['gemini']
@@ -413,20 +490,24 @@ def _kaynak_sirasi(ayar, gorsel_var=False):
         return []
     if mod == 'gemini':
         return ['gemini'] if _gemini_anahtar(ayar) else []
+    if mod == 'deepseek':
+        return ['deepseek'] if _deepseek_anahtar(ayar) else []
     if mod == 'ollama':
         return ['ollama'] if ollama_aktif_mi() else []
 
     sira = []
-    if _gemini_anahtar(ayar):
-        sira.append('gemini')
+    if ollama_aktif_mi():
+        sira.append('ollama')
+    if _deepseek_anahtar(ayar):
+        sira.append('deepseek')
+    if _groq_anahtar(ayar):
+        sira.append('groq')
     if _openrouter_anahtar(ayar):
         sira.append('openrouter')
     if _xai_anahtar(ayar):
         sira.append('xai')
-    if _groq_anahtar(ayar):
-        sira.append('groq')
-    if not _android_mi() and ayar.get('ollama_masaustu', True):
-        sira.append('ollama')
+    if _gemini_anahtar(ayar):
+        sira.append('gemini')
     return sira
 
 
@@ -829,14 +910,19 @@ def _gecersiz_foto_yaniti(metin, tip):
 
 
 def _ollama_istek(prompt, ayar):
+    hdrs = {}
+    key = _ollama_api_key_al(ayar)
+    if key:
+        hdrs['Authorization'] = f'Bearer {key}'
     veri = _http_post(
-        ayar['ollama_url'],
+        _ollama_generate_url(ayar),
         {
             'model': ayar['ollama_model'],
             'prompt': prompt,
             'stream': False,
             'options': {'temperature': 0.85, 'num_predict': 1200},
         },
+        headers=hdrs or None,
         timeout=int(ayar.get('ai_timeout', 90)),
     )
     return (veri.get('response') or '').strip() or None
@@ -880,8 +966,18 @@ def _modeller_listesi(ayar, primary_key, yedek_key, varsayilan, varsayilan_yedek
 
 
 def _bulut_metin_dene(saglayici, prompt, ayar):
-    """OpenRouter veya Groq — yalnızca metin fal."""
-    if saglayici == 'openrouter':
+    """DeepSeek, OpenRouter, Groq veya xAI — yalnızca metin fal."""
+    if saglayici == 'deepseek':
+        anahtar = _deepseek_anahtar(ayar)
+        if not anahtar:
+            return None, None
+        url = 'https://api.deepseek.com/chat/completions'
+        modeller = _modeller_listesi(
+            ayar, 'deepseek_model', 'deepseek_yedek_modeller',
+            'deepseek-chat', ['deepseek-reasoner'],
+        )
+        ek_hdr = {}
+    elif saglayici == 'openrouter':
         anahtar = _openrouter_anahtar(ayar)
         if not anahtar:
             return None, None
@@ -1141,6 +1237,13 @@ def _yorum_uret(text_prompt, ayar, gorsel=None, vision_prompt=None):
                 return metin, 'gemini', None
             if kod:
                 hatalar.append(f'gemini:{kod}')
+        elif kaynak == 'deepseek':
+            metin, kod = _bulut_metin_dene('deepseek', text_prompt, ayar)
+            if metin:
+                print('AI kaynak: DeepSeek (bulut)', flush=True)
+                return metin, 'deepseek', None
+            if kod:
+                hatalar.append(f'deepseek:{kod}')
         elif kaynak == 'openrouter':
             metin, kod = _bulut_metin_dene('openrouter', text_prompt, ayar)
             if metin:
@@ -1254,6 +1357,23 @@ def _yorum_al_calistir(tip, veri, callback):
             if not ok:
                 _ana_thread(lambda h=hata: _sonuc(None, False, h, None))
                 return
+
+        ai_detay = bool(veri.get('ai_detay'))
+        kahve_sema = (
+            tip == 'kahve'
+            and ayar.get('kahve_sema_oncelik', True)
+            and not ai_detay
+        )
+        if kahve_sema:
+            from offline_yorum import offline_yorum_uret
+            metin = offline_yorum_uret(
+                tip,
+                _veri_nonce({**veri, 'foto_aciklamalari': aciklamalar}),
+                foto_ozellikleri,
+            )
+            print('Kahve: sembol kütüphanesi yorumu (API yok)', flush=True)
+            _ana_thread(lambda m=metin: _sonuc(m, False, None, 'sema', True))
+            return
 
         if not ayar.get('ai_aktif', True):
             from offline_yorum import offline_yorum_uret

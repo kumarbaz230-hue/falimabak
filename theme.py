@@ -14,7 +14,7 @@ from kivy.metrics import dp
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 ASSETS_DIR = os.path.join(BASE_DIR, 'assets')
-APP_SURUM = '1.6.7'
+APP_SURUM = '1.7.0'
 
 # ============================================================
 #  PROFESYONEL RENK PALETİ
@@ -778,13 +778,17 @@ def yorum_sonuc_metni(temel, metin, ai_kullanildi=True, hata=None, kaynak=None, 
     )
 
 
-def foto_fal_sonuc(metin, hata=None):
-    """Fotoğraflı fal ekranları — sadece AI yorumu veya hata."""
+def foto_fal_sonuc(metin, hata=None, kaynak=None):
+    """Fotoğraflı fal ekranları — sembol veya AI yorumu."""
     if hata and not metin:
         return f"[color={RENKLER['kirmizi']}]{emoji_temizle(hata)}[/color]"
     govde = emoji_temizle(metin or '')
+    if kaynak == 'sema':
+        baslik = 'Sembol Yorumu'
+    else:
+        baslik = yorum_baslik_metin()
     return (
-        f"[b][color={RENKLER['altin']}]» {yorum_baslik_metin()}[/color][/b]\n\n"
+        f"[b][color={RENKLER['altin']}]» {baslik}[/color][/b]\n\n"
         f"[color={RENKLER['pembe_acik']}]{govde}[/color]"
     )
 

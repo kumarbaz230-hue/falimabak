@@ -446,6 +446,40 @@ def fotolar_dogrula(tip, yollar, aciklamalar=None):
     return True, None, ozellikler
 
 
+def foto_sembol_ipuclari(yol, ozellik=None):
+    """Basit görsel analiz → olası kahve sembol isimleri."""
+    oz = ozellik or _analiz_et(yol)
+    if not oz:
+        return []
+    ipuclari = []
+    kontrast = float(oz.get('kontrast') or 0)
+    kahve_b = int(oz.get('kahve_bolge') or 0)
+    koyu = float(oz.get('koyu_orani') or 0)
+    seramik = float(oz.get('seramik_orani') or 0)
+    kenar_yogun = 0.0
+    try:
+        from PIL import Image, ImageFilter
+        with Image.open(yol) as img:
+            img = img.convert('L').resize((96, 96))
+            img = img.filter(ImageFilter.FIND_EDGES)
+            px = list(img.getdata())
+            if px:
+                kenar_yogun = sum(1 for p in px if p > 40) / len(px)
+    except Exception:
+        pass
+    if kenar_yogun > 0.14:
+        ipuclari.extend(['Kuş', 'Yol', 'Kılıç', 'Ağaç'])
+    if kahve_b >= 2 or koyu > 0.12:
+        ipuclari.extend(['Balık', 'Göz', 'Kalp', 'Yılan'])
+    if seramik > 0.08:
+        ipuclari.extend(['Yüzük', 'Ev', 'Kapı'])
+    if kontrast > 12:
+        ipuclari.append('Yıldız')
+    if koyu > 0.18:
+        ipuclari.extend(['At', 'Dağ'])
+    return list(dict.fromkeys(ipuclari))
+
+
 def foto_tohum(ozellikler):
     if not ozellikler:
         return random.randint(0, 999999)

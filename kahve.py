@@ -221,13 +221,17 @@ class KahveScreen(Screen):
             spacing=dp(8),
         )
 
-        self.fal_buton = tus_buton('yorumla', vurgu=True, font_size='15sp')
-        self.fal_buton.bind(on_press=self.fal_yorumla)
+        self.fal_buton = tus_buton('yorumla', vurgu=True, font_size='14sp')
+        self.fal_buton.bind(on_press=lambda *_: self._fal_baslat(ai_detay=False))
+
+        self.ai_buton = tus_buton('AI Detaylı', font_size='13sp')
+        self.ai_buton.bind(on_press=lambda *_: self._fal_baslat(ai_detay=True))
 
         geri_buton = tus_buton('geri', font_size='13sp')
         geri_buton.bind(on_press=lambda x: setattr(self.manager, 'current', 'anasayfa'))
 
         buton_layout.add_widget(self.fal_buton)
+        buton_layout.add_widget(self.ai_buton)
         buton_layout.add_widget(geri_buton)
         ana_layout.add_widget(buton_layout)
 
@@ -253,8 +257,8 @@ class KahveScreen(Screen):
         anim.start(flash)
         Clock.schedule_once(lambda dt: self.remove_widget(flash) if flash in self.children else None, 0.3)
     
-    def fal_yorumla(self, instance):
-        """Kahve falını yorumla — fotoğraflar doğrulanır ve yorumlanır."""
+    def _fal_baslat(self, ai_detay=False):
+        """Kahve falını başlat — varsayılan sembol, isteğe bağlı AI detay."""
         if not self.foto_panel.tamam_mi():
             eksik = ', '.join(self.foto_panel.eksik_basliklar())
             self.yorum_label.markup = True
@@ -276,20 +280,28 @@ class KahveScreen(Screen):
             self.yorum_label.text = foto_fal_sonuc(None, hata)
             return
 
+        self._ai_detay_istek = ai_detay
         from fal_limit import yorum_baslat
-        yorum_baslat('kahve', lambda: self._fal_yorumla_devam(instance))
+        yorum_baslat('kahve', lambda: self._fal_yorumla_devam())
 
-    def _fal_yorumla_devam(self, instance):
+    def fal_yorumla(self, instance):
+        """Geriye dönük uyumluluk."""
+        self._fal_baslat(ai_detay=False)
+
+    def _fal_yorumla_devam(self):
         self.sekiller_label.text = ''
         self.yorum_label.markup = True
         self.yorum_label.text = yorum_bekle_markup()
         buton_metin_guncelle(self.fal_buton, yorum_bekle_metin())
         self.fal_buton.disabled = True
+        self.ai_buton.disabled = True
 
         def _ai_bitir(metin, ai_kullanildi, hata, kaynak=None, fotograf=False):
-            self.yorum_label.text = foto_fal_sonuc(metin, hata)
+            self.yorum_label.text = foto_fal_sonuc(metin, hata, kaynak=kaynak)
             buton_metin_guncelle(self.fal_buton, tus_metin('tekrar'))
             self.fal_buton.disabled = False
+            self.ai_buton.disabled = False
 
         foto_veri = self.foto_panel.tum_veri()
+        foto_veri['ai_detay'] = getattr(self, '_ai_detay_istek', False)
         yorum_al('kahve', foto_veri, _ai_bitir, coin_dahil=False)
