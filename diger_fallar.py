@@ -119,17 +119,17 @@ class DigerFallarScreen(Screen):
         from kivy.metrics import dp
         ana_layout = BoxLayout(
             orientation='vertical',
-            spacing=dp(8),
+            spacing=dp(4),
             padding=[dp(12), SAFE_UST, dp(12), SAFE_ALT],
         )
 
-        ana_layout.add_widget(baslik_satir('', 'DİĞER FALLAR', font_size='24sp', height=dp(44)))
+        ana_layout.add_widget(baslik_satir('', 'DİĞER FALLAR', font_size='24sp', height=dp(36)))
 
         fal_turu_layout = GridLayout(
             cols=2,
-            spacing=dp(10),
+            spacing=dp(8),
             size_hint_y=None,
-            height=dp(100),
+            height=dp(88),
         )
 
         fal_turleri = [
@@ -157,7 +157,7 @@ class DigerFallarScreen(Screen):
         buton_layout = BoxLayout(
             orientation='horizontal',
             size_hint_y=None,
-            height=dp(48),
+            height=dp(46),
             spacing=dp(10),
         )
 

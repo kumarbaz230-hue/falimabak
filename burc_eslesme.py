@@ -2,7 +2,6 @@
 
 from kivy.uix.screenmanager import Screen
 from kivy.uix.boxlayout import BoxLayout
-from kivy.uix.scrollview import ScrollView
 from kivy.metrics import dp
 
 from astroloji import BURCLAR
@@ -12,7 +11,7 @@ from theme import (
     metin_label, guvenli_textinput, tus_buton, baslik_satir,
     buton_metin_guncelle, ekran_icerik_sar, kaydirici_metin,
     yorum_bekle_metin, yorum_sonuc_metni, tus_metin, fontlari_yukle,
-    klavye_kaydir_bagla, fal_form_panel, yorum_panel_baslik,
+    fal_form_duz, yorum_panel_baslik,
 )
 
 fontlari_yukle()
@@ -89,76 +88,77 @@ class BurcEslesmeScreen(Screen):
         super().__init__(**kwargs)
         self._kur()
 
-    def _tarih_satir(self, etiket):
+    def _kisi_blok(self, baslik, renk):
         from dil import t
-        kutu = BoxLayout(orientation='vertical', size_hint_y=None, spacing=dp(4))
-        kutu.add_widget(metin_label(
-            etiket, font_size='13sp', bold=True, color=RENKLER['altin_parlak'],
-            halign='left', size_hint_y=None, height=dp(20),
+        blok = BoxLayout(
+            orientation='vertical',
+            size_hint_y=None,
+            height=dp(76),
+            spacing=dp(2),
+        )
+        blok.add_widget(metin_label(
+            baslik, font_size='12sp', bold=True, color=renk,
+            halign='left', size_hint_y=None, height=dp(16),
         ))
-        satir = BoxLayout(orientation='horizontal', size_hint_y=None, height=dp(44), spacing=dp(6))
+        isim = guvenli_textinput(
+            hint_text=t('burc_isim1') if '1' in baslik else t('burc_isim2'),
+            size_hint_y=None,
+            height=dp(34),
+        )
+        blok.add_widget(isim)
+        satir = BoxLayout(
+            orientation='horizontal',
+            size_hint_y=None,
+            height=dp(36),
+            spacing=dp(6),
+        )
         g = guvenli_textinput(hint_text=t('burc_gun'), input_filter='int', size_hint_x=0.28)
         a = guvenli_textinput(hint_text=t('burc_ay'), input_filter='int', size_hint_x=0.28)
         y = guvenli_textinput(hint_text=t('burc_yil'), input_filter='int', size_hint_x=0.44)
         satir.add_widget(g)
         satir.add_widget(a)
         satir.add_widget(y)
-        kutu.add_widget(satir)
-        kutu.bind(minimum_height=kutu.setter('height'))
-        kutu.height = dp(68)
-        return kutu, g, a, y
+        blok.add_widget(satir)
+        return blok, isim, g, a, y
 
     def _kur(self):
         from dil import t
         ana = BoxLayout(
             orientation='vertical',
             padding=[dp(12), SAFE_UST, dp(12), SAFE_ALT],
-            spacing=dp(8),
+            spacing=dp(4),
         )
-        ana.add_widget(baslik_satir('💞', t('burc_eslesme_title'), font_size='22sp', height=dp(40)))
+        ana.add_widget(baslik_satir('💞', t('burc_eslesme_title'), font_size='22sp', height=dp(36)))
 
-        form_panel, govde, self._kaydir = fal_form_panel(yukseklik=dp(280))
+        form_panel, govde = fal_form_duz()
 
-        aciklama_lbl = metin_label(
-            t('burc_eslesme_aciklama'),
-            font_size='12sp', color=RENKLER['gri_acik'],
-            halign='left', size_hint_y=None,
+        k1, self._isim1, self._g1, self._a1, self._y1 = self._kisi_blok(
+            t('burc_kisi1'), RENKLER['pembe_acik'],
         )
-        aciklama_lbl.bind(texture_size=lambda i, v: setattr(i, 'height', max(v[1], dp(36))))
-        govde.add_widget(aciklama_lbl)
-
-        self._isim1 = guvenli_textinput(hint_text=t('burc_isim1'), size_hint_y=None, height=dp(44))
-        govde.add_widget(metin_label(
-            t('burc_kisi1'), font_size='13sp', bold=True, color=RENKLER['pembe_acik'],
-            halign='left', size_hint_y=None, height=dp(20),
-        ))
-        govde.add_widget(self._isim1)
-        k1, self._g1, self._a1, self._y1 = self._tarih_satir(t('burc_dogum_tarihi'))
         govde.add_widget(k1)
-
-        self._isim2 = guvenli_textinput(hint_text=t('burc_isim2'), size_hint_y=None, height=dp(44))
-        govde.add_widget(metin_label(
-            t('burc_kisi2'), font_size='13sp', bold=True, color=RENKLER['mavi_acik'],
-            halign='left', size_hint_y=None, height=dp(20),
-        ))
-        govde.add_widget(self._isim2)
-        k2, self._g2, self._a2, self._y2 = self._tarih_satir(t('burc_dogum_tarihi'))
-        govde.add_widget(k2)
-
-        self._ozet = metin_label(
-            '', font_size='14sp', color=RENKLER['beyaz'],
-            halign='left', markup=True, size_hint_y=None, height=dp(80),
+        k2, self._isim2, self._g2, self._a2, self._y2 = self._kisi_blok(
+            t('burc_kisi2'), RENKLER['mavi_acik'],
         )
-        self._ozet.bind(texture_size=lambda i, v: setattr(i, 'height', max(v[1], dp(40))))
-        govde.add_widget(self._ozet)
+        govde.add_widget(k2)
 
         ana.add_widget(form_panel)
 
+        self._durum = metin_label(
+            '', font_size='12sp', color=RENKLER['kirmizi'],
+            halign='left', markup=True, size_hint_y=None, height=dp(18),
+        )
+        ana.add_widget(self._durum)
+
         ana.add_widget(yorum_panel_baslik('Uyum yorumu'))
         self._yorum_alani, self._yorum_label = kaydirici_metin(1)
+        self._yorum_label.text = (
+            f'[color={RENKLER["gri_acik"]}]İki kişinin doğum tarihini girip '
+            f'"Eşleştir"e basın.[/color]'
+        )
+        self._yorum_label.markup = True
         ana.add_widget(self._yorum_alani)
 
-        btn = BoxLayout(orientation='horizontal', size_hint_y=None, height=dp(48), spacing=dp(8))
+        btn = BoxLayout(orientation='horizontal', size_hint_y=None, height=dp(46), spacing=dp(8))
         self._esles_btn = tus_buton('burc_esles', vurgu=True, font_size='14sp')
         self._esles_btn.bind(on_press=self._eslestir)
         geri = tus_buton('geri', font_size='14sp')
@@ -168,12 +168,6 @@ class BurcEslesmeScreen(Screen):
         ana.add_widget(btn)
 
         ekran_icerik_sar(self, ana)
-
-        klavye_kaydir_bagla(
-            self._kaydir,
-            self._isim1, self._g1, self._a1, self._y1,
-            self._isim2, self._g2, self._a2, self._y2,
-        )
 
     def _parse_tarih(self, g_in, a_in, y_in):
         g, a, y = g_in.text.strip(), a_in.text.strip(), y_in.text.strip()
@@ -193,10 +187,11 @@ class BurcEslesmeScreen(Screen):
         t2, err2 = self._parse_tarih(self._g2, self._a2, self._y2)
         if err1 or err2:
             kod = err1 or err2
-            self._ozet.text = f"[color={RENKLER['kirmizi']}]{t(kod)}[/color]"
+            self._durum.text = f"[color={RENKLER['kirmizi']}]{t(kod)}[/color]"
             self._yorum_label.text = ''
             return
 
+        self._durum.text = ''
         gun1, ay1, yil1, burc1 = t1
         gun2, ay2, yil2, burc2 = t2
         isim1 = self._isim1.text.strip()
@@ -204,7 +199,6 @@ class BurcEslesmeScreen(Screen):
         skor = _uyum_skoru(burc1, burc2)
 
         temel = _temel_sonuc(burc1, burc2, skor, isim1, isim2)
-        self._ozet.text = temel
         self._son_temel = temel
         self._yorum_label.text = yorum_bekle_metin()
         buton_metin_guncelle(self._esles_btn, yorum_bekle_metin())

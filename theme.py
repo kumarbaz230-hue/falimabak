@@ -14,7 +14,7 @@ from kivy.metrics import dp
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 ASSETS_DIR = os.path.join(BASE_DIR, 'assets')
-APP_SURUM = '1.5.5'
+APP_SURUM = '1.5.6'
 
 # ============================================================
 #  PROFESYONEL RENK PALETİ
@@ -797,9 +797,8 @@ def kaydirici_metin(yukseklik_hint=0.2, zemin_renk=None):
     scroll = ScrollView(
         size_hint=(1, yukseklik_hint),
         do_scroll_x=False,
-        bar_width=dp(3),
-        bar_color=get_color_from_hex(RENKLER['mor_parlak'] + '99'),
-        bar_inactive_color=get_color_from_hex(RENKLER['gri_koyu'] + '66'),
+        bar_width=0,
+        scroll_type=['bars', 'content'],
     )
     renk = zemin_renk or RENKLER['kart_arka_cam']
     radius = dp(14)
@@ -848,34 +847,39 @@ def kaydirici_metin(yukseklik_hint=0.2, zemin_renk=None):
     return scroll, label
 
 
-def fal_form_panel(yukseklik=None, esnek=False):
-    """Yuvarlatılmış form paneli — fal ekranları için modern giriş alanı."""
+def fal_form_duz():
+    """Düz, kaydırmasız kompakt form paneli — tek ekrana sığar."""
     from kivy.uix.boxlayout import BoxLayout
-    from kivy.uix.scrollview import ScrollView
 
     panel = BoxLayout(
         orientation='vertical',
-        size_hint_y=1 if esnek else None,
-        height=0 if esnek else (yukseklik or dp(200)),
-        padding=dp(8),
+        size_hint_y=None,
+        padding=dp(10),
+        spacing=dp(4),
     )
-    if yukseklik and not esnek:
-        panel.height = yukseklik
-
-    koyu_zemin_ekle(panel, RENKLER['kart_arka_cam'], radius=14, vurgu_renk=RENKLER['mor'])
-
-    scroll = ScrollView(
-        size_hint=(1, 1),
-        do_scroll_x=False,
-        bar_width=dp(3),
-        bar_color=get_color_from_hex(RENKLER['mor_parlak'] + '99'),
-        bar_inactive_color=get_color_from_hex(RENKLER['gri_koyu'] + '66'),
+    form = BoxLayout(
+        orientation='vertical',
+        size_hint_y=None,
+        spacing=dp(5),
     )
-    form = BoxLayout(orientation='vertical', size_hint_y=None, spacing=dp(8))
     form.bind(minimum_height=form.setter('height'))
-    scroll.add_widget(form)
-    panel.add_widget(scroll)
-    return panel, form, scroll
+
+    def _panel_h(*_):
+        panel.height = form.height + dp(20)
+
+    form.bind(height=_panel_h)
+    panel.add_widget(form)
+    koyu_zemin_ekle(panel, RENKLER['kart_arka_cam'], radius=14, vurgu_renk=RENKLER['mor'])
+    Clock.schedule_once(lambda *_: _panel_h(), 0)
+    return panel, form
+
+
+def fal_form_panel(yukseklik=None, esnek=False):
+    """Geriye dönük — artık kaydırmasız düz panel."""
+    panel, form = fal_form_duz()
+    if yukseklik and not esnek:
+        panel.height = max(yukseklik, panel.height)
+    return panel, form, None
 
 
 def yorum_panel_baslik(metin='Yorum'):

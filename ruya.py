@@ -2,7 +2,6 @@
 
 from kivy.uix.screenmanager import Screen
 from kivy.uix.boxlayout import BoxLayout
-from kivy.uix.scrollview import ScrollView
 from kivy.metrics import dp
 
 from ai_yorum import _yorum_al_calistir
@@ -12,7 +11,7 @@ from theme import (
     metin_label, guvenli_textinput, tus_buton, baslik_satir,
     buton_metin_guncelle, ekran_icerik_sar, kaydirici_metin,
     yorum_bekle_metin, yorum_sonuc_metni, tus_metin, fontlari_yukle,
-    klavye_kaydir_bagla, fal_form_panel, yorum_panel_baslik,
+    fal_form_duz, yorum_panel_baslik,
 )
 
 fontlari_yukle()
@@ -37,47 +36,44 @@ class RuyaScreen(Screen):
         ana = BoxLayout(
             orientation='vertical',
             padding=[dp(12), SAFE_UST, dp(12), SAFE_ALT],
-            spacing=dp(8),
+            spacing=dp(4),
         )
-        ana.add_widget(baslik_satir('🌙', t('ruya_title'), font_size='22sp', height=dp(40)))
+        ana.add_widget(baslik_satir('🌙', t('ruya_title'), font_size='22sp', height=dp(36)))
 
-        form_panel, form, self._form_kaydir = fal_form_panel(yukseklik=dp(210))
+        form_panel, form = fal_form_duz()
 
-        aciklama = metin_label(
+        form.add_widget(metin_label(
             t('ruya_aciklama'),
-            font_size='12sp', color=RENKLER['gri_acik'],
-            halign='left', size_hint_y=None,
-        )
-        aciklama.bind(texture_size=lambda i, v: setattr(i, 'height', max(v[1], dp(36))))
-        form.add_widget(aciklama)
+            font_size='11sp', color=RENKLER['gri_acik'],
+            halign='left', size_hint_y=None, height=dp(28),
+        ))
 
         form.add_widget(metin_label(
             t('ruya_input_label'),
-            font_size='13sp', bold=True, color=RENKLER['mor'],
-            halign='left', size_hint_y=None, height=dp(20),
+            font_size='12sp', bold=True, color=RENKLER['mor'],
+            halign='left', size_hint_y=None, height=dp(16),
         ))
         self._ruya_input = guvenli_textinput(
             hint_text=t('ruya_input_hint'),
             multiline=True,
             size_hint_y=None,
-            height=dp(120),
+            height=dp(96),
         )
         form.add_widget(self._ruya_input)
 
         ana.add_widget(form_panel)
 
         self._durum = metin_label(
-            '', font_size='13sp', color=RENKLER['beyaz'],
-            halign='left', markup=True, size_hint_y=None, height=dp(24),
+            '', font_size='12sp', color=RENKLER['beyaz'],
+            halign='left', markup=True, size_hint_y=None, height=dp(18),
         )
-        self._durum.bind(texture_size=lambda i, v: setattr(i, 'height', max(v[1], dp(24))))
         ana.add_widget(self._durum)
 
         ana.add_widget(yorum_panel_baslik('Tabiriniz'))
         self._yorum_alani, self._yorum_label = kaydirici_metin(1)
         ana.add_widget(self._yorum_alani)
 
-        btn = BoxLayout(orientation='horizontal', size_hint_y=None, height=dp(48), spacing=dp(8))
+        btn = BoxLayout(orientation='horizontal', size_hint_y=None, height=dp(46), spacing=dp(8))
         self._yorum_btn = tus_buton('ruya_tabir', vurgu=True, font_size='14sp')
         self._yorum_btn.bind(on_press=self._tabir_et)
         geri = tus_buton('geri', font_size='14sp')
@@ -87,7 +83,6 @@ class RuyaScreen(Screen):
         ana.add_widget(btn)
 
         ekran_icerik_sar(self, ana)
-        klavye_kaydir_bagla(self._form_kaydir, self._ruya_input)
 
     def _tabir_et(self, *_):
         from dil import t

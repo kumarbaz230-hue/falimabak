@@ -4,7 +4,6 @@
 
 from kivy.uix.screenmanager import Screen
 from kivy.uix.boxlayout import BoxLayout
-from kivy.uix.scrollview import ScrollView
 from kivy.metrics import dp
 import random
 from datetime import date
@@ -14,8 +13,8 @@ from theme import (
     RENKLER, SAFE_UST, SAFE_ALT,
     tus_metin, yorum_bekle_metin, tus_buton, baslik_satir, buton_metin_guncelle,
     yorum_sonuc_metni, metin_label, guvenli_textinput, ekran_icerik_sar,
-    kaydirici_metin, klavye_kaydir_bagla, fontlari_yukle,
-    fal_form_panel, yorum_panel_baslik,
+    kaydirici_metin, fontlari_yukle,
+    fal_form_duz, yorum_panel_baslik,
 )
 
 fontlari_yukle()
@@ -178,23 +177,23 @@ class AstrolojiScreen(Screen):
     def build_ui(self):
         ana_layout = BoxLayout(
             orientation='vertical',
-            spacing=dp(8),
+            spacing=dp(4),
             padding=[dp(12), SAFE_UST, dp(12), SAFE_ALT],
         )
-        ana_layout.add_widget(baslik_satir('🌟', 'YILDIZ FALI', font_size='24sp', height=dp(44)))
+        ana_layout.add_widget(baslik_satir('🌟', 'YILDIZ FALI', font_size='24sp', height=dp(36)))
 
-        form_panel, govde, self._kaydir = fal_form_panel(yukseklik=dp(200))
+        form_panel, govde = fal_form_duz()
 
         govde.add_widget(metin_label(
-            'Doğum tarihinizi girin — burcunuzu ve yorumunuzu öğrenin!',
-            font_size='13sp', color=RENKLER['mavi_acik'],
-            halign='left', size_hint_y=None, height=dp(40),
+            'Doğum tarihinizi girin — burcunuzu öğrenin!',
+            font_size='12sp', color=RENKLER['mavi_acik'],
+            halign='left', size_hint_y=None, height=dp(28),
         ))
 
         tarih_layout = BoxLayout(
             orientation='horizontal',
             size_hint_y=None,
-            height=dp(44),
+            height=dp(40),
             spacing=dp(8),
         )
         self.gun_input = guvenli_textinput(
@@ -211,30 +210,7 @@ class AstrolojiScreen(Screen):
         tarih_layout.add_widget(self.yil_input)
         govde.add_widget(tarih_layout)
 
-        self.sonuc_label = metin_label(
-            '',
-            font_size='15sp', color=RENKLER['beyaz'],
-            halign='center', markup=True,
-            size_hint_y=None, height=dp(48),
-        )
-        self.sonuc_label.bind(texture_size=lambda i, v: setattr(i, 'height', max(v[1], dp(24))))
-        govde.add_widget(self.sonuc_label)
-
         ana_layout.add_widget(form_panel)
-
-        buton_layout = BoxLayout(
-            orientation='horizontal',
-            size_hint_y=None,
-            height=dp(48),
-            spacing=dp(8),
-        )
-        self.fal_buton = tus_buton('fal_bak', vurgu=True, font_size='15sp')
-        self.fal_buton.bind(on_press=self.fal_bak)
-        geri_buton = tus_buton('geri', font_size='13sp')
-        geri_buton.bind(on_press=lambda x: setattr(self.manager, 'current', 'anasayfa'))
-        buton_layout.add_widget(self.fal_buton)
-        buton_layout.add_widget(geri_buton)
-        ana_layout.add_widget(buton_layout)
 
         ana_layout.add_widget(yorum_panel_baslik('Burç yorumunuz'))
         self.yorum_alani, self.yorum_label = kaydirici_metin(1)
@@ -245,11 +221,21 @@ class AstrolojiScreen(Screen):
         self.yorum_label.markup = True
         ana_layout.add_widget(self.yorum_alani)
 
-        ekran_icerik_sar(self, ana_layout)
-        klavye_kaydir_bagla(
-            self._kaydir,
-            self.gun_input, self.ay_input, self.yil_input,
+        buton_layout = BoxLayout(
+            orientation='horizontal',
+            size_hint_y=None,
+            height=dp(46),
+            spacing=dp(8),
         )
+        self.fal_buton = tus_buton('fal_bak', vurgu=True, font_size='15sp')
+        self.fal_buton.bind(on_press=self.fal_bak)
+        geri_buton = tus_buton('geri', font_size='13sp')
+        geri_buton.bind(on_press=lambda x: setattr(self.manager, 'current', 'anasayfa'))
+        buton_layout.add_widget(self.fal_buton)
+        buton_layout.add_widget(geri_buton)
+        ana_layout.add_widget(buton_layout)
+
+        ekran_icerik_sar(self, ana_layout)
     
     def fal_bak(self, instance):
         """Doğum tarihine göre burç ve yorum göster"""
@@ -259,9 +245,8 @@ class AstrolojiScreen(Screen):
             yil_text = self.yil_input.text.strip()
             
             if not gun_text or not ay_text or not yil_text:
-                self.sonuc_label.markup = True
-                self.sonuc_label.text = f"[color={RENKLER['kirmizi']}]Lütfen tüm alanları doldurun![/color]"
-                self.yorum_label.text = ''
+                self.yorum_label.markup = True
+                self.yorum_label.text = f"[color={RENKLER['kirmizi']}]Lütfen tüm alanları doldurun![/color]"
                 return
             
             gun = int(gun_text)
@@ -269,22 +254,19 @@ class AstrolojiScreen(Screen):
             yil = int(yil_text)
             
             if not self.tarih_kontrol(gun, ay, yil):
-                self.sonuc_label.markup = True
-                self.sonuc_label.text = f"[color={RENKLER['kirmizi']}]Geçersiz tarih! Lütfen\ngeçerli bir tarih girin.[/color]"
-                self.yorum_label.text = ''
+                self.yorum_label.markup = True
+                self.yorum_label.text = f"[color={RENKLER['kirmizi']}]Geçersiz tarih! Lütfen geçerli bir tarih girin.[/color]"
                 return
 
             from fal_limit import yorum_baslat
             yorum_baslat('astroloji', lambda: self._fal_bak_devam(gun, ay, yil))
             
         except ValueError:
-            self.sonuc_label.markup = True
-            self.sonuc_label.text = f"[color={RENKLER['kirmizi']}]Lütfen sayısal değerler girin![/color]"
-            self.yorum_label.text = ''
+            self.yorum_label.markup = True
+            self.yorum_label.text = f"[color={RENKLER['kirmizi']}]Lütfen sayısal değerler girin![/color]"
         except Exception as e:
-            self.sonuc_label.markup = True
-            self.sonuc_label.text = f"[color={RENKLER['kirmizi']}]Hata: {str(e)}[/color]"
-            self.yorum_label.text = ''
+            self.yorum_label.markup = True
+            self.yorum_label.text = f"[color={RENKLER['kirmizi']}]Hata: {str(e)}[/color]"
 
     def _fal_bak_devam(self, gun, ay, yil):
         burc_adi = self.burc_bul(gun, ay)
@@ -293,12 +275,10 @@ class AstrolojiScreen(Screen):
 
         sonuc = f"{burc['sembol']} [b]BURCUNUZ: {burc_adi}[/b] {burc['sembol']}\n"
         sonuc += f"Element: {burc['element']}  |  Gezegen: {burc['gezegen']}\n"
-        sonuc += f"{burc['tarih']}"
-
-        self.sonuc_label.markup = True
-        self.sonuc_label.text = sonuc
+        sonuc += f"{burc['tarih']}\n\n"
 
         yorum = f"[b][color={RENKLER['altin']}]⭐ {burc_adi} BURCU YORUMU ⭐[/color][/b]\n\n"
+        yorum = sonuc + yorum
         secilen_yorum = random.choice(yorumlar)
         yorum += f"[color={RENKLER['mavi_acik']}]{secilen_yorum}[/color]\n\n"
 

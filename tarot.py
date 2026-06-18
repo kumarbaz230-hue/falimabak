@@ -163,7 +163,7 @@ class TarotScreen(Screen):
     def kur(self):
         ana = BoxLayout(
             orientation='vertical',
-            spacing=dp(6),
+            spacing=dp(4),
             padding=[dp(10), SAFE_UST, dp(10), SAFE_ALT],
         )
 
@@ -172,7 +172,7 @@ class TarotScreen(Screen):
         btsatir = BoxLayout(
             orientation='horizontal',
             size_hint_y=None,
-            height=dp(46),
+            height=dp(44),
             spacing=dp(8),
         )
         gb = tus_buton('geri', font_size='13sp', size_hint_x=0.28)
@@ -192,8 +192,8 @@ class TarotScreen(Screen):
         self.kart_satir = BoxLayout(
             orientation='horizontal',
             size_hint_y=None,
-            height=dp(180),
-            spacing=dp(10),
+            height=dp(140),
+            spacing=dp(8),
         )
         ana.add_widget(self.kart_satir)
         self._kart_placeholder_ekle(3)
@@ -201,8 +201,8 @@ class TarotScreen(Screen):
         self.poz_satir = BoxLayout(
             orientation='horizontal',
             size_hint_y=None,
-            height=dp(24),
-            spacing=dp(10),
+            height=dp(20),
+            spacing=dp(8),
         )
         for _ in range(3):
             self.poz_satir.add_widget(
@@ -213,8 +213,8 @@ class TarotScreen(Screen):
         self.isim_satir = BoxLayout(
             orientation='horizontal',
             size_hint_y=None,
-            height=dp(38),
-            spacing=dp(6),
+            height=dp(32),
+            spacing=dp(4),
         )
         for _ in range(3):
             self.isim_satir.add_widget(
@@ -307,7 +307,7 @@ class TarotScreen(Screen):
     def _kartlari_goster(self):
         """Seçilen kartların görsellerini yatay BoxLayout'a eşit genişlikte yerleştirir."""
         self.kart_satir.clear_widgets()
-        self.kart_satir.height = dp(180)
+        self.kart_satir.height = dp(140)
 
         adet = len(self.secilen)
         genislik_pay = 1.0 / max(adet, 1)

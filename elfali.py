@@ -226,28 +226,28 @@ class ElFaliScreen(Screen):
     def build_ui(self):
         ana_layout = BoxLayout(
             orientation='vertical',
-            spacing=dp(6),
+            spacing=dp(4),
             padding=[dp(12), SAFE_UST, dp(12), SAFE_ALT],
         )
 
-        ana_layout.add_widget(baslik_satir('✋', 'EL FALI', font_size='24sp', height=dp(44)))
+        ana_layout.add_widget(baslik_satir('✋', 'EL FALI', font_size='24sp', height=dp(36)))
 
         ana_layout.add_widget(metin_label(
-            'Avuç içi ve el dışı fotoğrafı ekleyin. Kutuya dokunup kamera ile çekin.',
-            font_size='12sp',
+            'Avuç içi + el dışı fotoğrafı çekin.',
+            font_size='11sp',
             color=RENKLER['gri_acik'],
             halign='center',
             size_hint_y=None,
-            height=dp(36),
+            height=dp(28),
         ))
 
-        self.foto_panel = FotoKutucukPanel(EL_FOTO_SLOT, yukseklik=dp(128))
+        self.foto_panel = FotoKutucukPanel(EL_FOTO_SLOT, yukseklik=dp(112))
         ana_layout.add_widget(self.foto_panel)
 
         btn_layout1 = BoxLayout(
             orientation='horizontal',
             size_hint_y=None,
-            height=dp(48),
+            height=dp(44),
             spacing=dp(8),
         )
 
@@ -270,15 +270,15 @@ class ElFaliScreen(Screen):
         self.sonuc_alani, self.sonuc_label = kaydirici_metin(1)
         self.sonuc_label.halign = 'left'
         self.sonuc_label.text = (
-            f'[b][color={RENKLER["gri_acik"]}]👐 Avuç içi + el dışı fotoğrafı ekleyin,\n'
-            f'sonra el falı yorumunuzu alın![/color][/b]'
+            f'[b][color={RENKLER["gri_acik"]}]👐 Fotoğrafları ekleyip\n'
+            f'el falı yorumunuzu alın![/color][/b]'
         )
         ana_layout.add_widget(self.sonuc_alani)
 
         btn_layout2 = BoxLayout(
             orientation='horizontal',
             size_hint_y=None,
-            height=dp(48),
+            height=dp(46),
             spacing=dp(8),
         )
 

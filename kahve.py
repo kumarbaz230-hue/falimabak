@@ -168,28 +168,28 @@ class KahveScreen(Screen):
     def build_ui(self):
         ana_layout = BoxLayout(
             orientation='vertical',
-            spacing=dp(8),
+            spacing=dp(4),
             padding=[dp(12), SAFE_UST, dp(12), SAFE_ALT],
         )
 
-        ana_layout.add_widget(baslik_satir('☕', 'KAHVE FALI', font_size='24sp', height=dp(44)))
+        ana_layout.add_widget(baslik_satir('☕', 'KAHVE FALI', font_size='24sp', height=dp(36)))
 
         ana_layout.add_widget(metin_label(
-            'Fincan içini 2 kez + tabağı fotoğraflayın. Kutuya dokunup kamera ile çekin.',
-            font_size='12sp',
+            'Fincan + tabağı fotoğraflayın, kutuya dokunup çekin.',
+            font_size='11sp',
             color=RENKLER['gri_acik'],
             halign='center',
             size_hint_y=None,
-            height=dp(36),
+            height=dp(28),
         ))
 
-        self.foto_panel = FotoKutucukPanel(KAHVE_FOTO_SLOT, yukseklik=dp(128))
+        self.foto_panel = FotoKutucukPanel(KAHVE_FOTO_SLOT, yukseklik=dp(112))
         ana_layout.add_widget(self.foto_panel)
 
         kamera_btn_layout = BoxLayout(
             orientation='horizontal',
             size_hint_y=None,
-            height=dp(48),
+            height=dp(44),
             spacing=dp(8),
         )
 
@@ -203,10 +203,21 @@ class KahveScreen(Screen):
         kamera_btn_layout.add_widget(kamera_btn)
         ana_layout.add_widget(kamera_btn_layout)
 
+        self.sekiller_alani, self.sekiller_label = kaydirici_metin(1)
+        self.sekiller_alani.size_hint_y = None
+        self.sekiller_alani.height = dp(44)
+        self.sekiller_label.halign = 'center'
+        ana_layout.add_widget(self.sekiller_alani)
+
+        ana_layout.add_widget(yorum_panel_baslik('Fal yorumunuz'))
+        self.yorum_alani, self.yorum_label = kaydirici_metin(1)
+        self.yorum_label.halign = 'left'
+        ana_layout.add_widget(self.yorum_alani)
+
         buton_layout = BoxLayout(
             orientation='horizontal',
             size_hint_y=None,
-            height=dp(48),
+            height=dp(46),
             spacing=dp(8),
         )
 
@@ -219,17 +230,6 @@ class KahveScreen(Screen):
         buton_layout.add_widget(self.fal_buton)
         buton_layout.add_widget(geri_buton)
         ana_layout.add_widget(buton_layout)
-
-        self.sekiller_alani, self.sekiller_label = kaydirici_metin(1)
-        self.sekiller_alani.size_hint_y = None
-        self.sekiller_alani.height = dp(56)
-        self.sekiller_label.halign = 'center'
-        ana_layout.add_widget(self.sekiller_alani)
-
-        ana_layout.add_widget(yorum_panel_baslik('Fal yorumunuz'))
-        self.yorum_alani, self.yorum_label = kaydirici_metin(1)
-        self.yorum_label.halign = 'left'
-        ana_layout.add_widget(self.yorum_alani)
 
         ekran_icerik_sar(self, ana_layout)
     
