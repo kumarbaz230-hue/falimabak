@@ -25,6 +25,8 @@ def _ten_rengi(r, g, b):
 
 def _kahve_telve(r, g, b):
     """Kahve telvesi — koyu kahverengi / siyahımsı (ışık farkına dayanıklı)."""
+    if _sicak_kahve_telve(r, g, b):
+        return True
     if r < 28 and g < 28 and b < 28:
         return True
     toplam = r + g + b
@@ -37,6 +39,45 @@ def _kahve_telve(r, g, b):
         and r >= g >= b
         and (r - b) > 8
         and toplam < 320
+    )
+
+
+def _sicak_kahve_telve(r, g, b):
+    """Gerçek sıcak kahverengi telve — gri/siyah ekran pikselleri sayılmaz."""
+    toplam = r + g + b
+    if toplam < 80 or toplam > 420:
+        return False
+    mx, mn = max(r, g, b), min(r, g, b)
+    if mx - mn < 8:
+        return False
+    return (
+        40 <= r <= 175
+        and 22 <= g <= 125
+        and 8 <= b <= 85
+        and r > g > b
+        and (r - b) > 18
+        and (r - g) > 6
+    )
+
+
+def _notr_koyu(r, g, b):
+    """Koyu gri / saf siyah — kod editörü ve ekran görüntüsü imzası."""
+    toplam = r + g + b
+    if toplam > 120:
+        return False
+    mx, mn = max(r, g, b), min(r, g, b)
+    return mx - mn < 22
+
+
+def _ekran_ui_rengi(r, g, b):
+    """Koyu mor/lacivert uygulama arayüzü arka planları."""
+    toplam = r + g + b
+    return (
+        toplam < 200
+        and r < 90
+        and g < 75
+        and 20 < b < 130
+        and b >= r * 0.75
     )
 
 
@@ -86,11 +127,18 @@ def _analiz_et(yol, max_kenar=320):
 
             n = len(px)
             ten = kahve = seramik = kap = koyu = 0
+            sicak_kahve = notr_koyu = ekran_ui = 0
             for r, g, b in px:
                 if _ten_rengi(r, g, b):
                     ten += 1
                 if _kahve_telve(r, g, b):
                     kahve += 1
+                if _sicak_kahve_telve(r, g, b):
+                    sicak_kahve += 1
+                if _notr_koyu(r, g, b):
+                    notr_koyu += 1
+                if _ekran_ui_rengi(r, g, b):
+                    ekran_ui += 1
                 if _fincan_seramik(r, g, b):
                     seramik += 1
                 if _fincan_kap(r, g, b):
@@ -99,16 +147,21 @@ def _analiz_et(yol, max_kenar=320):
                     koyu += 1
 
             ten_b, kahve_b, seramik_b, kap_b = _bolge_say(pixels=px, w=w, h=h)
+            sicak_b = _sicak_kahve_bolge(pixels=px, w=w, h=h)
 
             stat = ImageStat.Stat(img)
             return {
                 'ten_orani': ten / n,
                 'kahve_orani': kahve / n,
+                'sicak_kahve_orani': sicak_kahve / n,
+                'notr_koyu_orani': notr_koyu / n,
+                'ekran_ui_orani': ekran_ui / n,
                 'seramik_orani': seramik / n,
                 'kap_orani': kap / n,
                 'koyu_orani': koyu / n,
                 'ten_bolge': ten_b,
                 'kahve_bolge': kahve_b,
+                'sicak_kahve_bolge': sicak_b,
                 'seramik_bolge': seramik_b,
                 'kap_bolge': kap_b,
                 'kontrast': sum(stat.stddev) / 3.0,
@@ -161,6 +214,44 @@ def _bolge_say(pixels, w, h, esik=0.08):
     return ten_b, kahve_b, seramik_b, kap_b
 
 
+def _sicak_kahve_bolge(pixels, w, h, esik=0.06):
+    cols, rows = 3, 3
+    cw = max(w // cols, 1)
+    rh = max(h // rows, 1)
+    say = 0
+    for row in range(rows):
+        for col in range(cols):
+            x0, y0 = col * cw, row * rh
+            x1 = min(x0 + cw, w)
+            y1 = min(y0 + rh, h)
+            toplam = sicak = 0
+            for y in range(y0, y1):
+                satir = y * w
+                for x in range(x0, x1):
+                    r, g, b = pixels[satir + x]
+                    toplam += 1
+                    if _sicak_kahve_telve(r, g, b):
+                        sicak += 1
+            if toplam and sicak / toplam >= esik:
+                say += 1
+    return say
+
+
+def _ekran_goruntusu_mu(oz):
+    """Kod ekranı, arayüz ss veya koyu editör görüntüsü."""
+    ui = oz.get('ekran_ui_orani', 0)
+    notr = oz.get('notr_koyu_orani', 0)
+    sicak = oz.get('sicak_kahve_orani', 0)
+    kontrast = oz.get('kontrast', 0)
+    if ui >= 0.18:
+        return True
+    if notr >= 0.20 and sicak < 0.012:
+        return True
+    if notr >= 0.12 and kontrast >= 18 and sicak < 0.018:
+        return True
+    return False
+
+
 def _el_gorunuyor_mu(oz):
     """Fotoğrafta anlamlı el/ten alanı var mı?"""
     ten = oz.get('ten_orani', 0)
@@ -177,17 +268,24 @@ def _el_gorunuyor_mu(oz):
 
 
 def _telve_var_mi(oz):
-    """Fotoğrafta kahve telvesi / koyu telve lekeleri var mı?"""
+    """Fotoğrafta gerçek kahve telvesi var mı?"""
+    if _ekran_goruntusu_mu(oz):
+        return False
+    sicak = oz.get('sicak_kahve_orani', 0)
+    sicak_b = oz.get('sicak_kahve_bolge', 0)
+    if sicak >= 0.018 or sicak_b >= 1:
+        return True
     kahve = oz.get('kahve_orani', 0)
-    koyu = oz.get('koyu_orani', 0)
     kahve_b = oz.get('kahve_bolge', 0)
+    koyu = oz.get('koyu_orani', 0)
     kontrast = oz.get('kontrast', 0)
-    return (
-        kahve >= 0.035
-        or kahve_b >= 1
-        or (koyu >= 0.09 and kontrast >= 4)
-        or (koyu >= 0.14)
-    )
+    seramik = oz.get('seramik_orani', 0)
+    # Sadece koyu+kontrast yetmez; sıcak kahve tonu veya seramik de gerekli
+    if kahve >= 0.05 and kahve_b >= 2 and (seramik >= 0.03 or sicak >= 0.01):
+        return True
+    if koyu >= 0.14 and kontrast >= 8 and sicak >= 0.01:
+        return True
+    return False
 
 
 def _kap_var_mi(oz):
@@ -207,21 +305,21 @@ def _kap_var_mi(oz):
 def _fincan_gorunuyor_mu(oz, tabak_mi=False):
     """
     Kahve falı fotoğrafı geçerli mi?
-    Şart: telve + (fincan/tabağın herhangi bir rengi) birlikte görünsün.
+    Şart: gerçek telve + (fincan/tabağın herhangi bir rengi) birlikte görünsün.
     """
+    if _ekran_goruntusu_mu(oz):
+        return False
     if not _telve_var_mi(oz):
         return False
 
     if tabak_mi:
-        return _kap_var_mi(oz) or oz.get('kahve_bolge', 0) >= 2
+        return _kap_var_mi(oz) or oz.get('sicak_kahve_bolge', 0) >= 2
 
-    # Fincan içi: telveyi net gör + fincan duvarı/kenarı (mavi, beyaz, her renk)
-    if _kap_var_mi(oz):
+    if _kap_var_mi(oz) and oz.get('sicak_kahve_orani', 0) >= 0.012:
         return True
-    # Sadece iç çekim — telvenin yoğun ve dağınık olması fincan içi imzası
-    if oz.get('kahve_orani', 0) >= 0.06 and oz.get('kahve_bolge', 0) >= 2:
+    if oz.get('sicak_kahve_orani', 0) >= 0.035 and oz.get('sicak_kahve_bolge', 0) >= 2:
         return True
-    if oz.get('koyu_orani', 0) >= 0.12 and oz.get('kontrast', 0) >= 7:
+    if oz.get('seramik_orani', 0) >= 0.06 and oz.get('sicak_kahve_orani', 0) >= 0.015:
         return True
     return False
 

@@ -1279,13 +1279,14 @@ def _yorum_al_calistir(tip, veri, callback):
         if metin:
             foto_hata = _gecersiz_foto_yaniti(metin, tip) if fotograf_fal else None
             if foto_hata:
-                print('AI: bulut geçersiz foto dedi — cihaz yorumu kullanılacak', flush=True)
-            else:
-                _ana_thread(
-                    lambda m=metin, k=kaynak, f=fotograf_ai and k == 'gemini':
-                    _sonuc(m, True, None, k, f),
-                )
+                print('AI: geçersiz foto — kullanıcıya bildiriliyor', flush=True)
+                _ana_thread(lambda h=foto_hata: _sonuc(None, False, h, kaynak, False))
                 return
+            _ana_thread(
+                lambda m=metin, k=kaynak, f=fotograf_ai and k == 'gemini':
+                _sonuc(m, True, None, k, f),
+            )
+            return
 
         from offline_yorum import offline_yorum_uret
         offline_metin = offline_yorum_uret(
