@@ -2,7 +2,8 @@
 FalımaBak - Fal yorumu motoru.
 Kahve (varsayılan): sembol kütüphanesi — API maliyeti yok.
 Kahve (AI Detaylı): Gemini Vision.
-Metin fallar: Ollama → DeepSeek → Groq → OpenRouter → xAI → Gemini → offline.
+Metin fallar (mobil): Gemini → Groq → DeepSeek → yedekler → cihaz içi.
+Metin fallar (PC): Ollama → DeepSeek → Groq → yedekler → Gemini → cihaz içi.
 """
 
 import base64
@@ -30,6 +31,8 @@ _model_kota = {}  # model -> kota bitiş zamanı (429 sonrası)
 
 GEMINI_MIN_ARALIK = 1.5
 GEMINI_KOTA_BEKLE = 90
+# Oturum içi başarısız sağlayıcıları atla (402 bakiye, 401 key vb.)
+_provider_atla = {}
 
 
 def _config_yolu():
@@ -56,7 +59,6 @@ _varsayilan = {
     'gemini_model': 'gemini-2.5-flash',
     'gemini_yedek_modeller': [
         'gemini-2.0-flash',
-        'gemini-1.5-flash',
     ],
     # Kahve: sembol yorumu önce (Kaave tarzı, ücretsiz)
     'kahve_sema_oncelik': True,
@@ -133,8 +135,6 @@ _GECERLI_GEMINI = frozenset({
     'gemini-2.5-pro',
     'gemini-2.0-flash',
     'gemini-2.0-flash-lite',
-    'gemini-1.5-flash',
-    'gemini-1.5-pro',
 })
 
 
@@ -168,7 +168,7 @@ def _gemini_ayar_duzelt(ayar):
         if m_norm not in yedek and m_norm != model:
             yedek.append(m_norm)
     if not yedek:
-        yedek = ['gemini-2.0-flash', 'gemini-1.5-flash']
+        yedek = ['gemini-2.0-flash']
     ayar['gemini_yedek_modeller'] = yedek
     return ayar
 
@@ -464,7 +464,13 @@ def _groq_anahtar(ayar=None):
     )
     if key.startswith('xai-'):
         return ''
-    return key
+    if key:
+        return key
+    try:
+        from koruma import gomulu_groq_anahtar
+        return (gomulu_groq_anahtar() or '').strip()
+    except Exception:
+        return ''
 
 
 def _xai_anahtar(ayar=None):
@@ -478,10 +484,19 @@ def _xai_anahtar(ayar=None):
     return ''
 
 
+def _provider_atla_mi(kaynak):
+    return time.time() < float(_provider_atla.get(kaynak) or 0)
+
+
+def _provider_atla_isaretle(kaynak, sure=3600):
+    if kaynak:
+        _provider_atla[kaynak] = time.time() + sure
+
+
 def _kaynak_sirasi(ayar, gorsel_var=False):
-    """Görsel: Gemini Vision. Metin: kendi sunucu → ucuz bulut → Gemini."""
+    """Mobil: Gemini önce. PC: Ollama önce. Görsel: yalnızca Gemini Vision."""
     if gorsel_var:
-        if _gemini_anahtar(ayar):
+        if _gemini_anahtar(ayar) and not _provider_atla_mi('gemini'):
             return ['gemini']
         return []
 
@@ -496,19 +511,34 @@ def _kaynak_sirasi(ayar, gorsel_var=False):
         return ['ollama'] if ollama_aktif_mi() else []
 
     sira = []
-    if ollama_aktif_mi():
-        sira.append('ollama')
-    if _deepseek_anahtar(ayar):
-        sira.append('deepseek')
-    if _groq_anahtar(ayar):
-        sira.append('groq')
-    if _openrouter_anahtar(ayar):
-        sira.append('openrouter')
-    if _xai_anahtar(ayar):
-        sira.append('xai')
-    if _gemini_anahtar(ayar):
-        sira.append('gemini')
-    return sira
+    if _android_mi():
+        # Telefon: PC Ollama yok; gömülü Gemini birincil
+        if _ollama_uzak_mi(ayar) and _ollama_sunucu_url_al(ayar):
+            sira.append('ollama')
+        if _gemini_anahtar(ayar):
+            sira.append('gemini')
+        if _groq_anahtar(ayar):
+            sira.append('groq')
+        if _deepseek_anahtar(ayar):
+            sira.append('deepseek')
+        if _openrouter_anahtar(ayar):
+            sira.append('openrouter')
+        if _xai_anahtar(ayar):
+            sira.append('xai')
+    else:
+        if ollama_aktif_mi():
+            sira.append('ollama')
+        if _deepseek_anahtar(ayar):
+            sira.append('deepseek')
+        if _groq_anahtar(ayar):
+            sira.append('groq')
+        if _openrouter_anahtar(ayar):
+            sira.append('openrouter')
+        if _xai_anahtar(ayar):
+            sira.append('xai')
+        if _gemini_anahtar(ayar):
+            sira.append('gemini')
+    return [k for k in sira if not _provider_atla_mi(k)]
 
 
 def _veri_nonce(veri):
@@ -801,10 +831,7 @@ def _gemini_istek(prompt, ayar, model=None, gorsel=None, max_tokens=None):
 def _gemini_modeller(ayar):
     primary = ayar.get('gemini_model', 'gemini-2.5-flash')
     modeller = [primary]
-    for yedek in ayar.get('gemini_yedek_modeller') or (
-        'gemini-2.0-flash',
-        'gemini-1.5-flash',
-    ):
+    for yedek in ayar.get('gemini_yedek_modeller') or ('gemini-2.0-flash',):
         if yedek and yedek not in modeller:
             modeller.append(yedek)
     return modeller
@@ -887,6 +914,8 @@ def _kullanici_hata_mesaji(hatalar):
             kodlar.append(h.split(':', 1)[1])
     if '429' in kodlar or '503' in kodlar:
         return 'Servis yoğun; FalımaBak yorumu gösteriliyor. Biraz sonra tekrar deneyin.'
+    if '402' in kodlar:
+        return 'DeepSeek bakiyesi bitti; FalımaBak yorumu gösteriliyor.'
     if any(k in ('401', '403', '400') for k in kodlar):
         return 'Bağlantı kurulamadı; FalımaBak yorumu gösteriliyor.'
     return 'Bağlantı kurulamadı; FalımaBak yorumu gösteriliyor.'
@@ -1033,6 +1062,8 @@ def _bulut_metin_dene(saglayici, prompt, ayar):
                 except Exception:
                     pass
                 print(f'AI HTTP ({saglayici}/{model}): {e.code} {e.reason} {detay}', flush=True)
+                if e.code in (401, 402, 403):
+                    _provider_atla_isaretle(saglayici, 7200)
                 if _gecici_http_kodu(e.code) and deneme == 0:
                     time.sleep(2 + (1 if e.code == 503 else 0))
                     continue
@@ -1242,6 +1273,8 @@ def _yorum_uret(text_prompt, ayar, gorsel=None, vision_prompt=None):
             if metin:
                 print('AI kaynak: DeepSeek (bulut)', flush=True)
                 return metin, 'deepseek', None
+            if kod in (401, 402, 403):
+                _provider_atla_isaretle('deepseek', 7200)
             if kod:
                 hatalar.append(f'deepseek:{kod}')
         elif kaynak == 'openrouter':
@@ -1424,7 +1457,9 @@ def _yorum_al_calistir(tip, veri, callback):
         offline_metin = offline_yorum_uret(
             tip, _veri_nonce({**veri, 'foto_aciklamalari': aciklamalar}), foto_ozellikleri,
         )
-        hata_mesaji = _kullanici_hata_mesaji(hatalar) if hatalar else None
+        hata_mesaji = None
+        if hatalar and not _android_mi():
+            hata_mesaji = _kullanici_hata_mesaji(hatalar)
         if hatalar:
             print(f'AI: bulut başarısız ({", ".join(hatalar)}), cihaz yorumu', flush=True)
         else:

@@ -51,6 +51,39 @@ def gomulu_deepseek_anahtar():
     return ''
 
 
+_GR_ENC = (
+    110, 60, 106, 24, 64, 84, 79, 83, 75, 66, 126, 114, 122, 62, 106, 114,
+    87, 42, 99, 120, 46, 104, 113, 119, 87, 78, 98, 103, 79, 57, 68, 74,
+    79, 108, 51, 75, 105, 11, 72, 35, 105, 54, 116, 51, 76, 65, 71, 96,
+    92, 110, 101, 68, 53, 71, 107, 106,
+)
+_GR_SEED_A = 'falimabak_koruma_v1'
+_GR_SEED_B = 'org.kumar.falimabak'
+_gr_cache = None
+
+
+def gomulu_groq_anahtar():
+    """APK içi Groq anahtarı — mobil yedek AI."""
+    global _gr_cache
+    if _gr_cache is not None:
+        return _gr_cache
+    try:
+        parca = []
+        for i, c in enumerate(_GR_ENC):
+            parca.append(chr(
+                c ^ ord(_GR_SEED_A[i % len(_GR_SEED_A)])
+                ^ ord(_GR_SEED_B[(i * 3) % len(_GR_SEED_B)])
+            ))
+        metin = ''.join(parca).strip()
+        if metin.startswith('gsk_') and len(metin) >= 20:
+            _gr_cache = metin
+            return metin
+    except Exception:
+        pass
+    _gr_cache = ''
+    return ''
+
+
 def koruma_baslat():
     """Açılışta çağrılır — uygulamayı asla kapatmaz."""
     anahtar = gomulu_api_anahtar()

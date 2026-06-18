@@ -4,7 +4,7 @@
   "ai_timeout": 45,
   "gemini_api_key": "",
   "gemini_model": "gemini-2.5-flash",
-  "gemini_yedek_modeller": ["gemini-2.0-flash", "gemini-1.5-flash"],
+  "gemini_yedek_modeller": ["gemini-2.0-flash"],
   "deepseek_api_key": "",
   "deepseek_model": "deepseek-chat",
   "deepseek_yedek_modeller": ["deepseek-reasoner"],
