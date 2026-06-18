@@ -246,13 +246,22 @@ def bildirim_acik_kaydet(acik):
 
 
 def bildirim_saati_al():
-    ham = _yukle().get('bildirim_saati')
-    if isinstance(ham, dict):
-        return {
-            'saat': int(ham.get('saat', 20)),
-            'dakika': int(ham.get('dakika', 0)),
-        }
+    """Geriye dönük uyumluluk — artık periyodik aralık kullanılıyor."""
     return {'saat': 20, 'dakika': 0}
+
+
+def bildirim_aralik_saat_al():
+    ham = _yukle().get('bildirim_aralik_saat', 2)
+    try:
+        return max(1, min(int(ham), 6))
+    except (TypeError, ValueError):
+        return 2
+
+
+def bildirim_aralik_kaydet(saat):
+    veri = _yukle()
+    veri['bildirim_aralik_saat'] = max(1, min(int(saat), 6))
+    _kaydet(veri)
 
 
 def degerlendirme_odulu_alindi():

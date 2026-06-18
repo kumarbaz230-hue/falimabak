@@ -1,10 +1,11 @@
-"""Günlük fal hatırlatma bildirimleri (Android)."""
+"""Periyodik fal hatırlatma bildirimleri (Android)."""
 
 import os
 
 PAKET = 'org.kumar.falimabak.falimabak'
 RECEIVER_SINIF = f'{PAKET}.FalimabakAlarmReceiver'
 ALARM_REQUEST = 9001
+BILDIRIM_ARALIK_SAAT = 2
 
 
 def _android_mi():
@@ -21,6 +22,12 @@ def _bildirim_metinleri():
         return t('notif_title'), t('notif_body')
     except Exception:
         return 'FalımaBak', 'Bugün falına baktın mı?'
+
+
+def _aralik_ms():
+    from gecmis import bildirim_aralik_saat_al
+    saat = max(1, min(int(bildirim_aralik_saat_al()), 6))
+    return saat * 60 * 60 * 1000
 
 
 def bildirim_izni_iste():
@@ -69,7 +76,7 @@ def bildirim_iptal():
 
 
 def bildirim_zamanla():
-    from gecmis import bildirim_acik_al, bildirim_saati_al
+    from gecmis import bildirim_acik_al
     if not bildirim_acik_al():
         bildirim_iptal()
         return
@@ -87,19 +94,18 @@ def bildirim_zamanla():
         context = activity.getApplicationContext()
 
         baslik, mesaj = _bildirim_metinleri()
-        saat_bilgi = bildirim_saati_al()
-        saat = int(saat_bilgi.get('saat', 20))
-        dakika = int(saat_bilgi.get('dakika', 0))
+        aralik_ms = _aralik_ms()
+        aralik_saat = aralik_ms // (60 * 60 * 1000)
 
         now = datetime.now()
-        hedef = now.replace(hour=saat, minute=dakika, second=0, microsecond=0)
-        if hedef <= now:
-            hedef += timedelta(days=1)
+        hedef = now + timedelta(hours=aralik_saat)
 
         intent = Intent()
         intent.setComponent(ComponentName(PAKET, RECEIVER_SINIF))
         intent.putExtra('title', baslik)
         intent.putExtra('text', mesaj)
+        intent.putExtra('interval_ms', aralik_ms)
+        intent.putExtra('reschedule', True)
         pi = PendingIntent.getBroadcast(
             context, ALARM_REQUEST, intent,
             PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE,
