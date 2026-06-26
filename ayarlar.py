@@ -215,7 +215,7 @@ class AyarlarScreen(Screen):
         self._isim_input.text = kullanici_ismi()
         self._dil_spinner.text = dil_etiket(dil_al())
         self._mesaj.text = ''
-        self._bildirim_switch.active = bildirim_acik_al()
+        self._bildirim_check.active = bildirim_acik_al()
         self._slider_guncelle(muzik_seviye_al() * 100, ses_uygula=False)
         self._muzik_btn_guncelle()
         try:
