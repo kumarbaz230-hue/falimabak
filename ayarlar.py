@@ -294,8 +294,8 @@ class AyarlarScreen(Screen):
 
     def _bildirim_test(self, *_):
         try:
-            from bildirim import bildirim_test_goster, bildirim_baslat
-            bildirim_baslat()
+            from bildirim import bildirim_test_goster, bildirim_izni_iste
+            bildirim_izni_iste()
             ok, hata = bildirim_test_goster()
             if ok:
                 self._mesaj.text = 'Test bildirimi gönderildi'

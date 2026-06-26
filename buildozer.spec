@@ -12,7 +12,7 @@ source.include_patterns = assets/*,assets/muzik/*,config.ornek.json,store/*
 source.exclude_dirs = tests,bin,.git,__pycache__,.buildozer,.venv,venv,env,.idea,user_photos,.github,recipes,tools,images,keystore
 source.exclude_patterns = license,images/*/*.jpg,*.bat,config.json,kullanici_veri.json,.env,secrets.json,secrets.ornek.json,assets/muzik/ambiyans.wav
 
-version = 1.7.6
+version = 1.7.7
 
 icon.filename = %(source.dir)s/assets/app_icon.png
 presplash.filename = %(source.dir)s/assets/splash_banner.png
@@ -40,7 +40,8 @@ android.enable_androidx = True
 
 android.gradle_dependencies = androidx.appcompat:appcompat:1.6.1,androidx.activity:activity:1.8.2,androidx.core:core:1.12.0,com.google.android.gms:play-services-ads:22.6.0
 
-android.add_java = java
+# Bildirim receiver Java siniflari (FalimabakAlarmReceiver / BootReceiver)
+android.add_src = java
 
 # Gradle bellek (CI packageDebug OOM önleme)
 android.gradle_arguments = -Dorg.gradle.jvmargs=-Xmx2560m,-Dorg.gradle.daemon=false,-Dorg.gradle.parallel=false,-Dorg.gradle.workers.max=1
@@ -48,7 +49,7 @@ android.gradle_arguments = -Dorg.gradle.jvmargs=-Xmx2560m,-Dorg.gradle.daemon=fa
 # AdMob (onaylı hesap — canlı birimler)
 android.meta_data = com.google.android.gms.ads.APPLICATION_ID=ca-app-pub-9430596197237392~1799758284
 
-android.add_src = android_res
+android.add_resources = android_res/res
 android.add_application_xml = %(source.dir)s/android_res/application.xml
 
 android.presplash_color = #0F0C20

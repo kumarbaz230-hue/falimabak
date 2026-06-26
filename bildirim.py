@@ -197,25 +197,81 @@ def _py_zamanla(baslik, mesaj, aralik_ms, ilk_ms):
         am.set(AlarmManager.RTC_WAKEUP, trigger_ms, pi)
 
 
+def _py_test_bildirim(baslik, mesaj):
+    """Java receiver yoksa saf jnius ile bildirim göster (yedek)."""
+    from jnius import autoclass, cast
+    PythonActivity = autoclass('org.kivy.android.PythonActivity')
+    Context = autoclass('android.content.Context')
+    NotificationManager = autoclass('android.app.NotificationManager')
+    NotificationBuilder = autoclass('android.app.Notification$Builder')
+    BuildVersion = autoclass('android.os.Build$VERSION')
+    Intent = autoclass('android.content.Intent')
+    PendingIntent = autoclass('android.app.PendingIntent')
+
+    activity = PythonActivity.mActivity
+    context = activity.getApplicationContext()
+    nm = cast(
+        'android.app.NotificationManager',
+        context.getSystemService(Context.NOTIFICATION_SERVICE),
+    )
+
+    kanal_id = 'falimabak_hatirlatma'
+    if BuildVersion.SDK_INT >= 26:
+        NotificationChannel = autoclass('android.app.NotificationChannel')
+        kanal = NotificationChannel(
+            kanal_id, 'Hatırlatmalar', NotificationManager.IMPORTANCE_HIGH,
+        )
+        kanal.setDescription('Fal hatırlatmaları')
+        kanal.enableVibration(True)
+        nm.createNotificationChannel(kanal)
+        builder = NotificationBuilder(context, kanal_id)
+    else:
+        builder = NotificationBuilder(context)
+
+    launch = Intent(context, PythonActivity)
+    launch.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP)
+    flags = PendingIntent.FLAG_UPDATE_CURRENT
+    if BuildVersion.SDK_INT >= 23:
+        flags |= PendingIntent.FLAG_IMMUTABLE
+    pi = PendingIntent.getActivity(context, 9002, launch, flags)
+
+    ikon = context.getApplicationInfo().icon
+    builder.setSmallIcon(ikon)
+    builder.setContentTitle(baslik)
+    builder.setContentText(mesaj)
+    builder.setContentIntent(pi)
+    builder.setAutoCancel(True)
+    nm.notify(9002, builder.build())
+
+
 def bildirim_test_goster():
     """Anında test bildirimi — Ayarlar'dan."""
     if not _android_mi():
         return False, 'Sadece Android'
+    # Android 13+ izni yoksa önce runtime izin penceresini göster.
     if not bildirim_izni_var_mi():
-        bildirim_ayarlari_ac()
-        return False, 'Bildirim izni kapalı — ayarları açın'
+        bildirim_izni_iste()
+        return False, 'Bildirim izni gerekli — izni verip tekrar deneyin'
+
+    baslik = 'FalımaBak'
+    mesaj = 'Hatırlatmalar çalışıyor! Periyodik fallar yolda.'
+    java_hata = None
     try:
         from jnius import autoclass
         Receiver = autoclass('org.kumar.falimabak.falimabak.FalimabakAlarmReceiver')
-        Receiver.showTestNotification(
-            _context(),
-            'FalımaBak',
-            'Hatırlatmalar çalışıyor! Periyodik fallar yolda.',
-        )
+        Receiver.showTestNotification(_context(), baslik, mesaj)
         return True, None
     except Exception as e:
-        print(f'Bildirim test: {e}', flush=True)
-        return False, str(e)
+        java_hata = e
+        print(f'Bildirim test (Java): {e}', flush=True)
+
+    # Java receiver APK'da yoksa saf jnius ile dene.
+    try:
+        _py_test_bildirim(baslik, mesaj)
+        return True, None
+    except Exception as e:
+        print(f'Bildirim test (Python): {e}', flush=True)
+        return False, str(java_hata or e)
 
 
 def bildirim_zamanla():
