@@ -15,6 +15,8 @@ import androidx.core.content.ContextCompat;
 
 import org.kivy.android.PythonActivity;
 
+import java.util.Random;
+
 public class FalimabakAlarmReceiver extends BroadcastReceiver {
     public static final String CHANNEL_ID = "falimabak_hatirlatma";
     public static final int ALARM_REQUEST = 9001;
@@ -22,16 +24,35 @@ public class FalimabakAlarmReceiver extends BroadcastReceiver {
     public static final long DEFAULT_INTERVAL_MS = 2L * 60L * 60L * 1000L;
     public static final long DEFAULT_FIRST_DELAY_MS = 15L * 60L * 1000L;
 
+    // Fal ile ilgili çeşitli hatırlatma mesajları — her bildirimde rastgele seçilir.
+    private static final String[] FAL_MESAJLARI = {
+        "Bugün hiç fal açmadın! Kahveni hazırla, fincanını çevir.",
+        "Yıldızlar seni çağırıyor — kısa bir fal molası?",
+        "Bugünün mesajı fincanda veya kartlarda olabilir.",
+        "Bir kahve, bir kart — FalımaBak hazır.",
+        "Merak etme, falına bakmak için her zaman geç değil.",
+        "Tarot kartları bugün sana ne söyler? Hadi bir çekiş yap.",
+        "Avucundaki çizgiler bir hikâye anlatıyor. El falına bak!",
+        "Kahve telven bugün şanslı bir işaret taşıyor olabilir.",
+        "Burç yorumun hazır — bugün seni neler bekliyor?",
+        "Rüyanı mı gördün? Anlamını FalımaBak'ta keşfet.",
+        "Günün falını kaçırma! Bir bakış her şeyi değiştirebilir.",
+        "FalımaBak seni özledi — bugünkü kaderine göz at."
+    };
+
+    private static String pickMessage() {
+        int i = new Random().nextInt(FAL_MESAJLARI.length);
+        return FAL_MESAJLARI[i];
+    }
+
     @Override
     public void onReceive(Context context, Intent intent) {
         String title = intent.getStringExtra("title");
-        String text = intent.getStringExtra("text");
         if (title == null || title.isEmpty()) {
             title = "FalımaBak";
         }
-        if (text == null || text.isEmpty()) {
-            text = "Bugün falına baktın mı?";
-        }
+        // Her tetiklemede taze/çeşitli mesaj seç (uygulama kapalı olsa bile çalışır).
+        String text = pickMessage();
 
         long intervalMs = intent.getLongExtra("interval_ms", DEFAULT_INTERVAL_MS);
         if (intervalMs < 60L * 60L * 1000L) {
@@ -45,16 +66,8 @@ public class FalimabakAlarmReceiver extends BroadcastReceiver {
 
         showNotification(context, title, text, ALARM_REQUEST);
 
-        if (intent.getBooleanExtra("reschedule", false)) {
-            scheduleAlarm(context, title, text, intervalMs, intervalMs);
-        }
-    }
-
-    public static void showTestNotification(Context context, String title, String text) {
-        if (!canNotify(context)) {
-            return;
-        }
-        showNotification(context, title, text, TEST_NOTIFY_ID);
+        // setAlarmClock tek seferlik olduğu için her seferinde yeniden zamanla.
+        scheduleAlarm(context, title, text, intervalMs, intervalMs);
     }
 
     private static void showNotification(Context context, String title, String text, int notifyId) {

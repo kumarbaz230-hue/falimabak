@@ -828,7 +828,9 @@ class FalimaBakApp(App):
         except Exception:
             pass
         try:
-            from bildirim import bildirim_baslat
+            from bildirim import bildirim_izni_iste, bildirim_baslat
+            # Uygulama ilk açıldığında bildirim iznini hemen iste.
+            Clock.schedule_once(lambda *_: bildirim_izni_iste(), 0.3)
             Clock.schedule_once(lambda *_: bildirim_baslat(), 2.0)
         except Exception as e:
             print(f'Bildirim baslat: {e}', flush=True)

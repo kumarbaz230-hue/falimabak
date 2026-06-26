@@ -113,9 +113,6 @@ class AyarlarScreen(Screen):
         self._bildirim_switch.bind(active=self._bildirim_degisti)
         bildirim_satir.add_widget(self._bildirim_switch)
         bildirim_kart.add_widget(bildirim_satir)
-        test_btn = siyah_buton('Bildirimi test et', font_size='13sp')
-        test_btn.bind(on_press=self._bildirim_test)
-        bildirim_kart.add_widget(test_btn)
         icerik.add_widget(bildirim_kart)
 
         hukuk = _ayar_karti(t('settings_legal'), t('settings_legal_hint'))
@@ -291,21 +288,6 @@ class AyarlarScreen(Screen):
             self._mesaj.color = get_color_from_hex(RENKLER['yesil'])
         except Exception:
             pass
-
-    def _bildirim_test(self, *_):
-        try:
-            from bildirim import bildirim_test_goster, bildirim_izni_iste
-            bildirim_izni_iste()
-            ok, hata = bildirim_test_goster()
-            if ok:
-                self._mesaj.text = 'Test bildirimi gönderildi'
-                self._mesaj.color = get_color_from_hex(RENKLER['yesil'])
-            else:
-                self._mesaj.text = hata or 'Bildirim gönderilemedi'
-                self._mesaj.color = get_color_from_hex(RENKLER['kirmizi'])
-        except Exception as e:
-            self._mesaj.text = str(e)
-            self._mesaj.color = get_color_from_hex(RENKLER['kirmizi'])
 
     def _degerlendir(self, *_):
         try:
