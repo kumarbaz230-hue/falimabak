@@ -66,6 +66,18 @@ def _reklam_ayar():
     def _gecerli(unit_id):
         return unit_id and 'XXXX' not in unit_id and unit_id.startswith('ca-app-pub-')
 
+    test_mod = bool(veri.get('admob_test_mod', False))
+
+    if test_mod:
+        print('AdMob: test modu (Google test reklamları)', flush=True)
+        return {
+            'app_id': TestIds.APP,
+            'banner_id': TestIds.BANNER,
+            'interstitial_id': TestIds.INTERSTITIAL,
+            'rewarded_id': TestIds.REWARDED,
+            'test_mod': True,
+        }
+
     app_id = veri.get('admob_app_id', '').strip()
     banner_id = veri.get('admob_banner_id', '').strip()
     inter_id = veri.get('admob_interstitial_id', '').strip()
@@ -85,7 +97,7 @@ def _reklam_ayar():
         'banner_id': banner_id,
         'interstitial_id': inter_id,
         'rewarded_id': rewarded_id,
-        'test_banner': banner_id == TestIds.BANNER,
+        'test_mod': False,
     }
 
 
@@ -128,7 +140,8 @@ def reklam_hazirla():
     try:
         from kivmob import KivMob
         ayar = _reklam_ayar()
-        print(f"Reklam başlatılıyor: app={ayar['app_id'][:20]}...", flush=True)
+        mod = 'test' if ayar.get('test_mod') else 'canli'
+        print(f"Reklam başlatılıyor ({mod}): app={ayar['app_id'][:24]}...", flush=True)
         _ads = KivMob(ayar['app_id'])
         _ads.new_banner(ayar['banner_id'], top_pos=False)
         _ads.request_banner()

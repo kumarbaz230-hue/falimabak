@@ -12,7 +12,7 @@ source.include_patterns = assets/*,assets/muzik/*,config.ornek.json,store/*
 source.exclude_dirs = tests,bin,.git,__pycache__,.buildozer,.venv,venv,env,.idea,user_photos,.github,recipes,tools,images,keystore
 source.exclude_patterns = license,images/*/*.jpg,*.bat,config.json,kullanici_veri.json,.env,secrets.json,secrets.ornek.json,assets/muzik/ambiyans.wav
 
-version = 1.7.3
+version = 1.7.4
 
 icon.filename = %(source.dir)s/assets/app_icon.png
 presplash.filename = %(source.dir)s/assets/splash_banner.png
@@ -45,7 +45,7 @@ android.add_java = java
 # Gradle bellek (CI packageDebug OOM önleme)
 android.gradle_arguments = -Dorg.gradle.jvmargs=-Xmx2560m,-Dorg.gradle.daemon=false,-Dorg.gradle.parallel=false,-Dorg.gradle.workers.max=1
 
-# Test AdMob App ID — yayın öncesi secrets.json + bu satırı gerçek ID ile güncelle
+# AdMob (onaylı hesap — canlı birimler)
 android.meta_data = com.google.android.gms.ads.APPLICATION_ID=ca-app-pub-9430596197237392~1799758284
 
 android.add_src = android_res
