@@ -103,15 +103,21 @@ class AyarlarScreen(Screen):
         icerik.add_widget(islem)
 
         bildirim_kart = _ayar_karti(t('settings_notif'), t('settings_notif_hint'))
-        from kivy.uix.switch import Switch
+        from kivy.uix.checkbox import CheckBox
         bildirim_satir = BoxLayout(size_hint_y=None, height=dp(44), spacing=dp(8))
-        bildirim_satir.add_widget(metin_label(
+        self._bildirim_check = CheckBox(
+            active=bildirim_acik_al(),
+            size_hint_x=None,
+            width=dp(40),
+            color=get_color_from_hex(RENKLER['altin']),
+        )
+        self._bildirim_check.bind(active=self._bildirim_degisti)
+        bildirim_satir.add_widget(self._bildirim_check)
+        bildirim_etiket = metin_label(
             t('settings_notif_on'), font_size='14sp', color=RENKLER['beyaz'],
             halign='left', valign='middle', size_hint_x=1,
-        ))
-        self._bildirim_switch = Switch(active=bildirim_acik_al(), size_hint_x=None, width=dp(64))
-        self._bildirim_switch.bind(active=self._bildirim_degisti)
-        bildirim_satir.add_widget(self._bildirim_switch)
+        )
+        bildirim_satir.add_widget(bildirim_etiket)
         bildirim_kart.add_widget(bildirim_satir)
         icerik.add_widget(bildirim_kart)
 

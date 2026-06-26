@@ -78,6 +78,17 @@ def bildirim_izni_iste():
         from android import api_version
         if api_version.API_VERSION < 33:
             return
+    except Exception:
+        pass
+    # 1) p4a'nin standart izin penceresi (en guvenilir yontem).
+    try:
+        from android.permissions import request_permissions
+        request_permissions(['android.permission.POST_NOTIFICATIONS'])
+        return
+    except Exception as e:
+        print(f'Bildirim izni (p4a): {e}', flush=True)
+    # 2) Yedek: ActivityCompat ile dogrudan iste.
+    try:
         from jnius import autoclass
         PythonActivity = autoclass('org.kivy.android.PythonActivity')
         ActivityCompat = autoclass('androidx.core.app.ActivityCompat')
