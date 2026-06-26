@@ -6,7 +6,7 @@ import random
 PAKET = 'org.kumar.falimabak.falimabak'
 RECEIVER_SINIF = f'{PAKET}.FalimabakAlarmReceiver'
 ALARM_REQUEST = 9001
-ILK_GECIKME_DK = 30
+ILK_GECIKME_DK = 15
 
 
 def _android_mi():
@@ -21,16 +21,13 @@ def _bildirim_metinleri():
     try:
         from dil import t
         baslik = t('notif_title')
-        govde = t('notif_body')
         ek = [
             t('notif_body'),
             'Yıldızlar seni çağırıyor — kısa bir fal molası?',
             'Bugünün mesajı fincanda veya kartlarda olabilir.',
             'Bir kahve, bir kart — FalımaBak hazır.',
         ]
-        if len(ek) > 1:
-            govde = random.choice(ek)
-        return baslik, govde
+        return baslik, random.choice(ek)
     except Exception:
         return 'FalımaBak', 'Bugün falına baktın mı?'
 
@@ -45,6 +42,12 @@ def _ilk_gecikme_ms():
     return ILK_GECIKME_DK * 60 * 1000
 
 
+def _context():
+    from jnius import autoclass
+    PythonActivity = autoclass('org.kivy.android.PythonActivity')
+    return PythonActivity.mActivity.getApplicationContext()
+
+
 def bildirim_izni_var_mi():
     if not _android_mi():
         return True
@@ -53,11 +56,10 @@ def bildirim_izni_var_mi():
         if api_version.API_VERSION < 33:
             return True
         from jnius import autoclass
-        PythonActivity = autoclass('org.kivy.android.PythonActivity')
         ContextCompat = autoclass('androidx.core.content.ContextCompat')
         Manifest = autoclass('android.Manifest')
         PackageManager = autoclass('android.content.pm.PackageManager')
-        context = PythonActivity.mActivity.getApplicationContext()
+        context = _context()
         return ContextCompat.checkSelfPermission(
             context, Manifest.permission.POST_NOTIFICATIONS,
         ) == PackageManager.PERMISSION_GRANTED
@@ -87,6 +89,28 @@ def bildirim_izni_iste():
         print(f'Bildirim izni: {e}', flush=True)
 
 
+def bildirim_ayarlari_ac():
+    """Uygulama bildirim ayarlarını aç."""
+    if not _android_mi():
+        return
+    try:
+        from jnius import autoclass
+        PythonActivity = autoclass('org.kivy.android.PythonActivity')
+        Intent = autoclass('android.content.Intent')
+        Settings = autoclass('android.provider.Settings')
+        activity = PythonActivity.mActivity
+        pkg = activity.getPackageName()
+        if hasattr(Settings, 'ACTION_APP_NOTIFICATION_SETTINGS'):
+            intent = Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+            intent.putExtra(Settings.EXTRA_APP_PACKAGE, pkg)
+        else:
+            intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+            intent.setData(autoclass('android.net.Uri').parse(f'package:{pkg}'))
+        activity.startActivity(intent)
+    except Exception as e:
+        print(f'Bildirim ayarları: {e}', flush=True)
+
+
 def tam_alarm_izni_var_mi():
     if not _android_mi():
         return True
@@ -94,10 +118,7 @@ def tam_alarm_izni_var_mi():
         from android import api_version
         if api_version.API_VERSION < 31:
             return True
-        from jnius import autoclass
-        PythonActivity = autoclass('org.kivy.android.PythonActivity')
-        AlarmManager = autoclass('android.app.AlarmManager')
-        context = PythonActivity.mActivity.getApplicationContext()
+        context = _context()
         am = context.getSystemService('alarm')
         return am.canScheduleExactAlarms()
     except Exception:
@@ -105,7 +126,6 @@ def tam_alarm_izni_var_mi():
 
 
 def tam_alarm_ayarlarini_ac():
-    """Android 12+ tam alarm izni kapalıysa ayarlara yönlendir."""
     if not _android_mi() or tam_alarm_izni_var_mi():
         return
     try:
@@ -116,9 +136,7 @@ def tam_alarm_ayarlarini_ac():
         activity = PythonActivity.mActivity
         intent = Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM)
         intent.setData(
-            autoclass('android.net.Uri').parse(
-                f'package:{activity.getPackageName()}'
-            )
+            autoclass('android.net.Uri').parse(f'package:{activity.getPackageName()}')
         )
         activity.startActivity(intent)
     except Exception as e:
@@ -130,12 +148,10 @@ def bildirim_iptal():
         return
     try:
         from jnius import autoclass
-        PythonActivity = autoclass('org.kivy.android.PythonActivity')
         Intent = autoclass('android.content.Intent')
         PendingIntent = autoclass('android.app.PendingIntent')
         ComponentName = autoclass('android.content.ComponentName')
-        activity = PythonActivity.mActivity
-        context = activity.getApplicationContext()
+        context = _context()
         intent = Intent()
         intent.setComponent(ComponentName(PAKET, RECEIVER_SINIF))
         pi = PendingIntent.getBroadcast(
@@ -148,6 +164,60 @@ def bildirim_iptal():
         print(f'Bildirim iptal: {e}', flush=True)
 
 
+def _java_zamanla(baslik, mesaj, aralik_ms, ilk_ms):
+    from jnius import autoclass
+    Receiver = autoclass('org.kumar.falimabak.falimabak.FalimabakAlarmReceiver')
+    Receiver.scheduleAlarm(_context(), baslik, mesaj, int(aralik_ms), int(ilk_ms))
+
+
+def _py_zamanla(baslik, mesaj, aralik_ms, ilk_ms):
+    """Java çağrısı başarısız olursa yedek."""
+    from datetime import datetime, timedelta
+    from jnius import autoclass
+    Intent = autoclass('android.content.Intent')
+    PendingIntent = autoclass('android.app.PendingIntent')
+    AlarmManager = autoclass('android.app.AlarmManager')
+    ComponentName = autoclass('android.content.ComponentName')
+    context = _context()
+    intent = Intent()
+    intent.setComponent(ComponentName(PAKET, RECEIVER_SINIF))
+    intent.putExtra('title', baslik)
+    intent.putExtra('text', mesaj)
+    intent.putExtra('interval_ms', int(aralik_ms))
+    intent.putExtra('reschedule', True)
+    pi = PendingIntent.getBroadcast(
+        context, ALARM_REQUEST, intent,
+        PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE,
+    )
+    am = context.getSystemService('alarm')
+    trigger_ms = int((datetime.now() + timedelta(milliseconds=ilk_ms)).timestamp() * 1000)
+    try:
+        am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, trigger_ms, pi)
+    except Exception:
+        am.set(AlarmManager.RTC_WAKEUP, trigger_ms, pi)
+
+
+def bildirim_test_goster():
+    """Anında test bildirimi — Ayarlar'dan."""
+    if not _android_mi():
+        return False, 'Sadece Android'
+    if not bildirim_izni_var_mi():
+        bildirim_ayarlari_ac()
+        return False, 'Bildirim izni kapalı — ayarları açın'
+    try:
+        from jnius import autoclass
+        Receiver = autoclass('org.kumar.falimabak.falimabak.FalimabakAlarmReceiver')
+        Receiver.showTestNotification(
+            _context(),
+            'FalımaBak',
+            'Hatırlatmalar çalışıyor! Periyodik fallar yolda.',
+        )
+        return True, None
+    except Exception as e:
+        print(f'Bildirim test: {e}', flush=True)
+        return False, str(e)
+
+
 def bildirim_zamanla():
     from gecmis import bildirim_acik_al
     if not bildirim_acik_al():
@@ -155,37 +225,45 @@ def bildirim_zamanla():
         return
     if not _android_mi():
         return
+    baslik, mesaj = _bildirim_metinleri()
+    aralik_ms = _aralik_ms()
+    ilk_ms = _ilk_gecikme_ms()
     try:
-        from jnius import autoclass
-        PythonActivity = autoclass('org.kivy.android.PythonActivity')
-        FalimabakAlarmReceiver = autoclass(
-            'org.kumar.falimabak.falimabak.FalimabakAlarmReceiver'
-        )
-        context = PythonActivity.mActivity.getApplicationContext()
-        baslik, mesaj = _bildirim_metinleri()
-        aralik_ms = _aralik_ms()
-        ilk_ms = _ilk_gecikme_ms()
-        FalimabakAlarmReceiver.scheduleAlarm(
-            context, baslik, mesaj, aralik_ms, ilk_ms,
-        )
-        izin = 'OK' if bildirim_izni_var_mi() else 'YOK'
-        alarm = 'OK' if tam_alarm_izni_var_mi() else 'YOK'
-        print(
-            f'Bildirim planlandi: ilk={ILK_GECIKME_DK}dk sonra, '
-            f'aralik={aralik_ms // 3600000}saat, izin={izin}, tam_alarm={alarm}',
-            flush=True,
-        )
-        if not tam_alarm_izni_var_mi():
-            tam_alarm_ayarlarini_ac()
+        _java_zamanla(baslik, mesaj, aralik_ms, ilk_ms)
     except Exception as e:
-        print(f'Bildirim zamanla: {e}', flush=True)
+        print(f'Bildirim Java zamanla hatasi: {e}', flush=True)
+        try:
+            _py_zamanla(baslik, mesaj, aralik_ms, ilk_ms)
+        except Exception as e2:
+            print(f'Bildirim Python zamanla hatasi: {e2}', flush=True)
+            return
+    izin = 'OK' if bildirim_izni_var_mi() else 'YOK'
+    alarm = 'OK' if tam_alarm_izni_var_mi() else 'YOK'
+    print(
+        f'Bildirim planlandi: ilk={ILK_GECIKME_DK}dk, '
+        f'aralik={aralik_ms // 3600000}saat, izin={izin}, tam_alarm={alarm}',
+        flush=True,
+    )
+    if not bildirim_izni_var_mi():
+        print('Bildirim: POST_NOTIFICATIONS izni yok', flush=True)
+    if not tam_alarm_izni_var_mi():
+        tam_alarm_ayarlarini_ac()
 
 
 def bildirim_baslat():
-    """Uygulama açılışında veya arka plana giderken hatırlatmayı planla."""
     from gecmis import bildirim_acik_al
     if not bildirim_acik_al():
         bildirim_iptal()
         return
     bildirim_izni_iste()
     bildirim_zamanla()
+
+
+def bildirim_izinleri_kontrol():
+    """İzin yoksa ayarlara yönlendir."""
+    if not _android_mi():
+        return
+    if not bildirim_izni_var_mi():
+        bildirim_ayarlari_ac()
+    elif not tam_alarm_izni_var_mi():
+        tam_alarm_ayarlarini_ac()

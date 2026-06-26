@@ -18,8 +18,9 @@ import org.kivy.android.PythonActivity;
 public class FalimabakAlarmReceiver extends BroadcastReceiver {
     public static final String CHANNEL_ID = "falimabak_hatirlatma";
     public static final int ALARM_REQUEST = 9001;
+    public static final int TEST_NOTIFY_ID = 9002;
     public static final long DEFAULT_INTERVAL_MS = 2L * 60L * 60L * 1000L;
-    public static final long DEFAULT_FIRST_DELAY_MS = 30L * 60L * 1000L;
+    public static final long DEFAULT_FIRST_DELAY_MS = 15L * 60L * 1000L;
 
     @Override
     public void onReceive(Context context, Intent intent) {
@@ -32,19 +33,31 @@ public class FalimabakAlarmReceiver extends BroadcastReceiver {
             text = "Bugün falına baktın mı?";
         }
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            if (ContextCompat.checkSelfPermission(
-                    context, android.Manifest.permission.POST_NOTIFICATIONS
-                ) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
-                long intervalMs = intent.getLongExtra("interval_ms", DEFAULT_INTERVAL_MS);
-                if (intervalMs < 60L * 60L * 1000L) {
-                    intervalMs = DEFAULT_INTERVAL_MS;
-                }
-                scheduleAlarm(context, title, text, intervalMs, intervalMs);
-                return;
-            }
+        long intervalMs = intent.getLongExtra("interval_ms", DEFAULT_INTERVAL_MS);
+        if (intervalMs < 60L * 60L * 1000L) {
+            intervalMs = DEFAULT_INTERVAL_MS;
         }
 
+        if (!canNotify(context)) {
+            scheduleAlarm(context, title, text, intervalMs, intervalMs);
+            return;
+        }
+
+        showNotification(context, title, text, ALARM_REQUEST);
+
+        if (intent.getBooleanExtra("reschedule", false)) {
+            scheduleAlarm(context, title, text, intervalMs, intervalMs);
+        }
+    }
+
+    public static void showTestNotification(Context context, String title, String text) {
+        if (!canNotify(context)) {
+            return;
+        }
+        showNotification(context, title, text, TEST_NOTIFY_ID);
+    }
+
+    private static void showNotification(Context context, String title, String text, int notifyId) {
         NotificationManager nm = (NotificationManager)
             context.getSystemService(Context.NOTIFICATION_SERVICE);
         if (nm == null) {
@@ -59,7 +72,7 @@ public class FalimabakAlarmReceiver extends BroadcastReceiver {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             flags |= PendingIntent.FLAG_IMMUTABLE;
         }
-        PendingIntent pi = PendingIntent.getActivity(context, ALARM_REQUEST, launch, flags);
+        PendingIntent pi = PendingIntent.getActivity(context, notifyId, launch, flags);
 
         int icon = context.getApplicationInfo().icon;
         NotificationCompat.Builder builder = new NotificationCompat.Builder(context, CHANNEL_ID)
@@ -71,15 +84,7 @@ public class FalimabakAlarmReceiver extends BroadcastReceiver {
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setDefaults(NotificationCompat.DEFAULT_ALL);
 
-        nm.notify(ALARM_REQUEST, builder.build());
-
-        if (intent.getBooleanExtra("reschedule", false)) {
-            long intervalMs = intent.getLongExtra("interval_ms", DEFAULT_INTERVAL_MS);
-            if (intervalMs < 60L * 60L * 1000L) {
-                intervalMs = DEFAULT_INTERVAL_MS;
-            }
-            scheduleAlarm(context, title, text, intervalMs, intervalMs);
-        }
+        nm.notify(notifyId, builder.build());
     }
 
     public static void scheduleAlarm(
@@ -96,7 +101,7 @@ public class FalimabakAlarmReceiver extends BroadcastReceiver {
         if (intervalMs < 60L * 60L * 1000L) {
             intervalMs = DEFAULT_INTERVAL_MS;
         }
-        if (delayMs < 5L * 60L * 1000L) {
+        if (delayMs < 60L * 1000L) {
             delayMs = DEFAULT_FIRST_DELAY_MS;
         }
 
@@ -111,26 +116,40 @@ public class FalimabakAlarmReceiver extends BroadcastReceiver {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             flags |= PendingIntent.FLAG_IMMUTABLE;
         }
-        PendingIntent pi = PendingIntent.getBroadcast(context, ALARM_REQUEST, next, flags);
+        PendingIntent alarmPi = PendingIntent.getBroadcast(context, ALARM_REQUEST, next, flags);
         long trigger = System.currentTimeMillis() + delayMs;
 
+        Intent show = new Intent(context, PythonActivity.class);
+        show.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+        PendingIntent showPi = PendingIntent.getActivity(context, ALARM_REQUEST + 100, show, flags);
+
         try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                if (am.canScheduleExactAlarms()) {
-                    am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, trigger, pi);
-                } else {
-                    am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, trigger, pi);
-                }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                AlarmManager.AlarmClockInfo info =
+                    new AlarmManager.AlarmClockInfo(trigger, showPi);
+                am.setAlarmClock(info, alarmPi);
             } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, trigger, pi);
+                am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, trigger, alarmPi);
             } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
-                am.setExact(AlarmManager.RTC_WAKEUP, trigger, pi);
+                am.setExact(AlarmManager.RTC_WAKEUP, trigger, alarmPi);
             } else {
-                am.set(AlarmManager.RTC_WAKEUP, trigger, pi);
+                am.set(AlarmManager.RTC_WAKEUP, trigger, alarmPi);
             }
         } catch (SecurityException e) {
-            am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, trigger, pi);
+            try {
+                am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, trigger, alarmPi);
+            } catch (Exception ignored) {
+            }
         }
+    }
+
+    private static boolean canNotify(Context context) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
+            return true;
+        }
+        return ContextCompat.checkSelfPermission(
+            context, android.Manifest.permission.POST_NOTIFICATIONS
+        ) == android.content.pm.PackageManager.PERMISSION_GRANTED;
     }
 
     private static void ensureChannel(NotificationManager nm) {
