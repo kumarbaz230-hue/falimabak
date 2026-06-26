@@ -861,6 +861,11 @@ class FalimaBakApp(App):
                 kamera_hazirla()
             except Exception:
                 pass
+            try:
+                from bildirim import bildirim_baslat
+                Clock.schedule_once(lambda *_: bildirim_baslat(), 0.5)
+            except Exception:
+                pass
 
     def _geri_tusu(self, _window, key, *args):
         # Android: key 4 = BACK. Masaüstü SDL: scancode 4 = A tuşu — karışmasın!

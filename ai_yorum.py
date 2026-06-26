@@ -60,8 +60,9 @@ _varsayilan = {
     'gemini_yedek_modeller': [
         'gemini-2.0-flash',
     ],
-    # Kahve: sembol yorumu önce (Kaave tarzı, ücretsiz)
+    # Kahve / el: sembol yorumu önce (ücretsiz, kısa)
     'kahve_sema_oncelik': True,
+    'foto_sema_oncelik': True,
     # Masaüstü Ollama (localhost)
     'ollama_url': 'http://127.0.0.1:11434/api/generate',
     'ollama_model': 'llama3.1:8b',
@@ -1392,19 +1393,19 @@ def _yorum_al_calistir(tip, veri, callback):
                 return
 
         ai_detay = bool(veri.get('ai_detay'))
-        kahve_sema = (
-            tip == 'kahve'
-            and ayar.get('kahve_sema_oncelik', True)
+        foto_sema = (
+            tip in ('kahve', 'elfali')
+            and ayar.get('foto_sema_oncelik', True)
             and not ai_detay
         )
-        if kahve_sema:
+        if foto_sema:
             from offline_yorum import offline_yorum_uret
             metin = offline_yorum_uret(
                 tip,
                 _veri_nonce({**veri, 'foto_aciklamalari': aciklamalar}),
                 foto_ozellikleri,
             )
-            print('Kahve: sembol kütüphanesi yorumu (API yok)', flush=True)
+            print(f'{tip}: sembol/cihaz yorumu (API yok)', flush=True)
             _ana_thread(lambda m=metin: _sonuc(m, False, None, 'sema', True))
             return
 
