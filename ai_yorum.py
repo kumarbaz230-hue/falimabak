@@ -60,7 +60,7 @@ _varsayilan = {
     'gemini_yedek_modeller': [
         'gemini-2.0-flash',
     ],
-    # Kahve / el: sembol yorumu önce (ücretsiz, kısa)
+    # Kahve: sembol kütüphanesi ile detaylı yorum (API yok); el falı AI Vision
     'kahve_sema_oncelik': True,
     'foto_sema_oncelik': True,
     # Masaüstü Ollama (localhost)
@@ -1394,7 +1394,7 @@ def _yorum_al_calistir(tip, veri, callback):
 
         ai_detay = bool(veri.get('ai_detay'))
         foto_sema = (
-            tip in ('kahve', 'elfali')
+            tip == 'kahve'
             and ayar.get('foto_sema_oncelik', True)
             and not ai_detay
         )

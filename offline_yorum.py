@@ -136,27 +136,60 @@ def _elfali_yorum(veri, ozellikler=None):
         from foto_analiz import foto_tohum
         foto_t = foto_tohum(ozellikler)
     rng = rng_olustur(veri, foto_t)
+    uzun = premium_uzun_mu(rng)
 
     el_tipi = rng.choice(tipler)
-    secilen = rng.sample(cizgiler_db, min(3, len(cizgiler_db)))
+    secilen = rng.sample(cizgiler_db, min(rng.randint(5, 8), len(cizgiler_db)))
+    aciklamalar = veri.get('foto_aciklamalari') or []
 
     bolum = []
-    bolum.append(f'{_temiz(el_tipi["tip"])} el — {el_tipi["ozellik"]}')
+    bolum.append('EL FALI YORUMUNUZ')
     bolum.append('')
-    bolum.append('Öne çıkan çizgiler:')
+    bolum.append(f'El tipiniz: {_temiz(el_tipi["tip"])}')
+    bolum.append(el_tipi['ozellik'])
+    bolum.append(
+        f'Karakter: {el_tipi["karakter"]}. Bu tip genelde {el_tipi["meslek"]} '
+        'alanlarında parlar.'
+    )
+    bolum.append('')
+
+    gozlem = _foto_gozlem_elfali(ozellikler, aciklamalar)
+    if gozlem:
+        bolum.append('Fotoğraf gözlemleri:')
+        bolum.append(gozlem)
+        bolum.append('')
+
+    bolum.append('Çizgi analizi:')
     for c in secilen:
-        bolum.append(f'• {_temiz(c["isim"])}: {_temiz(c["pozitif"])}')
+        durum = rng.choice(['Pozitif', 'Güçlü', 'Belirgin', 'Net'])
+        yorum = c['pozitif'] if durum != 'Negatif' else c.get('negatif', c['pozitif'])
+        bolum.append(f'• {_temiz(c["isim"])} ({durum}): {_temiz(yorum)}')
+        if uzun and rng.random() < 0.4:
+            bolum.append(f'  {_temiz(c.get("ipucu", ""))}')
 
     bolum.append('')
-    bolum.append('Aşk:')
-    bolum.append(_paragraf(hitap + paragraf_sec(rng, ASK_UZUN, 1)[0]))
+    bolum.append('Aşk ve ilişkiler:')
+    for p in paragraf_sec(rng, ASK_UZUN, 2 if uzun else 1):
+        bolum.append(_paragraf(hitap + p))
 
     bolum.append('')
-    bolum.append('Genel:')
-    bolum.append(_paragraf(hitap + paragraf_sec(rng, GENEL_UZUN, 1)[0]))
+    bolum.append('Kariyer ve para:')
+    for p in paragraf_sec(rng, KARIYER_UZUN, 2 if uzun else 1):
+        bolum.append(_paragraf(hitap + p))
+
+    bolum.append('')
+    bolum.append('Sağlık ve enerji:')
+    for p in paragraf_sec(rng, SAGLIK_UZUN, 1 if not uzun else 2):
+        bolum.append(_paragraf(hitap + p))
+
+    bolum.append('')
+    bolum.append('Genel mesaj:')
+    for p in paragraf_sec(rng, GENEL_UZUN, 2 if uzun else 1):
+        bolum.append(_paragraf(hitap + p))
 
     bolum.append('')
     bolum.append(f'Şanslı sayınız: {rng.randint(1, 99)}')
+    bolum.append(f'Şanslı renginiz: {rng.choice(["altın", "mor", "mavi", "pembe", "yeşil", "bordo"])}')
     bolum.append(rng.choice(KAPANIS_CUMLE))
     return '\n'.join(bolum)
 
@@ -197,25 +230,59 @@ def _kahve_yorum(veri, ozellikler=None):
                 ipuclari.extend(foto_sembol_ipuclari('', oz))
         ipuclari = list(dict.fromkeys(ipuclari))
     rng = rng_olustur(veri, foto_t + 17)
+    uzun = premium_uzun_mu(rng)
 
-    adet = rng.randint(3, 4)
+    adet = rng.randint(4, 7)
     secilen = _kahve_sembol_sec(rng, sekiller_db, ipuclari, adet)
+    aciklamalar = veri.get('foto_aciklamalari') or []
+
+    kategoriler = {}
+    for s in secilen:
+        kategoriler.setdefault(s['kategori'], []).append(s)
 
     bolum = []
-    bolum.append('Fincandaki semboller:')
-    for s in secilen:
-        bolum.append(f'• {_temiz(s["isim"])}: {_temiz(s["pozitif"])}')
+    bolum.append('KAHVE FALI YORUMUNUZ')
+    bolum.append('')
+
+    gozlem = _foto_gozlem_kahve(ozellikler, aciklamalar)
+    if gozlem:
+        bolum.append('Fincan gözlemleri:')
+        bolum.append(gozlem)
+        bolum.append('')
+
+    bolum.append('Fincanda öne çıkan semboller:')
+    for kat, liste in kategoriler.items():
+        bolum.append(f'\n{kat}:')
+        for s in liste:
+            durum = rng.choice(['Pozitif', 'Güçlü', 'Belirgin'])
+            y = s['pozitif'] if durum != 'Negatif' else s.get('negatif', s['pozitif'])
+            bolum.append(f'  • {_temiz(s["isim"])}: {_temiz(y)}')
 
     bolum.append('')
     bolum.append('Aşk:')
-    bolum.append(_paragraf(hitap + paragraf_sec(rng, ASK_UZUN, 1)[0]))
+    for p in paragraf_sec(rng, ASK_UZUN, 2 if uzun else 1):
+        bolum.append(_paragraf(hitap + p))
 
     bolum.append('')
-    bolum.append('Genel:')
-    bolum.append(_paragraf(hitap + paragraf_sec(rng, GENEL_UZUN, 1)[0]))
+    bolum.append('Para ve iş:')
+    for p in paragraf_sec(rng, KARIYER_UZUN, 2 if uzun else 1):
+        bolum.append(_paragraf(hitap + p))
+
+    bolum.append('')
+    bolum.append('Sağlık:')
+    for p in paragraf_sec(rng, SAGLIK_UZUN, 1 if not uzun else 2):
+        bolum.append(_paragraf(hitap + p))
+
+    bolum.append('')
+    bolum.append('Genel yorum:')
+    bolum.append(_paragraf(_temiz(rng.choice(genel_db))))
+    if uzun:
+        for p in paragraf_sec(rng, GENEL_UZUN, 1):
+            bolum.append(_paragraf(hitap + p))
 
     bolum.append('')
     bolum.append(f'Şanslı sayınız: {rng.randint(1, 99)}')
+    bolum.append(f'Şanslı renginiz: {rng.choice(["kahve", "altın", "krem", "yeşil", "bordo"])}')
     bolum.append(rng.choice(KAPANIS_CUMLE))
     return '\n'.join(bolum)
 
