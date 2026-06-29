@@ -119,10 +119,10 @@ jobs:
             ~/.buildozer/android/platform/build-arm64-v8a_armeabi-v7a/packages
             ~/.buildozer/android/platform/build-arm64-v8a/packages
             ~/.buildozer/android/platform/build-armeabi-v7a/packages
-          key: ${{ runner.os }}-falimabak-sdk-v3-${{ hashFiles('buildozer.spec', 'recipes/**', 'hooks/**') }}
+          key: ${{ runner.os }}-falimabak-sdk-v4-16kb-${{ hashFiles('buildozer.spec', 'recipes/**', 'hooks/**') }}
           restore-keys: |
+            ${{ runner.os }}-falimabak-sdk-v4-16kb-
             ${{ runner.os }}-falimabak-sdk-v3-
-            ${{ runner.os }}-falimabak-sdk-
 
       - name: Prune cached build artifacts
         run: |
