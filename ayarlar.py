@@ -296,6 +296,11 @@ class AyarlarScreen(Screen):
             pass
 
     def _degerlendir(self, *_):
+        # Dokunma olayı bitsin; Play Store geçişi hemen geri dönmesin diye kısa gecikme.
+        from kivy.clock import Clock
+        Clock.schedule_once(lambda *_: self._degerlendir_ac(), 0.2)
+
+    def _degerlendir_ac(self):
         try:
             from play_store import magaza_degerlendir_odullu
             from coin import DEGERLENDIRME_COIN

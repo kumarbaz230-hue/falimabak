@@ -14,22 +14,31 @@ def _android_mi():
     )
 
 
-def magaza_degerlendir():
-    """Play Store uygulama sayfasını aç (değerlendirme için)."""
+def _in_app_review_dene():
+    """Google In-App Review — uygulamadan çıkmadan yıldız penceresi."""
+    try:
+        from jnius import autoclass
+        PythonActivity = autoclass('org.kivy.android.PythonActivity')
+        Helper = autoclass('org.kumar.falimabak.falimabak.PlayReviewHelper')
+        activity = PythonActivity.mActivity
+        return bool(Helper.tryInAppReview(activity))
+    except Exception as e:
+        print(f'In-App Review: {e}', flush=True)
+        return False
+
+
+def _magaza_sayfasi_ac():
+    """Play Store uygulama sayfasını harici olarak aç."""
     if _android_mi():
         try:
             from jnius import autoclass
             PythonActivity = autoclass('org.kivy.android.PythonActivity')
-            Intent = autoclass('android.content.Intent')
-            Uri = autoclass('android.net.Uri')
+            Helper = autoclass('org.kumar.falimabak.falimabak.PlayReviewHelper')
             activity = PythonActivity.mActivity
-            uri = Uri.parse(f'market://details?id={PAKET}')
-            intent = Intent(Intent.ACTION_VIEW, uri)
-            intent.setPackage('com.android.vending')
-            activity.startActivity(intent)
-            return True
+            if Helper.openStoreListing(activity):
+                return True
         except Exception as e:
-            print(f'Play Store market: {e}', flush=True)
+            print(f'Play Store helper: {e}', flush=True)
         try:
             from jnius import autoclass
             PythonActivity = autoclass('org.kivy.android.PythonActivity')
@@ -37,6 +46,7 @@ def magaza_degerlendir():
             Uri = autoclass('android.net.Uri')
             activity = PythonActivity.mActivity
             intent = Intent(Intent.ACTION_VIEW, Uri.parse(WEB_URL))
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             activity.startActivity(intent)
             return True
         except Exception as e:
@@ -49,8 +59,16 @@ def magaza_degerlendir():
         return False
 
 
+def magaza_degerlendir():
+    """Önce uygulama içi değerlendirme; olmazsa Play Store sayfası."""
+    if _android_mi():
+        if _in_app_review_dene():
+            return True
+    return _magaza_sayfasi_ac()
+
+
 def magaza_degerlendir_odullu():
-    """Play Store aç; ilk kez değerlendiren kullanıcıya coin ver."""
+    """Değerlendirme penceresini aç; ilk kez coin ver."""
     acildi = magaza_degerlendir()
     if not acildi:
         return False, False, 0

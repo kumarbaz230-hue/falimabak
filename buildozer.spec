@@ -12,7 +12,7 @@ source.include_patterns = assets/*,assets/muzik/*,config.ornek.json,store/*
 source.exclude_dirs = tests,bin,.git,__pycache__,.buildozer,.venv,venv,env,.idea,user_photos,.github,recipes,tools,images,keystore
 source.exclude_patterns = license,images/*/*.jpg,*.bat,config.json,kullanici_veri.json,.env,secrets.json,secrets.ornek.json,assets/muzik/ambiyans.wav
 
-version = 1.8.0
+version = 1.8.1
 
 icon.filename = %(source.dir)s/assets/app_icon.png
 presplash.filename = %(source.dir)s/assets/splash_banner.png
@@ -38,7 +38,7 @@ android.accept_sdk_license = True
 android.allow_backup = True
 android.enable_androidx = True
 
-android.gradle_dependencies = androidx.appcompat:appcompat:1.6.1,androidx.activity:activity:1.8.2,androidx.core:core:1.12.0,com.google.android.gms:play-services-ads:22.6.0
+android.gradle_dependencies = androidx.appcompat:appcompat:1.6.1,androidx.activity:activity:1.8.2,androidx.core:core:1.12.0,com.google.android.gms:play-services-ads:22.6.0,com.google.android.play:review:2.0.2
 
 # Bildirim receiver Java siniflari (FalimabakAlarmReceiver / BootReceiver)
 android.add_src = java
