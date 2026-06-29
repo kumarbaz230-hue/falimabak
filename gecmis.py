@@ -239,6 +239,17 @@ def bildirim_acik_al():
     return bool(_yukle().get('bildirim_acik', True))
 
 
+def bildirim_karsilama_yapildi():
+    """İlk kurulumda tek seferlik karşılama bildirimi gösterildi mi?"""
+    return bool(_yukle().get('bildirim_karsilama', False))
+
+
+def bildirim_karsilama_isaretle():
+    veri = _yukle()
+    veri['bildirim_karsilama'] = True
+    _kaydet(veri)
+
+
 def bildirim_acik_kaydet(acik):
     veri = _yukle()
     veri['bildirim_acik'] = bool(acik)

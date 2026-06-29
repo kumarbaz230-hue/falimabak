@@ -832,8 +832,23 @@ class FalimaBakApp(App):
             # Uygulama ilk açıldığında bildirim iznini hemen iste.
             Clock.schedule_once(lambda *_: bildirim_izni_iste(), 0.3)
             Clock.schedule_once(lambda *_: bildirim_baslat(), 2.0)
+            # İlk kurulumda tek seferlik karşılama bildirimi (izin verildikten sonra).
+            Clock.schedule_once(lambda *_: self._bildirim_karsilama(), 5.0)
         except Exception as e:
             print(f'Bildirim baslat: {e}', flush=True)
+
+    def _bildirim_karsilama(self):
+        try:
+            from gecmis import (
+                bildirim_acik_al, bildirim_karsilama_yapildi, bildirim_karsilama_isaretle,
+            )
+            if bildirim_karsilama_yapildi() or not bildirim_acik_al():
+                return
+            from bildirim import bildirim_anlik_goster
+            if bildirim_anlik_goster('Hoş geldin! Fal zamanı geldiğinde sana haber vereceğiz.'):
+                bildirim_karsilama_isaretle()
+        except Exception as e:
+            print(f'Bildirim karsilama: {e}', flush=True)
 
     def on_pause(self):
         if _ANDROID:

@@ -45,6 +45,38 @@ public class FalimabakAlarmReceiver extends BroadcastReceiver {
         return FAL_MESAJLARI[i];
     }
 
+    /** Anında bildirim — uygulama izni verince/açınca onay icin (Python'dan cagrilir). */
+    public static void showInstant(Context context, String title, String text) {
+        if (context == null || !canNotify(context)) {
+            return;
+        }
+        if (title == null || title.isEmpty()) {
+            title = "FalımaBak";
+        }
+        if (text == null || text.isEmpty()) {
+            text = pickMessage();
+        }
+        showNotification(context, title, text, TEST_NOTIFY_ID);
+    }
+
+    /** Bildirim icin guvenli kucuk ikon: once ic_notify, olmazsa uygulama ikonu. */
+    private static int resolveSmallIcon(Context context) {
+        try {
+            int id = context.getResources().getIdentifier(
+                "ic_notify", "drawable", context.getPackageName()
+            );
+            if (id != 0) {
+                return id;
+            }
+        } catch (Throwable ignored) {
+        }
+        try {
+            return context.getApplicationInfo().icon;
+        } catch (Throwable ignored) {
+            return android.R.drawable.ic_dialog_info;
+        }
+    }
+
     @Override
     public void onReceive(Context context, Intent intent) {
         String title = intent.getStringExtra("title");
@@ -87,17 +119,27 @@ public class FalimabakAlarmReceiver extends BroadcastReceiver {
         }
         PendingIntent pi = PendingIntent.getActivity(context, notifyId, launch, flags);
 
-        int icon = context.getApplicationInfo().icon;
+        int icon = resolveSmallIcon(context);
         NotificationCompat.Builder builder = new NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(icon)
             .setContentTitle(title)
             .setContentText(text)
+            .setStyle(new NotificationCompat.BigTextStyle().bigText(text))
             .setContentIntent(pi)
             .setAutoCancel(true)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setDefaults(NotificationCompat.DEFAULT_ALL);
 
-        nm.notify(notifyId, builder.build());
+        try {
+            nm.notify(notifyId, builder.build());
+        } catch (Throwable e) {
+            // Ikon vb. bir sorun olursa sistem ikonuyla tekrar dene.
+            builder.setSmallIcon(android.R.drawable.ic_dialog_info);
+            try {
+                nm.notify(notifyId, builder.build());
+            } catch (Throwable ignored) {
+            }
+        }
     }
 
     public static void scheduleAlarm(

@@ -212,6 +212,80 @@ def _py_zamanla(baslik, mesaj, aralik_ms, ilk_ms):
         am.set(AlarmManager.RTC_WAKEUP, trigger_ms, pi)
 
 
+def _py_anlik_bildirim(baslik, mesaj):
+    """Java cagrisi olmazsa saf jnius ile anlik bildirim goster."""
+    from jnius import autoclass, cast
+    PythonActivity = autoclass('org.kivy.android.PythonActivity')
+    Context = autoclass('android.content.Context')
+    NotificationManager = autoclass('android.app.NotificationManager')
+    NotificationBuilder = autoclass('android.app.Notification$Builder')
+    BuildVersion = autoclass('android.os.Build$VERSION')
+    Intent = autoclass('android.content.Intent')
+    PendingIntent = autoclass('android.app.PendingIntent')
+
+    context = PythonActivity.mActivity.getApplicationContext()
+    nm = cast(
+        'android.app.NotificationManager',
+        context.getSystemService(Context.NOTIFICATION_SERVICE),
+    )
+
+    kanal_id = 'falimabak_hatirlatma'
+    if BuildVersion.SDK_INT >= 26:
+        NotificationChannel = autoclass('android.app.NotificationChannel')
+        kanal = NotificationChannel(kanal_id, 'Hatırlatmalar', NotificationManager.IMPORTANCE_HIGH)
+        kanal.setDescription('Fal hatırlatmaları')
+        kanal.enableVibration(True)
+        nm.createNotificationChannel(kanal)
+        builder = NotificationBuilder(context, kanal_id)
+    else:
+        builder = NotificationBuilder(context)
+
+    launch = Intent(context, PythonActivity)
+    launch.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP)
+    flags = PendingIntent.FLAG_UPDATE_CURRENT
+    if BuildVersion.SDK_INT >= 23:
+        flags |= PendingIntent.FLAG_IMMUTABLE
+    pi = PendingIntent.getActivity(context, 9002, launch, flags)
+
+    try:
+        ikon = context.getResources().getIdentifier('ic_notify', 'drawable', context.getPackageName())
+        if not ikon:
+            ikon = context.getApplicationInfo().icon
+    except Exception:
+        ikon = context.getApplicationInfo().icon
+
+    builder.setSmallIcon(ikon)
+    builder.setContentTitle(baslik)
+    builder.setContentText(mesaj)
+    builder.setContentIntent(pi)
+    builder.setAutoCancel(True)
+    nm.notify(9002, builder.build())
+
+
+def bildirim_anlik_goster(mesaj=None):
+    """Anlik onay bildirimi — bildirim acilinca/izin verilince."""
+    if not _android_mi():
+        return False
+    if not bildirim_izni_var_mi():
+        return False
+    baslik = 'FalımaBak'
+    if not mesaj:
+        mesaj = 'Hatırlatmalar açık! Fal zamanı geldiğinde seni uyaracağız.'
+    try:
+        from jnius import autoclass
+        Receiver = autoclass('org.kumar.falimabak.falimabak.FalimabakAlarmReceiver')
+        Receiver.showInstant(_context(), baslik, mesaj)
+        return True
+    except Exception as e:
+        print(f'Anlik bildirim (Java): {e}', flush=True)
+    try:
+        _py_anlik_bildirim(baslik, mesaj)
+        return True
+    except Exception as e:
+        print(f'Anlik bildirim (Python): {e}', flush=True)
+        return False
+
+
 def bildirim_zamanla():
     from gecmis import bildirim_acik_al
     if not bildirim_acik_al():

@@ -283,10 +283,16 @@ class AyarlarScreen(Screen):
     def _bildirim_degisti(self, _, acik):
         bildirim_acik_kaydet(acik)
         try:
-            from bildirim import bildirim_baslat, bildirim_iptal, bildirim_izinleri_kontrol
+            from bildirim import (
+                bildirim_baslat, bildirim_iptal, bildirim_izinleri_kontrol,
+                bildirim_anlik_goster,
+            )
             if acik:
                 bildirim_baslat()
                 bildirim_izinleri_kontrol()
+                # Açar açmaz anlık onay bildirimi — kullanıcı çalıştığını görsün.
+                from kivy.clock import Clock
+                Clock.schedule_once(lambda *_: bildirim_anlik_goster(), 0.6)
                 self._mesaj.text = t('settings_notif_on_msg')
             else:
                 bildirim_iptal()
