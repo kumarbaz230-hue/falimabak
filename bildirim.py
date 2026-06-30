@@ -158,6 +158,59 @@ def tam_alarm_ayarlarini_ac():
         print(f'Tam alarm ayarı: {e}', flush=True)
 
 
+def pil_kisitlamasi_var_mi():
+    """Telefon uygulamayı pil optimizasyonuna tabi tutuyor mu? (True = kısıtlı).
+
+    Kısıtlıysa Android/OEM, arka plandaki hatırlatma alarmlarını öldürebilir.
+    """
+    if not _android_mi():
+        return False
+    try:
+        from android import api_version
+        if api_version.API_VERSION < 23:
+            return False
+    except Exception:
+        pass
+    try:
+        context = _context()
+        pm = context.getSystemService('power')
+        if pm is None:
+            return False
+        return not pm.isIgnoringBatteryOptimizations(context.getPackageName())
+    except Exception as e:
+        print(f'Pil kisitlama kontrolu: {e}', flush=True)
+        return False
+
+
+def pil_optimizasyon_ayarlarini_ac():
+    """Pil optimizasyonu muafiyeti için ayar ekranını açar (Play-güvenli, izin gerektirmez)."""
+    if not _android_mi():
+        return
+    try:
+        from jnius import autoclass
+        PythonActivity = autoclass('org.kivy.android.PythonActivity')
+        Intent = autoclass('android.content.Intent')
+        Settings = autoclass('android.provider.Settings')
+        Uri = autoclass('android.net.Uri')
+        activity = PythonActivity.mActivity
+        pkg = activity.getPackageName()
+        # 1) Pil optimizasyonu listesi — kullanıcı FalımaBak'ı "kısıtlama yok" yapar.
+        try:
+            intent = Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
+            intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            activity.startActivity(intent)
+            return
+        except Exception as e:
+            print(f'Pil ayarı (liste): {e}', flush=True)
+        # 2) Yedek: uygulama detay ayarları (oradan Pil → Kısıtlama yok).
+        intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+        intent.setData(Uri.parse(f'package:{pkg}'))
+        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        activity.startActivity(intent)
+    except Exception as e:
+        print(f'Pil optimizasyon ayarı: {e}', flush=True)
+
+
 def bildirim_iptal():
     if not _android_mi():
         return

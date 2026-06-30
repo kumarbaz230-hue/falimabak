@@ -250,6 +250,17 @@ def bildirim_karsilama_isaretle():
     _kaydet(veri)
 
 
+def pil_uyari_yapildi():
+    """Pil optimizasyonu uyarısı bir kez gösterildi mi?"""
+    return bool(_yukle().get('pil_uyari', False))
+
+
+def pil_uyari_isaretle():
+    veri = _yukle()
+    veri['pil_uyari'] = True
+    _kaydet(veri)
+
+
 def bildirim_acik_kaydet(acik):
     veri = _yukle()
     veri['bildirim_acik'] = bool(acik)

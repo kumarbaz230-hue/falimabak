@@ -277,11 +277,11 @@ def _telve_izleri_var_mi(oz):
     kahve_b = oz.get('kahve_bolge', 0)
     koyu = oz.get('koyu_orani', 0)
     kontrast = oz.get('kontrast', 0)
-    if sicak >= 0.008 or sicak_b >= 1:
+    if sicak >= 0.005 or sicak_b >= 1:
         return True
-    if kahve >= 0.022 or kahve_b >= 1:
+    if kahve >= 0.015 or kahve_b >= 1:
         return True
-    if koyu >= 0.07 and kontrast >= 5 and kahve >= 0.012:
+    if koyu >= 0.05 and kontrast >= 4 and kahve >= 0.008:
         return True
     return False
 
@@ -296,9 +296,9 @@ def _fincan_ici_gecerli(oz):
     kahve = oz.get('kahve_orani', 0)
     if kahve_b >= 1 or sicak_b >= 1:
         return True
-    if kahve >= 0.03 and koyu >= 0.05:
+    if kahve >= 0.02 and koyu >= 0.03:
         return True
-    return kahve >= 0.045
+    return kahve >= 0.03
 
 
 def _tabak_gecerli(oz):
@@ -339,16 +339,17 @@ def _tabak_gecerli(oz):
 
 
 def _el_gorunuyor_mu(oz):
-    """Fotoğrafta anlamlı el/ten alanı var mı?"""
+    """Fotoğrafta el/ten izi var mı? Gevşek kontrol — asıl doğrulamayı AI Vision yapar.
+
+    Gerçek el fotoğrafları her ten tonunda ve ışıkta kabul edilir; yalnızca
+    elin hiç görünmediği kareler (manzara, ekran görüntüsü, boş zemin) elenir.
+    """
+    if _ekran_goruntusu_mu(oz):
+        return False
     ten = oz.get('ten_orani', 0)
     bolge = oz.get('ten_bolge', 0)
-    kontrast = oz.get('kontrast', 0)
-
-    if ten < 0.20:
-        return False
-    if bolge < 2:
-        return False
-    if kontrast < 7 and ten < 0.28:
+    # Hemen hiç ten tonu yoksa (tek bölge bile yoksa) el sayma.
+    if ten < 0.05 and bolge == 0:
         return False
     return True
 
@@ -390,41 +391,42 @@ def _kahve_slot_gecerli(ozellik, baslik):
 
 
 def _kahve_fotolar_dogrula(yollar, aciklamalar):
-    """Tüm slotları değerlendir — en az 2 fincan içi yeterli, tabak bonus."""
+    """Slotları değerlendir — en az 1 geçerli fincan/tabak yeterli (gevşek).
+
+    Amaç gerçek fal fotoğraflarını kabul etmek; yalnızca tüm kareler ekran
+    görüntüsü / alakasız ise reddetmek.
+    """
     from dil import t
     ozellikler = []
-    fincan_ok = 0
-    tabak_ok = False
+    gecerli = 0
     fincan_hata = None
     tabak_hata = None
+    toplam = 0
+    ekran_sayisi = 0
 
     for i, yol in enumerate(yollar or []):
         if not yol:
             continue
+        toplam += 1
         baslik = aciklamalar[i] if i < len(aciklamalar) else f'Fotoğraf {i + 1}'
         oz = _analiz_et(yol)
+        if oz and _ekran_goruntusu_mu(oz):
+            ekran_sayisi += 1
         ok, sonuc = _kahve_slot_gecerli(oz, baslik)
         if ok:
             ozellikler.append(sonuc)
-            if 'tabak' in baslik.lower():
-                tabak_ok = True
-            else:
-                fincan_ok += 1
+            gecerli += 1
         elif 'tabak' in baslik.lower():
             tabak_hata = sonuc
         else:
             fincan_hata = sonuc
 
-    if fincan_ok >= 2:
-        return True, None, ozellikler
-    if fincan_ok >= 1 and tabak_ok:
+    if gecerli >= 1:
         return True, None, ozellikler
 
-    if fincan_ok == 0:
-        return False, fincan_hata or t('foto_fincan_yok', baslik='Fincan İçi'), []
-    if not tabak_ok:
-        return False, tabak_hata or t('foto_tabak_yok', baslik='Tabak'), []
-    return False, t('foto_kahve_yok', baslik='Fotoğraf'), []
+    if toplam and ekran_sayisi >= toplam:
+        return False, t('foto_kahve_yok', baslik='Fotoğraf'), []
+    return False, fincan_hata or tabak_hata or t('foto_fincan_yok', baslik='Fincan İçi'), []
 
 
 def fotolar_dogrula(tip, yollar, aciklamalar=None):

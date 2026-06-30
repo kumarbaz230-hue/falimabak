@@ -119,6 +119,9 @@ class AyarlarScreen(Screen):
         )
         bildirim_satir.add_widget(bildirim_etiket)
         bildirim_kart.add_widget(bildirim_satir)
+        pil_btn = siyah_buton(t('settings_notif_battery'), font_size='13sp')
+        pil_btn.bind(on_press=lambda *_: self._pil_ayari_ac())
+        bildirim_kart.add_widget(pil_btn)
         icerik.add_widget(bildirim_kart)
 
         hukuk = _ayar_karti(t('settings_legal'), t('settings_legal_hint'))
@@ -293,6 +296,8 @@ class AyarlarScreen(Screen):
                 # Açar açmaz anlık onay bildirimi — kullanıcı çalıştığını görsün.
                 from kivy.clock import Clock
                 Clock.schedule_once(lambda *_: bildirim_anlik_goster(), 0.6)
+                # Pil optimizasyonu hatırlatmaları engelliyorsa kullanıcıyı yönlendir.
+                Clock.schedule_once(lambda *_: self._pil_uyari_kontrol(), 1.2)
                 self._mesaj.text = t('settings_notif_on_msg')
             else:
                 bildirim_iptal()
@@ -300,6 +305,49 @@ class AyarlarScreen(Screen):
             self._mesaj.color = get_color_from_hex(RENKLER['yesil'])
         except Exception:
             pass
+
+    def _pil_ayari_ac(self):
+        try:
+            from bildirim import pil_optimizasyon_ayarlarini_ac
+            pil_optimizasyon_ayarlarini_ac()
+        except Exception as e:
+            print(f'Pil ayari ac: {e}', flush=True)
+
+    def _pil_uyari_kontrol(self):
+        """Hatırlatmalar açıkken pil kısıtlaması varsa kullanıcıyı uyar."""
+        try:
+            from bildirim import pil_kisitlamasi_var_mi
+            if pil_kisitlamasi_var_mi():
+                self._pil_uyari_goster()
+        except Exception as e:
+            print(f'Pil uyari kontrol: {e}', flush=True)
+
+    def _pil_uyari_goster(self):
+        from kivy.uix.boxlayout import BoxLayout
+        from kivy.uix.popup import Popup
+
+        govde = BoxLayout(orientation='vertical', spacing=dp(12), padding=dp(16))
+        govde.add_widget(metin_label(
+            t('notif_battery_msg'), font_size='13sp', color=RENKLER['beyaz'],
+            halign='left', valign='top',
+        ))
+        butonlar = BoxLayout(size_hint_y=None, height=dp(48), spacing=dp(8))
+        ac_btn = siyah_buton(t('notif_battery_open'), vurgu=True, font_size='14sp')
+        sonra_btn = siyah_buton(t('notif_battery_later'), font_size='14sp')
+        butonlar.add_widget(sonra_btn)
+        butonlar.add_widget(ac_btn)
+        govde.add_widget(butonlar)
+
+        popup = Popup(
+            title=t('notif_battery_title'),
+            content=govde,
+            size_hint=(0.9, None),
+            height=dp(300),
+            auto_dismiss=True,
+        )
+        ac_btn.bind(on_press=lambda *_: (self._pil_ayari_ac(), popup.dismiss()))
+        sonra_btn.bind(on_press=lambda *_: popup.dismiss())
+        popup.open()
 
     def _degerlendir(self, *_):
         # Dokunma olayı bitsin; Play Store geçişi hemen geri dönmesin diye kısa gecikme.

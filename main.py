@@ -842,13 +842,61 @@ class FalimaBakApp(App):
             from gecmis import (
                 bildirim_acik_al, bildirim_karsilama_yapildi, bildirim_karsilama_isaretle,
             )
-            if bildirim_karsilama_yapildi() or not bildirim_acik_al():
+            if not bildirim_acik_al():
                 return
-            from bildirim import bildirim_anlik_goster
-            if bildirim_anlik_goster('Hoş geldin! Fal zamanı geldiğinde sana haber vereceğiz.'):
-                bildirim_karsilama_isaretle()
+            if not bildirim_karsilama_yapildi():
+                from bildirim import bildirim_anlik_goster
+                if bildirim_anlik_goster('Hoş geldin! Fal zamanı geldiğinde sana haber vereceğiz.'):
+                    bildirim_karsilama_isaretle()
+            # Hatırlatmaların gelmesi için pil optimizasyonu muafiyeti (tek sefer).
+            from kivy.clock import Clock
+            Clock.schedule_once(lambda *_: self._pil_uyari_acilis(), 6.0)
         except Exception as e:
             print(f'Bildirim karsilama: {e}', flush=True)
+
+    def _pil_uyari_acilis(self):
+        """Açılışta tek seferlik: pil kısıtlaması varsa kullanıcıyı muafiyete yönlendir."""
+        if not _ANDROID:
+            return
+        try:
+            from gecmis import (
+                bildirim_acik_al, pil_uyari_yapildi, pil_uyari_isaretle,
+            )
+            if pil_uyari_yapildi() or not bildirim_acik_al():
+                return
+            from bildirim import pil_kisitlamasi_var_mi, pil_optimizasyon_ayarlarini_ac
+            if not pil_kisitlamasi_var_mi():
+                return
+            pil_uyari_isaretle()
+
+            from kivy.uix.boxlayout import BoxLayout
+            from kivy.uix.popup import Popup
+            from dil import t
+
+            govde = BoxLayout(orientation='vertical', spacing=dp(12), padding=dp(16))
+            govde.add_widget(metin_label(
+                t('notif_battery_msg'), font_size='13sp', color=RENKLER['beyaz'],
+                halign='left', valign='top',
+            ))
+            butonlar = BoxLayout(size_hint_y=None, height=dp(48), spacing=dp(8))
+            ac_btn = siyah_buton(t('notif_battery_open'), vurgu=True, font_size='14sp')
+            sonra_btn = siyah_buton(t('notif_battery_later'), font_size='14sp')
+            butonlar.add_widget(sonra_btn)
+            butonlar.add_widget(ac_btn)
+            govde.add_widget(butonlar)
+
+            popup = Popup(
+                title=t('notif_battery_title'),
+                content=govde,
+                size_hint=(0.9, None),
+                height=dp(300),
+                auto_dismiss=True,
+            )
+            ac_btn.bind(on_press=lambda *_: (pil_optimizasyon_ayarlarini_ac(), popup.dismiss()))
+            sonra_btn.bind(on_press=lambda *_: popup.dismiss())
+            popup.open()
+        except Exception as e:
+            print(f'Pil uyari acilis: {e}', flush=True)
 
     def on_pause(self):
         if _ANDROID:
