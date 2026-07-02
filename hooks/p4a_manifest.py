@@ -13,6 +13,7 @@ _STRIP = (
     'android.permission.WRITE_EXTERNAL_STORAGE',
     'android.permission.ACCESS_MEDIA_LOCATION',
     'android.permission.MANAGE_EXTERNAL_STORAGE',
+    'android.permission.USE_EXACT_ALARM',
 )
 
 
