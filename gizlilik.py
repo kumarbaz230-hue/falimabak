@@ -7,7 +7,7 @@ from kivy.metrics import dp
 from kivy.utils import get_color_from_hex
 
 from theme import (
-    RENKLER, SAFE_UST, SAFE_ALT,
+    RENKLER, SAFE_UST, SAFE_ALT, EKRAN_UST,
     metin_label, siyah_buton, ekran_icerik_sar, baslik_satir,
 )
 
@@ -21,7 +21,7 @@ class GizlilikScreen(Screen):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         from dil import t
-        ana = BoxLayout(orientation='vertical', padding=[dp(12), SAFE_UST, dp(12), SAFE_ALT], spacing=dp(10))
+        ana = BoxLayout(orientation='vertical', padding=[dp(12), EKRAN_UST, dp(12), SAFE_ALT], spacing=dp(10))
         ana.add_widget(baslik_satir('', t('privacy_title'), font_size='22sp', height=dp(40)))
 
         kaydir = ScrollView(size_hint_y=1, do_scroll_x=False, bar_width=dp(3),

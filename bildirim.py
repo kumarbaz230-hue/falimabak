@@ -71,6 +71,53 @@ def bildirim_izni_var_mi():
         return True
 
 
+def bildirim_sistem_acik_mi():
+    """Telefon ayarlarında uygulama bildirimleri kapalı mı?"""
+    if not _android_mi():
+        return True
+    try:
+        from jnius import autoclass
+        NotificationManager = autoclass('android.app.NotificationManager')
+        context = _context()
+        nm = context.getSystemService('notification')
+        if nm is None:
+            return True
+        if hasattr(nm, 'areNotificationsEnabled'):
+            return bool(nm.areNotificationsEnabled())
+        return True
+    except Exception:
+        return True
+
+
+def bildirim_izni_hazir_bekle(callback, deneme=0, max_deneme=25, baslangic_gecikme=0):
+    """POST_NOTIFICATIONS izni ve sistem ayarı hazır olunca callback çağır."""
+    if not _android_mi():
+        if baslangic_gecikme > 0:
+            from kivy.clock import Clock
+            Clock.schedule_once(lambda *_: callback(), baslangic_gecikme)
+        else:
+            callback()
+        return
+    if bildirim_izni_var_mi() and bildirim_sistem_acik_mi():
+        if baslangic_gecikme > 0 and deneme == 0:
+            from kivy.clock import Clock
+            Clock.schedule_once(lambda *_: callback(), baslangic_gecikme)
+        else:
+            callback()
+        return
+    if deneme >= max_deneme:
+        print('Bildirim: izin/sistem hazir degil (zaman asimi)', flush=True)
+        return
+    from kivy.clock import Clock
+    gecikme = baslangic_gecikme if deneme == 0 else 2.0
+    Clock.schedule_once(
+        lambda *_: bildirim_izni_hazir_bekle(
+            callback, deneme + 1, max_deneme, baslangic_gecikme=0,
+        ),
+        gecikme,
+    )
+
+
 def bildirim_izni_iste():
     if not _android_mi():
         return
@@ -247,7 +294,8 @@ def _py_zamanla(baslik, mesaj, aralik_ms, ilk_ms):
     AlarmManager = autoclass('android.app.AlarmManager')
     ComponentName = autoclass('android.content.ComponentName')
     context = _context()
-    intent = Intent()
+    intent = Intent('org.kumar.falimabak.falimabak.ACTION_REMINDER')
+    intent.setPackage(PAKET)
     intent.setComponent(ComponentName(PAKET, RECEIVER_SINIF))
     intent.putExtra('title', baslik)
     intent.putExtra('text', mesaj)
@@ -321,6 +369,8 @@ def bildirim_anlik_goster(mesaj=None):
         return False
     if not bildirim_izni_var_mi():
         return False
+    if not bildirim_sistem_acik_mi():
+        return False
     baslik = 'FalımaBak'
     if not mesaj:
         mesaj = 'Hatırlatmalar açık! Fal zamanı geldiğinde seni uyaracağız.'
@@ -376,15 +426,27 @@ def bildirim_baslat():
     if not bildirim_acik_al():
         bildirim_iptal()
         return
+    if not _android_mi():
+        return
     bildirim_izni_iste()
-    bildirim_zamanla()
+
+    def _zamanla():
+        if not bildirim_izni_var_mi():
+            print('Bildirim: POST_NOTIFICATIONS izni yok', flush=True)
+            return
+        if not bildirim_sistem_acik_mi():
+            print('Bildirim: sistem ayarlarinda kapali', flush=True)
+            return
+        bildirim_zamanla()
+
+    bildirim_izni_hazir_bekle(_zamanla, baslangic_gecikme=1.0)
 
 
 def bildirim_izinleri_kontrol():
     """İzin yoksa ayarlara yönlendir."""
     if not _android_mi():
         return
-    if not bildirim_izni_var_mi():
+    if not bildirim_sistem_acik_mi() or not bildirim_izni_var_mi():
         bildirim_ayarlari_ac()
     elif not tam_alarm_izni_var_mi():
         tam_alarm_ayarlarini_ac()

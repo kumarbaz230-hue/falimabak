@@ -7,7 +7,7 @@ from kivy.metrics import dp
 from ai_yorum import _yorum_al_calistir
 from fal_limit import yorum_baslat
 from theme import (
-    RENKLER, SAFE_UST, SAFE_ALT,
+    RENKLER, SAFE_UST, SAFE_ALT, EKRAN_UST,
     metin_label, guvenli_textinput, tus_buton, baslik_satir,
     buton_metin_guncelle, ekran_icerik_sar, kaydirici_metin,
     yorum_bekle_metin, yorum_sonuc_metni, tus_metin, fontlari_yukle,
@@ -35,7 +35,7 @@ class RuyaScreen(Screen):
         from dil import t
         ana = BoxLayout(
             orientation='vertical',
-            padding=[dp(12), SAFE_UST, dp(12), SAFE_ALT],
+            padding=[dp(12), EKRAN_UST, dp(12), SAFE_ALT],
             spacing=dp(4),
         )
         ana.add_widget(baslik_satir('🌙', t('ruya_title'), font_size='22sp', height=dp(36)))

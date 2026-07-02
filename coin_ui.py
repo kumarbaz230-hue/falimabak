@@ -38,13 +38,13 @@ def _coin_ikon_widget(boyut=None, **kwargs):
     return metin_label('★', font_size='18sp', bold=True, color=RENKLER['altin'], **kwargs)
 
 
-class CoinChip(BoxLayout):
-    """Sağ üst altın coin rozeti — yalnızca görsel (tıklama CoinHitArea)."""
+class CoinChip(ButtonBehavior, BoxLayout):
+    """Sağ üst altın coin rozeti — geniş dokunma alanı, tek widget (tıklama güvenilir)."""
 
     def __init__(self, **kwargs):
         super().__init__(orientation='horizontal', **kwargs)
         self.size_hint = (None, None)
-        self.size = (COIN_CHIP_EN, COIN_CHIP_YUK)
+        self.size = (COIN_HIT_EN, COIN_HIT_YUK)
         self.padding = [dp(6), dp(4), dp(10), dp(4)]
         self.spacing = dp(5)
 
@@ -79,6 +79,7 @@ class CoinChip(BoxLayout):
         )
         self.add_widget(self._sayi)
 
+        _CHIPLER.append(self)
         Clock.schedule_once(lambda *_: self.guncelle(), 0)
 
     def _ciz(self, *_):
@@ -86,44 +87,29 @@ class CoinChip(BoxLayout):
         w, h = self.size
         if w < 1 or h < 1:
             return
+        # Görsel rozet — sağa hizalı, dokunma alanı daha geniş
+        vw = min(COIN_CHIP_EN, w)
+        vh = min(COIN_CHIP_YUK, h)
+        vx = x + w - vw
+        vy = y + (h - vh) / 2
         r = dp(17)
-        self._golge.pos = (x + dp(1), y - dp(2))
-        self._golge.size = (w - dp(2), h)
-        self._bg.pos = (x, y)
-        self._bg.size = (w, h)
-        self._parilti.pos = (x + dp(2), y + h * 0.45)
-        self._parilti.size = (w - dp(4), h * 0.5)
-        self._kenar.rounded_rectangle = (x, y, w, h, r)
-        self._isik.rounded_rectangle = (x + dp(2), y + dp(2), w - dp(4), h - dp(4), r - dp(2))
+        self._golge.pos = (vx + dp(1), vy - dp(2))
+        self._golge.size = (vw - dp(2), vh)
+        self._bg.pos = (vx, vy)
+        self._bg.size = (vw, vh)
+        self._parilti.pos = (vx + dp(2), vy + vh * 0.45)
+        self._parilti.size = (vw - dp(4), vh * 0.5)
+        self._kenar.rounded_rectangle = (vx, vy, vw, vh, r)
+        self._isik.rounded_rectangle = (vx + dp(2), vy + dp(2), vw - dp(4), vh - dp(4), r - dp(2))
 
     def guncelle(self):
         self._sayi.text = str(coin_miktar())
 
-
-class CoinHitArea(ButtonBehavior, AnchorLayout):
-    """Geniş dokunma alanı (min 48dp) — küçük ekranlarda tıklanabilirlik."""
-
-    def __init__(self, **kwargs):
-        super().__init__(
-            size_hint=(None, None),
-            size=(COIN_HIT_EN, COIN_HIT_YUK),
-            anchor_x='right',
-            anchor_y='center',
-            **kwargs,
-        )
-        self._chip = CoinChip()
-        self._chip.disabled = True  # dokunma üst katmanda (geniş alan)
-        self.add_widget(self._chip)
-        _CHIPLER.append(self)
-
-    def guncelle(self):
-        self._chip.guncelle()
-
     def on_press(self):
-        Animation(opacity=0.82, duration=0.06).start(self._chip)
+        Animation(opacity=0.82, duration=0.06).start(self)
 
     def on_release(self):
-        Animation(opacity=1, duration=0.12).start(self._chip)
+        Animation(opacity=1, duration=0.12).start(self)
         coin_popup_goster()
 
     def __del__(self):
@@ -133,15 +119,20 @@ class CoinHitArea(ButtonBehavior, AnchorLayout):
             pass
 
 
+# Geriye uyumluluk — main.py CoinHitArea import edebilir
+CoinHitArea = CoinChip
+
+
 def coin_satir_ekle(ust_layout):
     """Sağ üste hizalı coin satırı (BoxLayout/vertical içine)."""
-    satir = BoxLayout(size_hint_y=None, height=dp(42))
+    satir = BoxLayout(size_hint_y=None, height=COIN_HIT_YUK)
     satir.add_widget(BoxLayout(size_hint_x=1))
     anchor = AnchorLayout(size_hint_x=None, width=COIN_HIT_EN, anchor_x='right', anchor_y='center')
-    anchor.add_widget(CoinHitArea())
+    chip = CoinChip()
+    anchor.add_widget(chip)
     satir.add_widget(anchor)
     ust_layout.add_widget(satir)
-    return anchor.children[0] if anchor.children else None
+    return chip
 
 
 def _popup_baslik_coin():

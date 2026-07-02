@@ -23,7 +23,7 @@ from kivy.metrics import dp
 from theme import (
     RENKLER, tus_metin, fontlari_yukle, metin_label, ASSETS_DIR,
     tus_buton, baslik_satir, buton_metin_guncelle, yorum_bekle_markup, yorum_sonuc_metni,
-    kaydirici_metin, SAFE_UST, SAFE_ALT, ekran_icerik_sar, siyah_buton,
+    kaydirici_metin, SAFE_UST, SAFE_ALT, EKRAN_UST, ekran_icerik_sar, siyah_buton,
 )
 from ai_yorum import yorum_al
 
@@ -270,7 +270,7 @@ class TarotScreen(Screen):
         self.ana = BoxLayout(
             orientation='vertical',
             spacing=dp(4),
-            padding=[dp(10), SAFE_UST, dp(10), SAFE_ALT],
+            padding=[dp(10), EKRAN_UST, dp(10), SAFE_ALT],
         )
         ana = self.ana
 

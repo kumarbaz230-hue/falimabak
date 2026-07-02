@@ -19,6 +19,7 @@ import java.util.Random;
 
 public class FalimabakAlarmReceiver extends BroadcastReceiver {
     public static final String CHANNEL_ID = "falimabak_hatirlatma";
+    public static final String ACTION_REMINDER = "org.kumar.falimabak.falimabak.ACTION_REMINDER";
     public static final int ALARM_REQUEST = 9001;
     public static final int TEST_NOTIFY_ID = 9002;
     public static final int GUNCELLEME_NOTIFY_ID = 9003;
@@ -151,6 +152,11 @@ public class FalimabakAlarmReceiver extends BroadcastReceiver {
             return;
         }
 
+        if (!notificationsEnabled(context)) {
+            scheduleAlarm(context, title, text, intervalMs, intervalMs);
+            return;
+        }
+
         showNotification(context, title, text, ALARM_REQUEST);
 
         // setAlarmClock tek seferlik olduğu için her seferinde yeniden zamanla.
@@ -215,7 +221,8 @@ public class FalimabakAlarmReceiver extends BroadcastReceiver {
             delayMs = DEFAULT_FIRST_DELAY_MS;
         }
 
-        Intent next = new Intent();
+        Intent next = new Intent(ACTION_REMINDER);
+        next.setPackage(context.getPackageName());
         next.setComponent(new ComponentName(context, FalimabakAlarmReceiver.class));
         next.putExtra("title", title);
         next.putExtra("text", text);
@@ -251,6 +258,26 @@ public class FalimabakAlarmReceiver extends BroadcastReceiver {
             } catch (Exception ignored) {
             }
         }
+    }
+
+    private static boolean notificationsEnabled(Context context) {
+        NotificationManager nm = (NotificationManager)
+            context.getSystemService(Context.NOTIFICATION_SERVICE);
+        if (nm == null) {
+            return false;
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            if (!nm.areNotificationsEnabled()) {
+                return false;
+            }
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            NotificationChannel ch = nm.getNotificationChannel(CHANNEL_ID);
+            if (ch != null && ch.getImportance() == NotificationManager.IMPORTANCE_NONE) {
+                return false;
+            }
+        }
+        return true;
     }
 
     private static boolean canNotify(Context context) {

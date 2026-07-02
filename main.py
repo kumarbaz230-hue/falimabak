@@ -48,7 +48,7 @@ from kivy.metrics import dp
 
 from theme import (
     RENKLER, KART_MENU_AR,
-    SAFE_UST, SAFE_ALT, COIN_UST_ALAN,
+    SAFE_UST, SAFE_ALT, EKRAN_UST,
     fontlari_yukle, emoji_font_yukle, emoji_label,
     fal_ikon_widget, guvenli_textinput, klavye_kapat,
     metin_label, gradient_arka_plan_ekle, asset_yolu,
@@ -603,7 +603,7 @@ class GecmisScreen(Screen):
 
     def _kur(self):
         from dil import t
-        ana = BoxLayout(orientation='vertical', padding=[dp(12), SAFE_UST, dp(12), 0], spacing=dp(8))
+        ana = BoxLayout(orientation='vertical', padding=[dp(12), EKRAN_UST, dp(12), 0], spacing=dp(8))
 
         ana.add_widget(baslik_satir('📜', t('history_title'), font_size='22sp', height=dp(36)))
 
@@ -684,7 +684,7 @@ class Anasayfa(Screen):
         from dil import t
         ana = BoxLayout(
             orientation='vertical',
-            padding=[dp(12), SAFE_UST + COIN_UST_ALAN, dp(12), 0],
+            padding=[dp(12), EKRAN_UST, dp(12), 0],
             spacing=dp(8),
         )
         self._kurabiye = SansKurabiyesiKarti()
@@ -832,12 +832,15 @@ class FalimaBakApp(App):
         except Exception:
             pass
         try:
-            from bildirim import bildirim_izni_iste, bildirim_baslat
+            from bildirim import bildirim_izni_iste, bildirim_baslat, bildirim_izni_hazir_bekle
             # Uygulama ilk açıldığında bildirim iznini hemen iste.
             Clock.schedule_once(lambda *_: bildirim_izni_iste(), 0.3)
             Clock.schedule_once(lambda *_: bildirim_baslat(), 2.0)
-            # İlk kurulumda tek seferlik karşılama bildirimi (izin verildikten sonra).
-            Clock.schedule_once(lambda *_: self._bildirim_karsilama(), 5.0)
+            # İzin verildikten sonra karşılama bildirimi (izin penceresi kapanmadan gönderilmesin).
+            Clock.schedule_once(
+                lambda *_: bildirim_izni_hazir_bekle(lambda: self._bildirim_karsilama()),
+                3.0,
+            )
         except Exception as e:
             print(f'Bildirim baslat: {e}', flush=True)
         try:
@@ -1077,12 +1080,12 @@ class FalimaBakApp(App):
         self._sm = sm
         Clock.schedule_once(lambda *_: self._ekranlari_yukle(), 0.05)
 
-        from coin_ui import CoinHitArea
+        from coin_ui import CoinChip
         from theme import COIN_SAG_KENAR
 
         kok = FloatLayout()
         kok.add_widget(sm)
-        self._coin_chip = CoinHitArea()
+        self._coin_chip = CoinChip()
         kok.add_widget(self._coin_chip)
 
         def _coin_konum(*_):

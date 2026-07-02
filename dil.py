@@ -127,6 +127,20 @@ _METINLER = {
     'notif_battery_msg': {'tr': 'Telefonun pil ayarı FalımaBak\'ı arka planda durdurabiliyor; bu yüzden gün içi hatırlatmalar gelmeyebilir. Açılacak ekranda FalımaBak\'ı bul ve "Kısıtlama yok / İzin ver" seç.', 'en': 'Your phone\'s battery settings can stop FalımaBak in the background, so daily reminders may not arrive. On the next screen, find FalımaBak and choose "Don\'t restrict / Allow".'},
     'notif_battery_open': {'tr': 'Pil ayarını aç', 'en': 'Open battery setting'},
     'notif_battery_later': {'tr': 'Daha sonra', 'en': 'Later'},
+    'settings_notif_test': {'tr': 'Test bildirimi gönder', 'en': 'Send test notification'},
+    'settings_notif_test_msg': {
+        'tr': 'Bildirimler çalışıyor! Fal hatırlatmaları açık.',
+        'en': 'Notifications work! Reminders are enabled.',
+    },
+    'settings_notif_test_ok': {'tr': 'Test bildirimi gönderildi.', 'en': 'Test notification sent.'},
+    'settings_notif_test_fail': {
+        'tr': 'Bildirim gönderilemedi. Ayarlardan izin verin.',
+        'en': 'Could not send notification. Grant permission in settings.',
+    },
+    'settings_notif_system_off': {
+        'tr': 'Telefon ayarlarında FalımaBak bildirimleri kapalı.',
+        'en': 'FalımaBak notifications are disabled in phone settings.',
+    },
     'update_notify_title': {'tr': 'FalımaBak', 'en': 'FalımaBak'},
     'update_notify_msg': {
         'tr': 'Yeni güncelleme yayında! Uygulamayı güncelleyin.',

@@ -9,7 +9,7 @@ from kivy.utils import get_color_from_hex
 from kivy.metrics import dp
 
 from theme import (
-    RENKLER, SAFE_UST, APP_SURUM,
+    RENKLER, SAFE_UST, EKRAN_UST, APP_SURUM,
     metin_label, baslik_satir, siyah_buton, alt_nav_bar, ekran_icerik_sar,
     guvenli_textinput, kart_zemin_bagla, klavye_kaydir_bagla,
 )
@@ -57,7 +57,7 @@ class AyarlarScreen(Screen):
         self._kur()
 
     def _kur(self):
-        ana = BoxLayout(orientation='vertical', padding=[dp(12), SAFE_UST, dp(12), 0], spacing=dp(8))
+        ana = BoxLayout(orientation='vertical', padding=[dp(12), EKRAN_UST, dp(12), 0], spacing=dp(8))
 
         kaydir = ScrollView(
             size_hint_y=1,
@@ -122,6 +122,9 @@ class AyarlarScreen(Screen):
         pil_btn = siyah_buton(t('settings_notif_battery'), font_size='13sp')
         pil_btn.bind(on_press=lambda *_: self._pil_ayari_ac())
         bildirim_kart.add_widget(pil_btn)
+        test_btn = siyah_buton(t('settings_notif_test'), font_size='13sp')
+        test_btn.bind(on_press=lambda *_: self._bildirim_test())
+        bildirim_kart.add_widget(test_btn)
         icerik.add_widget(bildirim_kart)
 
         hukuk = _ayar_karti(t('settings_legal'), t('settings_legal_hint'))
@@ -292,10 +295,11 @@ class AyarlarScreen(Screen):
             )
             if acik:
                 bildirim_baslat()
-                bildirim_izinleri_kontrol()
-                # Açar açmaz anlık onay bildirimi — kullanıcı çalıştığını görsün.
+                from bildirim import bildirim_izni_hazir_bekle
+                bildirim_izni_hazir_bekle(lambda: bildirim_izinleri_kontrol())
+                # Açar açmaz anlık onay bildirimi — izin hazır olunca gönder.
                 from kivy.clock import Clock
-                Clock.schedule_once(lambda *_: bildirim_anlik_goster(), 0.6)
+                bildirim_izni_hazir_bekle(lambda: bildirim_anlik_goster(), baslangic_gecikme=0.5)
                 # Pil optimizasyonu hatırlatmaları engelliyorsa kullanıcıyı yönlendir.
                 Clock.schedule_once(lambda *_: self._pil_uyari_kontrol(), 1.2)
                 self._mesaj.text = t('settings_notif_on_msg')
@@ -312,6 +316,35 @@ class AyarlarScreen(Screen):
             pil_optimizasyon_ayarlarini_ac()
         except Exception as e:
             print(f'Pil ayari ac: {e}', flush=True)
+
+    def _bildirim_test(self):
+        """Anlık test bildirimi — kullanıcı sistemin çalıştığını doğrulasın."""
+        try:
+            from bildirim import (
+                bildirim_anlik_goster, bildirim_izni_iste,
+                bildirim_izni_hazir_bekle, bildirim_sistem_acik_mi,
+                bildirim_ayarlari_ac,
+            )
+            bildirim_izni_iste()
+
+            def _gonder():
+                if not bildirim_sistem_acik_mi():
+                    bildirim_ayarlari_ac()
+                    self._mesaj.text = t('settings_notif_system_off')
+                    self._mesaj.color = get_color_from_hex(RENKLER['kirmizi'])
+                    return
+                if bildirim_anlik_goster(t('settings_notif_test_msg')):
+                    self._mesaj.text = t('settings_notif_test_ok')
+                    self._mesaj.color = get_color_from_hex(RENKLER['yesil'])
+                else:
+                    self._mesaj.text = t('settings_notif_test_fail')
+                    self._mesaj.color = get_color_from_hex(RENKLER['kirmizi'])
+
+            bildirim_izni_hazir_bekle(_gonder, baslangic_gecikme=0.3)
+        except Exception as e:
+            print(f'Bildirim test: {e}', flush=True)
+            self._mesaj.text = t('settings_notif_test_fail')
+            self._mesaj.color = get_color_from_hex(RENKLER['kirmizi'])
 
     def _pil_uyari_kontrol(self):
         """Hatırlatmalar açıkken pil kısıtlaması varsa kullanıcıyı uyar."""

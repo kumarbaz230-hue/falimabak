@@ -9,7 +9,11 @@
 </provider>
 <receiver
     android:name=".FalimabakAlarmReceiver"
-    android:exported="false" />
+    android:exported="true">
+    <intent-filter>
+        <action android:name="org.kumar.falimabak.falimabak.ACTION_REMINDER" />
+    </intent-filter>
+</receiver>
 <receiver
     android:name=".FalimabakBootReceiver"
     android:exported="true"

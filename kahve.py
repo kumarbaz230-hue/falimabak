@@ -18,7 +18,7 @@ from theme import (
     RENKLER, tus_metin, yorum_bekle_metin, fontlari_yukle, metin_label,
     tus_buton, baslik_satir, buton_metin_guncelle,
     kaydirici_metin, FotoKutucukPanel, yorum_bekle_markup, foto_fal_sonuc,
-    SAFE_UST, SAFE_ALT, ekran_icerik_sar, yorum_panel_baslik,
+    SAFE_UST, SAFE_ALT, EKRAN_UST, ekran_icerik_sar, yorum_panel_baslik,
 )
 from kamera import galeriden_sec, kameradan_cek, galeri_aktif
 from ai_yorum import yorum_al
@@ -169,7 +169,7 @@ class KahveScreen(Screen):
         ana_layout = BoxLayout(
             orientation='vertical',
             spacing=dp(4),
-            padding=[dp(12), SAFE_UST, dp(12), SAFE_ALT],
+            padding=[dp(12), EKRAN_UST, dp(12), SAFE_ALT],
         )
 
         ana_layout.add_widget(baslik_satir('☕', 'KAHVE FALI', font_size='24sp', height=dp(36)))

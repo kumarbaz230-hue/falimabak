@@ -12,7 +12,7 @@ source.include_patterns = assets/*,assets/muzik/*,config.ornek.json,store/*
 source.exclude_dirs = tests,bin,.git,__pycache__,.buildozer,.venv,venv,env,.idea,user_photos,.github,recipes,tools,images,keystore
 source.exclude_patterns = license,images/*/*.jpg,*.bat,config.json,kullanici_veri.json,.env,secrets.json,secrets.ornek.json,assets/muzik/ambiyans.wav
 
-version = 1.8.5
+version = 1.8.6
 
 icon.filename = %(source.dir)s/assets/app_icon.png
 presplash.filename = %(source.dir)s/assets/splash_banner.png
@@ -29,7 +29,7 @@ android.minapi = 24
 android.ndk = 28
 android.ndk_api = 24
 
-android.permissions = INTERNET,ACCESS_NETWORK_STATE,AD_ID,CAMERA,POST_NOTIFICATIONS,SCHEDULE_EXACT_ALARM,RECEIVE_BOOT_COMPLETED,WAKE_LOCK
+android.permissions = INTERNET,ACCESS_NETWORK_STATE,AD_ID,CAMERA,POST_NOTIFICATIONS,SCHEDULE_EXACT_ALARM,USE_EXACT_ALARM,RECEIVE_BOOT_COMPLETED,WAKE_LOCK
 
 # Android: sadece kamera. Medya izinleri yalnizca p4a hook ile kaldirilir (extra_manifest yok).
 p4a.hook = %(source.dir)s/hooks/p4a_manifest.py

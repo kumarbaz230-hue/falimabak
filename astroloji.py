@@ -10,7 +10,7 @@ from datetime import date
 
 from ai_yorum import yorum_al
 from theme import (
-    RENKLER, SAFE_UST, SAFE_ALT,
+    RENKLER, SAFE_UST, SAFE_ALT, EKRAN_UST,
     tus_metin, yorum_bekle_metin, tus_buton, baslik_satir, buton_metin_guncelle,
     yorum_sonuc_metni, metin_label, guvenli_textinput, ekran_icerik_sar,
     kaydirici_metin, fontlari_yukle,
@@ -178,7 +178,7 @@ class AstrolojiScreen(Screen):
         ana_layout = BoxLayout(
             orientation='vertical',
             spacing=dp(4),
-            padding=[dp(12), SAFE_UST, dp(12), SAFE_ALT],
+            padding=[dp(12), EKRAN_UST, dp(12), SAFE_ALT],
         )
         ana_layout.add_widget(baslik_satir('🌟', 'YILDIZ FALI', font_size='24sp', height=dp(36)))
 

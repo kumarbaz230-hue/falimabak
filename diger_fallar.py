@@ -19,7 +19,7 @@ from ai_yorum import yorum_al
 from theme import (
     TUS, tus_buton, siyah_buton, baslik_satir, buton_metin_guncelle,
     yorum_bekle_markup, foto_fal_sonuc, diger_fal_buton, emoji_temizle,
-    SAFE_UST, SAFE_ALT, ekran_icerik_sar, kaydirici_metin, metin_label,
+    SAFE_UST, SAFE_ALT, EKRAN_UST, ekran_icerik_sar, kaydirici_metin, metin_label,
     yorum_panel_baslik,
 )
 
@@ -120,7 +120,7 @@ class DigerFallarScreen(Screen):
         ana_layout = BoxLayout(
             orientation='vertical',
             spacing=dp(4),
-            padding=[dp(12), SAFE_UST, dp(12), SAFE_ALT],
+            padding=[dp(12), EKRAN_UST, dp(12), SAFE_ALT],
         )
 
         ana_layout.add_widget(baslik_satir('', 'DİĞER FALLAR', font_size='24sp', height=dp(36)))
