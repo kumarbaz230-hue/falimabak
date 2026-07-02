@@ -48,7 +48,7 @@ from kivy.metrics import dp
 
 from theme import (
     RENKLER, KART_MENU_AR,
-    SAFE_UST, SAFE_ALT,
+    SAFE_UST, SAFE_ALT, COIN_UST_ALAN,
     fontlari_yukle, emoji_font_yukle, emoji_label,
     fal_ikon_widget, guvenli_textinput, klavye_kapat,
     metin_label, gradient_arka_plan_ekle, asset_yolu,
@@ -682,7 +682,11 @@ class Anasayfa(Screen):
 
     def _kur(self):
         from dil import t
-        ana = BoxLayout(orientation='vertical', padding=[dp(12), SAFE_UST, dp(12), 0], spacing=dp(8))
+        ana = BoxLayout(
+            orientation='vertical',
+            padding=[dp(12), SAFE_UST + COIN_UST_ALAN, dp(12), 0],
+            spacing=dp(8),
+        )
         self._kurabiye = SansKurabiyesiKarti()
         ana.add_widget(self._kurabiye)
         ana.add_widget(GunlukFalKarti())
@@ -1063,32 +1067,40 @@ class FalimaBakApp(App):
         self._sm = sm
         Clock.schedule_once(lambda *_: self._ekranlari_yukle(), 0.05)
 
-        from coin_ui import CoinChip
-        from theme import COIN_SAG_KENAR, COIN_UST_KENAR
+        from coin_ui import CoinHitArea
+        from theme import COIN_SAG_KENAR
 
         kok = FloatLayout()
         kok.add_widget(sm)
-        self._coin_chip = CoinChip()
-        self._coin_chip.size_hint = (None, None)
+        self._coin_chip = CoinHitArea()
         kok.add_widget(self._coin_chip)
 
         def _coin_konum(*_):
             ch = self._coin_chip
-            # Tam sağ üst köşe — SAFE_UST kullanma (buton satırına kayıyordu)
+            ch.size_hint = (None, None)
             ch.pos = (
                 max(0, kok.width - ch.width - COIN_SAG_KENAR),
-                max(0, kok.height - ch.height - COIN_UST_KENAR),
+                max(0, kok.height - ch.height - SAFE_UST - dp(6)),
             )
+
+        def _coin_one_cikar(*_):
+            if self._coin_chip.parent:
+                kok.remove_widget(self._coin_chip)
+                kok.add_widget(self._coin_chip)
+            _coin_konum()
 
         kok.bind(size=_coin_konum, pos=_coin_konum)
 
-        def _coin_gorunurluk(*_):
+        def _coin_gorunurluk(*_, ekran=None):
             gizle = sm.current in ('splash', 'onboarding', 'hata')
             self._coin_chip.opacity = 0 if gizle else 1
             self._coin_chip.disabled = gizle
+            if not gizle:
+                _coin_one_cikar()
 
         sm.bind(current=_coin_gorunurluk)
         Clock.schedule_once(lambda *_: (_coin_konum(), _coin_gorunurluk()), 0)
+        Clock.schedule_once(lambda *_: _coin_one_cikar(), 0.3)
         return kok
 
     def _ekranlari_yukle(self):

@@ -14,7 +14,7 @@ from kivy.metrics import dp
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 ASSETS_DIR = os.path.join(BASE_DIR, 'assets')
-APP_SURUM = '1.8.4'
+APP_SURUM = '1.8.5'
 
 # ============================================================
 #  PROFESYONEL RENK PALETİ
@@ -169,9 +169,15 @@ DIGER_FAL_IKONLARI = {
 
 # Mobil safe area (çentik / gesture bar) — Android'de aşağıda genişletilir
 SAFE_UST = dp(8)
-COIN_SAG_BOSLUK = dp(96)
-COIN_UST_KENAR = dp(4)
-COIN_SAG_KENAR = dp(6)
+# Coin dokunma alanı (Material min ~48dp) — başlık satırında sağ boşluk
+COIN_CHIP_EN = dp(92)
+COIN_CHIP_YUK = dp(44)
+COIN_HIT_EN = dp(108)
+COIN_HIT_YUK = dp(52)
+COIN_SAG_BOSLUK = COIN_HIT_EN + dp(8)
+COIN_SAG_KENAR = dp(10)
+# Üstte coin için ayrılan alan (Ana sayfa kartları çakışmasın)
+COIN_UST_ALAN = COIN_HIT_YUK + dp(6)
 SAFE_ALT = dp(10)
 BUTON_MIN_YUKSEK = dp(48)
 

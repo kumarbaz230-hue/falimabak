@@ -15,7 +15,10 @@ from coin import (
     coin_miktar, gunluk_giris_kontrol, hosgeldin_kontrol, reklam_hakki_var, reklam_kalan,
     reklam_coin_kazan,
 )
-from theme import RENKLER, kart_ikon_widget, metin_label, siyah_buton
+from theme import (
+    RENKLER, kart_ikon_widget, metin_label, siyah_buton,
+    COIN_CHIP_EN, COIN_CHIP_YUK, COIN_HIT_EN, COIN_HIT_YUK,
+)
 
 _CHIPLER = []
 
@@ -35,15 +38,15 @@ def _coin_ikon_widget(boyut=None, **kwargs):
     return metin_label('★', font_size='18sp', bold=True, color=RENKLER['altin'], **kwargs)
 
 
-class CoinChip(ButtonBehavior, BoxLayout):
-    """Sağ üst altın coin rozeti."""
+class CoinChip(BoxLayout):
+    """Sağ üst altın coin rozeti — yalnızca görsel (tıklama CoinHitArea)."""
 
     def __init__(self, **kwargs):
         super().__init__(orientation='horizontal', **kwargs)
         self.size_hint = (None, None)
-        self.size = (dp(76), dp(34))
-        self.padding = [dp(5), dp(3), dp(8), dp(3)]
-        self.spacing = dp(4)
+        self.size = (COIN_CHIP_EN, COIN_CHIP_YUK)
+        self.padding = [dp(6), dp(4), dp(10), dp(4)]
+        self.spacing = dp(5)
 
         altin = get_color_from_hex(RENKLER['altin'])
         altin2 = get_color_from_hex(RENKLER['buton_altin'])
@@ -64,19 +67,18 @@ class CoinChip(ButtonBehavior, BoxLayout):
         Clock.schedule_once(lambda *_: self._ciz(), 0)
 
         ikon_kutu = AnchorLayout(
-            size_hint_x=None, width=dp(28),
+            size_hint_x=None, width=dp(30),
             anchor_x='center', anchor_y='center',
         )
-        ikon_kutu.add_widget(_coin_ikon_widget(boyut=dp(24)))
+        ikon_kutu.add_widget(_coin_ikon_widget(boyut=dp(26)))
         self.add_widget(ikon_kutu)
 
         self._sayi = metin_label(
-            '0', font_size='16sp', bold=True, color=RENKLER['altin_parlak'],
+            '0', font_size='17sp', bold=True, color=RENKLER['altin_parlak'],
             halign='left', valign='middle', size_hint_x=1,
         )
         self.add_widget(self._sayi)
 
-        _CHIPLER.append(self)
         Clock.schedule_once(lambda *_: self.guncelle(), 0)
 
     def _ciz(self, *_):
@@ -97,11 +99,31 @@ class CoinChip(ButtonBehavior, BoxLayout):
     def guncelle(self):
         self._sayi.text = str(coin_miktar())
 
+
+class CoinHitArea(ButtonBehavior, AnchorLayout):
+    """Geniş dokunma alanı (min 48dp) — küçük ekranlarda tıklanabilirlik."""
+
+    def __init__(self, **kwargs):
+        super().__init__(
+            size_hint=(None, None),
+            size=(COIN_HIT_EN, COIN_HIT_YUK),
+            anchor_x='right',
+            anchor_y='center',
+            **kwargs,
+        )
+        self._chip = CoinChip()
+        self._chip.disabled = True  # dokunma üst katmanda (geniş alan)
+        self.add_widget(self._chip)
+        _CHIPLER.append(self)
+
+    def guncelle(self):
+        self._chip.guncelle()
+
     def on_press(self):
-        Animation(opacity=0.82, duration=0.06).start(self)
+        Animation(opacity=0.82, duration=0.06).start(self._chip)
 
     def on_release(self):
-        Animation(opacity=1, duration=0.12).start(self)
+        Animation(opacity=1, duration=0.12).start(self._chip)
         coin_popup_goster()
 
     def __del__(self):
@@ -115,8 +137,8 @@ def coin_satir_ekle(ust_layout):
     """Sağ üste hizalı coin satırı (BoxLayout/vertical içine)."""
     satir = BoxLayout(size_hint_y=None, height=dp(42))
     satir.add_widget(BoxLayout(size_hint_x=1))
-    anchor = AnchorLayout(size_hint_x=None, width=dp(96), anchor_x='right', anchor_y='center')
-    anchor.add_widget(CoinChip())
+    anchor = AnchorLayout(size_hint_x=None, width=COIN_HIT_EN, anchor_x='right', anchor_y='center')
+    anchor.add_widget(CoinHitArea())
     satir.add_widget(anchor)
     ust_layout.add_widget(satir)
     return anchor.children[0] if anchor.children else None
