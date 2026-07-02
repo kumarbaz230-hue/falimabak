@@ -4,7 +4,7 @@ from datetime import date
 
 from gecmis import _yukle, _kaydet
 
-HOSGELDIN_BONUS = 10
+HOSGELDIN_BONUS = 5
 GUNLUK_GIRIS_BONUS = 3  # Her gün ilk açılışta
 FAL_MALIYET = 1
 REKLAM_COIN_ODUL = 3

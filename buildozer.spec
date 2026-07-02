@@ -39,7 +39,7 @@ android.accept_sdk_license = True
 android.allow_backup = True
 android.enable_androidx = True
 
-android.gradle_dependencies = androidx.appcompat:appcompat:1.6.1,androidx.activity:activity:1.8.2,androidx.core:core:1.12.0,com.google.android.gms:play-services-ads:22.6.0,com.google.android.play:review:2.0.2
+android.gradle_dependencies = androidx.appcompat:appcompat:1.6.1,androidx.activity:activity:1.8.2,androidx.core:core:1.12.0,com.google.android.gms:play-services-ads:22.6.0,com.google.android.play:review:2.0.2,com.google.android.play:app-update:2.1.0
 
 # Bildirim receiver Java siniflari (FalimabakAlarmReceiver / BootReceiver)
 android.add_src = java

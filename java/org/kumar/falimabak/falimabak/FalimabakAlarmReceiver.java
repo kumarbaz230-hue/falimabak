@@ -21,6 +21,7 @@ public class FalimabakAlarmReceiver extends BroadcastReceiver {
     public static final String CHANNEL_ID = "falimabak_hatirlatma";
     public static final int ALARM_REQUEST = 9001;
     public static final int TEST_NOTIFY_ID = 9002;
+    public static final int GUNCELLEME_NOTIFY_ID = 9003;
     public static final long DEFAULT_INTERVAL_MS = 2L * 60L * 60L * 1000L;
     public static final long DEFAULT_FIRST_DELAY_MS = 15L * 60L * 1000L;
 
@@ -57,6 +58,60 @@ public class FalimabakAlarmReceiver extends BroadcastReceiver {
             text = pickMessage();
         }
         showNotification(context, title, text, TEST_NOTIFY_ID);
+    }
+
+    /** Güncelleme bildirimi — dokununca Play Store açılır. */
+    public static void showGuncelleme(Context context, String title, String text) {
+        if (context == null || !canNotify(context)) {
+            return;
+        }
+        if (title == null || title.isEmpty()) {
+            title = "FalımaBak";
+        }
+        if (text == null || text.isEmpty()) {
+            text = "Yeni güncelleme var! Uygulamayı güncelleyin.";
+        }
+
+        NotificationManager nm = (NotificationManager)
+            context.getSystemService(Context.NOTIFICATION_SERVICE);
+        if (nm == null) {
+            return;
+        }
+        ensureChannel(nm);
+
+        int flags = PendingIntent.FLAG_UPDATE_CURRENT;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            flags |= PendingIntent.FLAG_IMMUTABLE;
+        }
+        Intent store = new Intent(
+            Intent.ACTION_VIEW,
+            android.net.Uri.parse("market://details?id=" + context.getPackageName())
+        );
+        store.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        PendingIntent pi = PendingIntent.getActivity(
+            context, GUNCELLEME_NOTIFY_ID, store, flags
+        );
+
+        int icon = resolveSmallIcon(context);
+        NotificationCompat.Builder builder = new NotificationCompat.Builder(context, CHANNEL_ID)
+            .setSmallIcon(icon)
+            .setContentTitle(title)
+            .setContentText(text)
+            .setStyle(new NotificationCompat.BigTextStyle().bigText(text))
+            .setContentIntent(pi)
+            .setAutoCancel(true)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setDefaults(NotificationCompat.DEFAULT_ALL);
+
+        try {
+            nm.notify(GUNCELLEME_NOTIFY_ID, builder.build());
+        } catch (Throwable e) {
+            builder.setSmallIcon(android.R.drawable.ic_dialog_info);
+            try {
+                nm.notify(GUNCELLEME_NOTIFY_ID, builder.build());
+            } catch (Throwable ignored) {
+            }
+        }
     }
 
     /** Bildirim icin guvenli kucuk ikon: once ic_notify, olmazsa uygulama ikonu. */

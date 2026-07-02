@@ -840,6 +840,11 @@ class FalimaBakApp(App):
             Clock.schedule_once(lambda *_: self._bildirim_karsilama(), 5.0)
         except Exception as e:
             print(f'Bildirim baslat: {e}', flush=True)
+        try:
+            from guncelleme import guncelleme_bildirimi_kontrol
+            Clock.schedule_once(lambda *_: guncelleme_bildirimi_kontrol(), 8.0)
+        except Exception as e:
+            print(f'Guncelleme kontrol: {e}', flush=True)
 
     def _bildirim_karsilama(self):
         try:
@@ -933,6 +938,11 @@ class FalimaBakApp(App):
             try:
                 from bildirim import bildirim_baslat
                 Clock.schedule_once(lambda *_: bildirim_baslat(), 0.5)
+            except Exception:
+                pass
+            try:
+                from guncelleme import guncelleme_bildirimi_kontrol
+                Clock.schedule_once(lambda *_: guncelleme_bildirimi_kontrol(), 2.0)
             except Exception:
                 pass
 
