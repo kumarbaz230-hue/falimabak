@@ -14,7 +14,7 @@ from kivy.metrics import dp
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 ASSETS_DIR = os.path.join(BASE_DIR, 'assets')
-APP_SURUM = '1.8.6'
+APP_SURUM = '1.8.7'
 
 # ============================================================
 #  PROFESYONEL RENK PALETİ
@@ -170,9 +170,9 @@ DIGER_FAL_IKONLARI = {
 # Mobil safe area (çentik / gesture bar) — Android'de aşağıda genişletilir
 SAFE_UST = dp(8)
 # Coin dokunma alanı (Material min ~48dp) — başlık satırında sağ boşluk
-COIN_CHIP_EN = dp(92)
+COIN_CHIP_EN = dp(100)
 COIN_CHIP_YUK = dp(44)
-COIN_HIT_EN = dp(108)
+COIN_HIT_EN = dp(112)
 COIN_HIT_YUK = dp(52)
 COIN_SAG_BOSLUK = COIN_HIT_EN + dp(8)
 COIN_SAG_KENAR = dp(10)
@@ -1310,7 +1310,7 @@ class YukleniyorAnimasyon(Label):
 
 def alt_nav_bar(aktif='anasayfa', on_sec=None):
     """Alt navigasyon: Ana Sayfa | Geçmiş | Ayarlar."""
-    from kivy.graphics import Color, Rectangle, RoundedRectangle, Line
+    from kivy.graphics import Color, Rectangle, Line
     from kivy.uix.boxlayout import BoxLayout
     from kivy.uix.behaviors import ButtonBehavior
 
@@ -1356,18 +1356,6 @@ def alt_nav_bar(aktif='anasayfa', on_sec=None):
                 size_hint_y=None,
                 height=dp(18),
             ))
-            if secili:
-                gold = get_color_from_hex(RENKLER['altin'])
-                with self.canvas.after:
-                    Color(gold[0], gold[1], gold[2], 0.8)
-                    self._cizgi = RoundedRectangle(radius=[dp(1)])
-                self.bind(pos=self._ciz, size=self._ciz)
-                Clock.schedule_once(lambda *_: self._ciz(), 0)
-
-        def _ciz(self, *_):
-            if hasattr(self, '_cizgi'):
-                self._cizgi.pos = (self.center_x - dp(16), self.y + dp(2))
-                self._cizgi.size = (dp(32), dp(3))
 
         def on_release(self):
             if on_sec:
@@ -1381,7 +1369,6 @@ def alt_nav_bar(aktif='anasayfa', on_sec=None):
         spacing=dp(6),
     )
     gold = get_color_from_hex(RENKLER['altin'])
-    mor = get_color_from_hex(RENKLER['mor_parlak'])
     nav_bg = get_color_from_hex('#120E28')
     nav_bg2 = get_color_from_hex(RENKLER['kart_arka_cam'])
     with nav.canvas.before:
@@ -1391,10 +1378,8 @@ def alt_nav_bar(aktif='anasayfa', on_sec=None):
         nav._bg = Rectangle()
         Color(nav_bg2[0], nav_bg2[1], nav_bg2[2], 1)
         nav._bg2 = Rectangle()
-        Color(gold[0], gold[1], gold[2], 0.55)
-        nav._ust = Line(width=dp(1.5))
-        Color(mor[0], mor[1], mor[2], 0.15)
-        nav._alt = Line(width=dp(1))
+        Color(gold[0], gold[1], gold[2], 0.35)
+        nav._ust = Line(width=dp(1))
 
     def _nav_ciz(*_):
         nav._golge.pos = (nav.x, nav.y - dp(2))
@@ -1404,7 +1389,6 @@ def alt_nav_bar(aktif='anasayfa', on_sec=None):
         nav._bg2.pos = nav.pos
         nav._bg2.size = nav.size
         nav._ust.points = [nav.x, nav.top, nav.right, nav.top]
-        nav._alt.points = [nav.x, nav.y + dp(1), nav.right, nav.y + dp(1)]
 
     nav.bind(pos=_nav_ciz, size=_nav_ciz)
     Clock.schedule_once(lambda *_: _nav_ciz(), 0)

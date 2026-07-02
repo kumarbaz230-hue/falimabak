@@ -5,6 +5,7 @@ from kivy.clock import Clock
 from kivy.graphics import Color, Line, RoundedRectangle
 from kivy.metrics import dp
 from kivy.uix.anchorlayout import AnchorLayout
+from kivy.uix.widget import Widget
 from kivy.uix.behaviors import ButtonBehavior
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.popup import Popup
@@ -45,8 +46,6 @@ class CoinChip(ButtonBehavior, BoxLayout):
         super().__init__(orientation='horizontal', **kwargs)
         self.size_hint = (None, None)
         self.size = (COIN_HIT_EN, COIN_HIT_YUK)
-        self.padding = [dp(6), dp(4), dp(10), dp(4)]
-        self.spacing = dp(5)
 
         altin = get_color_from_hex(RENKLER['altin'])
         altin2 = get_color_from_hex(RENKLER['buton_altin'])
@@ -63,35 +62,44 @@ class CoinChip(ButtonBehavior, BoxLayout):
             Color(altin[0], altin[1], altin[2], 0.18)
             self._isik = Line(width=dp(0.8), rounded_rectangle=(0, 0, 0, 0, dp(17)))
 
-        self.bind(pos=self._ciz, size=self._ciz)
-        Clock.schedule_once(lambda *_: self._ciz(), 0)
+        # Dokunma alanı geniş; görsel rozet sağda, çerçeve ile hizalı
+        self.add_widget(Widget(size_hint_x=1))
 
+        self._rozet = BoxLayout(
+            orientation='horizontal',
+            size_hint=(None, None),
+            size=(COIN_CHIP_EN, COIN_CHIP_YUK),
+            padding=[dp(8), dp(5), dp(12), dp(5)],
+            spacing=dp(4),
+        )
         ikon_kutu = AnchorLayout(
-            size_hint_x=None, width=dp(30),
+            size_hint_x=None, width=dp(28),
             anchor_x='center', anchor_y='center',
         )
-        ikon_kutu.add_widget(_coin_ikon_widget(boyut=dp(26)))
-        self.add_widget(ikon_kutu)
+        ikon_kutu.add_widget(_coin_ikon_widget(boyut=dp(24)))
+        self._rozet.add_widget(ikon_kutu)
 
         self._sayi = metin_label(
-            '0', font_size='17sp', bold=True, color=RENKLER['altin_parlak'],
-            halign='left', valign='middle', size_hint_x=1,
+            '0', font_size='16sp', bold=True, color=RENKLER['altin_parlak'],
+            halign='left', valign='middle',
+            size_hint_x=None, width=dp(40),
+            shorten=True,
         )
-        self.add_widget(self._sayi)
+        self._rozet.add_widget(self._sayi)
+        self.add_widget(self._rozet)
+
+        self._rozet.bind(pos=self._ciz, size=self._ciz)
+        self.bind(pos=self._ciz, size=self._ciz)
+        Clock.schedule_once(lambda *_: self._ciz(), 0)
 
         _CHIPLER.append(self)
         Clock.schedule_once(lambda *_: self.guncelle(), 0)
 
     def _ciz(self, *_):
-        x, y = self.pos
-        w, h = self.size
-        if w < 1 or h < 1:
+        vx, vy = self._rozet.pos
+        vw, vh = self._rozet.size
+        if vw < 1 or vh < 1:
             return
-        # Görsel rozet — sağa hizalı, dokunma alanı daha geniş
-        vw = min(COIN_CHIP_EN, w)
-        vh = min(COIN_CHIP_YUK, h)
-        vx = x + w - vw
-        vy = y + (h - vh) / 2
         r = dp(17)
         self._golge.pos = (vx + dp(1), vy - dp(2))
         self._golge.size = (vw - dp(2), vh)
