@@ -40,55 +40,45 @@ def _coin_ikon_widget(boyut=None, **kwargs):
 
 
 class CoinChip(ButtonBehavior, BoxLayout):
-    """Sağ üst altın coin rozeti — geniş dokunma alanı, tek widget (tıklama güvenilir)."""
+    """Sağ üst altın coin rozeti — geniş dokunma alanı, şık altın pill rozet."""
 
     def __init__(self, **kwargs):
         super().__init__(orientation='horizontal', **kwargs)
         self.size_hint = (None, None)
-        self.size = (COIN_HIT_EN, COIN_HIT_YUK)
+        self.size = (dp(92), dp(36))
+        self.padding = [dp(6), dp(4), dp(10), dp(4)]
+        self.spacing = dp(4)
 
         altin = get_color_from_hex(RENKLER['altin'])
         altin2 = get_color_from_hex(RENKLER['buton_altin'])
         with self.canvas.before:
-            Color(0, 0, 0, 0.35)
-            self._golge = RoundedRectangle(radius=[dp(17)])
-            Color(0.14, 0.10, 0.28, 0.96)
-            self._bg = RoundedRectangle(radius=[dp(17)])
-            Color(altin2[0], altin2[1], altin2[2], 0.22)
-            self._parilti = RoundedRectangle(radius=[dp(17)])
-            Color(altin[0], altin[1], altin[2], 0.75)
-            self._kenar = Line(width=dp(1.4), rounded_rectangle=(0, 0, 0, 0, dp(17)))
+            Color(0, 0, 0, 0.40)
+            self._golge = RoundedRectangle(radius=[dp(18)])
+            Color(0.12, 0.08, 0.24, 0.96)
+            self._bg = RoundedRectangle(radius=[dp(18)])
+            Color(altin2[0], altin2[1], altin2[2], 0.20)
+            self._parilti = RoundedRectangle(radius=[dp(18)])
+            Color(altin[0], altin[1], altin[2], 0.80)
+            self._kenar = Line(width=dp(1.2), rounded_rectangle=(0, 0, 0, 0, dp(18)))
         with self.canvas.after:
-            Color(altin[0], altin[1], altin[2], 0.18)
-            self._isik = Line(width=dp(0.8), rounded_rectangle=(0, 0, 0, 0, dp(17)))
+            Color(altin[0], altin[1], altin[2], 0.20)
+            self._isik = Line(width=dp(0.8), rounded_rectangle=(0, 0, 0, 0, dp(18)))
 
-        # Dokunma alanı geniş; görsel rozet sağda, çerçeve ile hizalı
-        self.add_widget(Widget(size_hint_x=1))
-
-        self._rozet = BoxLayout(
-            orientation='horizontal',
-            size_hint=(None, None),
-            size=(COIN_CHIP_EN, COIN_CHIP_YUK),
-            padding=[dp(8), dp(5), dp(12), dp(5)],
-            spacing=dp(4),
-        )
         ikon_kutu = AnchorLayout(
-            size_hint_x=None, width=dp(28),
+            size_hint_x=None, width=dp(26),
             anchor_x='center', anchor_y='center',
         )
-        ikon_kutu.add_widget(_coin_ikon_widget(boyut=dp(24)))
-        self._rozet.add_widget(ikon_kutu)
+        ikon_kutu.add_widget(_coin_ikon_widget(boyut=dp(22)))
+        self.add_widget(ikon_kutu)
 
         self._sayi = metin_label(
-            '0', font_size='16sp', bold=True, color=RENKLER['altin_parlak'],
+            '0', font_size='15sp', bold=True, color=RENKLER['altin_parlak'],
             halign='left', valign='middle',
-            size_hint_x=None, width=dp(40),
+            size_hint_x=None, width=dp(48),
             shorten=True,
         )
-        self._rozet.add_widget(self._sayi)
-        self.add_widget(self._rozet)
+        self.add_widget(self._sayi)
 
-        self._rozet.bind(pos=self._ciz, size=self._ciz)
         self.bind(pos=self._ciz, size=self._ciz)
         Clock.schedule_once(lambda *_: self._ciz(), 0)
 
@@ -96,11 +86,11 @@ class CoinChip(ButtonBehavior, BoxLayout):
         Clock.schedule_once(lambda *_: self.guncelle(), 0)
 
     def _ciz(self, *_):
-        vx, vy = self._rozet.pos
-        vw, vh = self._rozet.size
+        vx, vy = self.pos
+        vw, vh = self.size
         if vw < 1 or vh < 1:
             return
-        r = dp(17)
+        r = dp(18)
         self._golge.pos = (vx + dp(1), vy - dp(2))
         self._golge.size = (vw - dp(2), vh)
         self._bg.pos = (vx, vy)
