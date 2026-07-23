@@ -14,7 +14,23 @@ from kivy.metrics import dp
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 ASSETS_DIR = os.path.join(BASE_DIR, 'assets')
-APP_SURUM = '1.8.8'
+
+
+def _surum_oku():
+    try:
+        spec_yolu = os.path.join(BASE_DIR, 'buildozer.spec')
+        if os.path.isfile(spec_yolu):
+            with open(spec_yolu, 'r', encoding='utf-8') as f:
+                for satir in f:
+                    satir = satir.strip()
+                    if satir.startswith('version ='):
+                        return satir.split('=')[1].strip()
+    except Exception:
+        pass
+    return '1.9.0'
+
+
+APP_SURUM = _surum_oku()
 
 # ============================================================
 #  PROFESYONEL RENK PALETİ
