@@ -217,10 +217,10 @@ def _android_mi():
 
 
 def _mobil_safe_alan_ayarla():
-    """Çentik ve gesture bar için Android safe area."""
+    """Çentik, damla kamera ve bildirim çubuğu için Android safe area."""
     global SAFE_UST, SAFE_ALT
     if _android_mi():
-        SAFE_UST = dp(32)
+        SAFE_UST = dp(46)
         SAFE_ALT = dp(24)
 
 
