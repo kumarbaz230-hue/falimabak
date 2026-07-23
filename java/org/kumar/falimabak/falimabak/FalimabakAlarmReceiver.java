@@ -236,26 +236,19 @@ public class FalimabakAlarmReceiver extends BroadcastReceiver {
         PendingIntent alarmPi = PendingIntent.getBroadcast(context, ALARM_REQUEST, next, flags);
         long trigger = System.currentTimeMillis() + delayMs;
 
-        Intent show = new Intent(context, PythonActivity.class);
-        show.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
-        PendingIntent showPi = PendingIntent.getActivity(context, ALARM_REQUEST + 100, show, flags);
-
         try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                AlarmManager.AlarmClockInfo info =
-                    new AlarmManager.AlarmClockInfo(trigger, showPi);
-                am.setAlarmClock(info, alarmPi);
-            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, trigger, alarmPi);
-            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
-                am.setExact(AlarmManager.RTC_WAKEUP, trigger, alarmPi);
+            // Play Console politikası ile %100 uyumlu inexact alarm zamanlaması.
+            // Android 12+ dahil hiçbir cihazda SCHEDULE_EXACT_ALARM izni gerektirmez.
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
+                long windowMs = 15L * 60L * 1000L;
+                am.setWindow(AlarmManager.RTC_WAKEUP, trigger, windowMs, alarmPi);
             } else {
                 am.set(AlarmManager.RTC_WAKEUP, trigger, alarmPi);
             }
-        } catch (SecurityException e) {
+        } catch (Throwable e) {
             try {
-                am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, trigger, alarmPi);
-            } catch (Exception ignored) {
+                am.set(AlarmManager.RTC_WAKEUP, trigger, alarmPi);
+            } catch (Throwable ignored) {
             }
         }
     }

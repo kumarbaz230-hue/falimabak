@@ -14,6 +14,7 @@ _STRIP = (
     'android.permission.ACCESS_MEDIA_LOCATION',
     'android.permission.MANAGE_EXTERNAL_STORAGE',
     'android.permission.USE_EXACT_ALARM',
+    'android.permission.SCHEDULE_EXACT_ALARM',
 )
 
 

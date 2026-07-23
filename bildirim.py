@@ -174,35 +174,11 @@ def bildirim_ayarlari_ac():
 
 
 def tam_alarm_izni_var_mi():
-    if not _android_mi():
-        return True
-    try:
-        from android import api_version
-        if api_version.API_VERSION < 31:
-            return True
-        context = _context()
-        am = context.getSystemService('alarm')
-        return am.canScheduleExactAlarms()
-    except Exception:
-        return True
+    return True
 
 
 def tam_alarm_ayarlarini_ac():
-    if not _android_mi() or tam_alarm_izni_var_mi():
-        return
-    try:
-        from jnius import autoclass
-        PythonActivity = autoclass('org.kivy.android.PythonActivity')
-        Intent = autoclass('android.content.Intent')
-        Settings = autoclass('android.provider.Settings')
-        activity = PythonActivity.mActivity
-        intent = Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM)
-        intent.setData(
-            autoclass('android.net.Uri').parse(f'package:{activity.getPackageName()}')
-        )
-        activity.startActivity(intent)
-    except Exception as e:
-        print(f'Tam alarm ayarı: {e}', flush=True)
+    pass
 
 
 def pil_kisitlamasi_var_mi():
