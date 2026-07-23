@@ -11,7 +11,7 @@ echo   Eksik resim uyarilari asagida gorunur
 echo ========================================
 echo.
 
-py -3 -u main.py
+py -3.11 -u main.py
 
 echo.
 echo Uygulama kapandi. Yukaridaki ciktiyi kontrol et.

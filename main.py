@@ -76,26 +76,25 @@ class DashboardKart(ButtonBehavior, BoxLayout):
 
         super().__init__(orientation='horizontal', **kwargs)
         self.hedef = hedef
-        kart_bg = KART_MENU_AR.get(ikon_anahtar, RENKLER['kart_arka'])
         self.size_hint_y = None
         self.height = dp(84)
-        self.padding = [dp(12), dp(10), dp(12), dp(10)]
-        self.spacing = dp(10)
+        self.padding = [dp(14), dp(10), dp(14), dp(10)]
+        self.spacing = dp(12)
 
-        bg = get_color_from_hex(kart_bg)
+        bg = get_color_from_hex('#1A1435')
         stripe = get_color_from_hex(renk)
         gold = get_color_from_hex(RENKLER['altin'])
 
         with self.canvas.before:
-            Color(0, 0, 0, 0.32)
-            self._golge = RoundedRectangle(radius=[dp(12)])
-            Color(bg[0], bg[1], bg[2], 1)
-            self._bg = RoundedRectangle(radius=[dp(12)])
+            Color(0, 0, 0, 0.38)
+            self._golge = RoundedRectangle(radius=[dp(14)])
+            Color(bg[0], bg[1], bg[2], 0.98)
+            self._bg = RoundedRectangle(radius=[dp(14)])
             Color(stripe[0], stripe[1], stripe[2], 1)
             self._serit = RoundedRectangle(radius=[dp(2)])
 
         with self.canvas.after:
-            Color(gold[0], gold[1], gold[2], 0.28)
+            Color(gold[0], gold[1], gold[2], 0.22)
             self._kenar = Line(width=dp(1))
 
         self.bind(pos=self._kart_ciz, size=self._kart_ciz)
@@ -103,7 +102,7 @@ class DashboardKart(ButtonBehavior, BoxLayout):
 
         ikon_kutu = AnchorLayout(
             size_hint=(None, 1),
-            width=dp(50),
+            width=dp(48),
             anchor_x='center',
             anchor_y='center',
         )
@@ -135,15 +134,15 @@ class DashboardKart(ButtonBehavior, BoxLayout):
 
         ok_kutu = AnchorLayout(
             size_hint=(None, 1),
-            width=dp(26),
+            width=dp(24),
             anchor_x='center',
             anchor_y='center',
         )
         ok_kutu.add_widget(metin_label(
-            '>', font_size='20sp', bold=True, color=RENKLER['altin'],
+            '›', font_size='22sp', bold=True, color=RENKLER['altin'],
             halign='center', valign='middle',
             size_hint=(None, None),
-            size=(dp(22), dp(28)),
+            size=(dp(20), dp(28)),
         ))
         self.add_widget(ok_kutu)
 
@@ -152,13 +151,13 @@ class DashboardKart(ButtonBehavior, BoxLayout):
         w, h = self.size
         if w < 1 or h < 1:
             return
-        r = dp(12)
+        r = dp(14)
         self._golge.pos = (x + dp(2), y - dp(2))
         self._golge.size = (w - dp(4), h)
         self._bg.pos = (x, y)
         self._bg.size = (w, h)
-        self._serit.pos = (x + dp(4), y + dp(8))
-        self._serit.size = (dp(4), max(h - dp(16), dp(12)))
+        self._serit.pos = (x + dp(4), y + dp(9))
+        self._serit.size = (dp(4), max(h - dp(18), dp(12)))
         self._kenar.rounded_rectangle = (x, y, w, h, r)
 
     def on_press(self):
@@ -184,11 +183,16 @@ class GunlukFalKarti(ButtonBehavior, BoxLayout):
         self.spacing = dp(10)
         self._gunluk = gunluk_fal()
 
+        gold = get_color_from_hex(RENKLER['altin'])
         with self.canvas.before:
             Color(*get_color_from_hex('#1A1238'))
             self._bg = RoundedRectangle(radius=[dp(14)])
             Color(*get_color_from_hex(RENKLER['altin']))
             self._serit = RoundedRectangle(radius=[dp(2)])
+
+        with self.canvas.after:
+            Color(gold[0], gold[1], gold[2], 0.22)
+            self._kenar = Line(width=dp(1))
 
         self.bind(pos=self._cizim, size=self._cizim)
         Clock.schedule_once(lambda *_: self._cizim(), 0)
@@ -226,10 +230,12 @@ class GunlukFalKarti(ButtonBehavior, BoxLayout):
     def _cizim(self, *_):
         x, y = self.pos
         w, h = self.size
+        r = dp(14)
         self._bg.pos = (x, y)
         self._bg.size = (w, h)
         self._serit.pos = (x + dp(4), y + dp(8))
         self._serit.size = (dp(4), max(h - dp(16), dp(8)))
+        self._kenar.rounded_rectangle = (x, y, w, h, r)
 
     def on_release(self):
         app = App.get_running_app()
@@ -249,11 +255,16 @@ class SansKurabiyesiKarti(ButtonBehavior, BoxLayout):
         self.padding = [dp(14), dp(10), dp(14), dp(10)]
         self.spacing = dp(12)
 
+        gold = get_color_from_hex(RENKLER['altin'])
         with self.canvas.before:
             Color(*get_color_from_hex('#1A1238'))
-            self._bg = RoundedRectangle(radius=[dp(16)])
+            self._bg = RoundedRectangle(radius=[dp(14)])
             Color(*get_color_from_hex(RENKLER['altin']))
             self._serit = RoundedRectangle(radius=[dp(2)])
+
+        with self.canvas.after:
+            Color(gold[0], gold[1], gold[2], 0.22)
+            self._kenar = Line(width=dp(1))
 
         self.bind(pos=self._cizim, size=self._cizim)
         Clock.schedule_once(lambda *_: self._cizim(), 0)
@@ -297,10 +308,12 @@ class SansKurabiyesiKarti(ButtonBehavior, BoxLayout):
         w, h = self.size
         if w < 1 or h < 1:
             return
+        r = dp(14)
         self._bg.pos = (x, y)
         self._bg.size = (w, h)
         self._serit.pos = (x + dp(4), y + dp(10))
         self._serit.size = (dp(4), max(h - dp(20), dp(12)))
+        self._kenar.rounded_rectangle = (x, y, w, h, r)
 
     def yenile(self):
         from dil import t
