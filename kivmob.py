@@ -21,11 +21,15 @@ if platform == 'android':
         View = autoclass('android.view.View')
 
         try:
-            InterstitialAd = autoclass('com.google.android.gms.ads.InterstitialAd')
+            InterstitialAd = autoclass('com.google.android.gms.ads.interstitial.InterstitialAd')
             _INTERSTITIAL_OK = True
         except Exception:
-            InterstitialAd = None
-            _INTERSTITIAL_OK = False
+            try:
+                InterstitialAd = autoclass('com.google.android.gms.ads.InterstitialAd')
+                _INTERSTITIAL_OK = True
+            except Exception:
+                InterstitialAd = None
+                _INTERSTITIAL_OK = False
 
         try:
             RewardedAd = autoclass('com.google.android.gms.ads.rewarded.RewardedAd')
@@ -40,6 +44,8 @@ if platform == 'android':
                 self._loaded = False
                 self._activity = PythonActivity.mActivity
                 self._interstitial = None
+                self._interstitial_loaded = False
+                self._interstitial_unit_id = ''
                 self._rewarded = None
                 self._rewarded_loaded = False
                 self._rewarded_unit_id = ''
@@ -90,64 +96,162 @@ if platform == 'android':
 
             @run_on_ui_thread
             def new_interstitial(self, unitID):
-                if not _INTERSTITIAL_OK:
-                    return
-                self._interstitial = InterstitialAd(self._activity)
-                self._interstitial.setAdUnitId(unitID)
+                self._interstitial_unit_id = unitID or ''
+                self._interstitial = None
+                self._interstitial_loaded = False
 
-            @run_on_ui_thread
-            def request_interstitial(self, options=None):
-                if self._interstitial is None:
-                    return
-                self._interstitial.loadAd(self._get_builder(options).build())
+            def is_interstitial_loaded(self):
+                if hasattr(self, '_interstitial_unit_id') and self._interstitial_unit_id:
+                    return bool(self._interstitial_loaded and self._interstitial)
+                self._is_interstitial_loaded()
+                return self._loaded
 
             @run_on_ui_thread
             def _is_interstitial_loaded(self):
                 if self._interstitial is None:
                     self._loaded = False
                     return
-                self._loaded = self._interstitial.isLoaded()
+                try:
+                    self._loaded = self._interstitial.isLoaded()
+                except Exception:
+                    self._loaded = bool(self._interstitial_loaded and self._interstitial)
 
-            def is_interstitial_loaded(self):
-                self._is_interstitial_loaded()
-                return self._loaded
+            @run_on_ui_thread
+            def request_interstitial(self, options=None):
+                if not _INTERSTITIAL_OK or not self._interstitial_unit_id:
+                    self._interstitial_loaded = False
+                    return
+                from jnius import PythonJavaClass, java_method
+                bridge = self
+                request = self._get_builder(options).build()
+
+                try:
+                    class _InterLoadCb(PythonJavaClass):
+                        __javaclasses__ = ['com/google/android/gms/ads/interstitial/InterstitialAdLoadCallback']
+
+                        @java_method('(Lcom/google/android/gms/ads/interstitial/InterstitialAd;)V')
+                        def onAdLoaded(self, ad):
+                            bridge._interstitial = ad
+                            bridge._interstitial_loaded = True
+                            print('Interstitial reklam yüklendi', flush=True)
+
+                        @java_method('(Lcom/google/android/gms/ads/LoadAdError;)V')
+                        def onAdFailedToLoad(self, error):
+                            bridge._interstitial = None
+                            bridge._interstitial_loaded = False
+                            try:
+                                print(f'Interstitial reklam yüklenemedi: {error.getMessage()}', flush=True)
+                            except Exception:
+                                print('Interstitial reklam yüklenemedi', flush=True)
+
+                    self._interstitial = None
+                    self._interstitial_loaded = False
+                    InterstitialAd.load(
+                        self._activity,
+                        self._interstitial_unit_id,
+                        request,
+                        _InterLoadCb(),
+                    )
+                except Exception as e:
+                    Logger.error(f'KivMob request_interstitial: {e}')
+                    try:
+                        old_inst = InterstitialAd(self._activity)
+                        old_inst.setAdUnitId(self._interstitial_unit_id)
+                        old_inst.loadAd(request)
+                        self._interstitial = old_inst
+                    except Exception:
+                        pass
 
             @run_on_ui_thread
             def show_interstitial(self):
-                if self._interstitial is not None and self.is_interstitial_loaded():
-                    self._interstitial.show()
+                if self._interstitial is not None:
+                    try:
+                        self._interstitial.show(self._activity)
+                        self._interstitial_loaded = False
+                        self._interstitial = None
+                    except Exception:
+                        try:
+                            self._interstitial.show()
+                            self._interstitial_loaded = False
+                            self._interstitial = None
+                        except Exception as e:
+                            Logger.error(f'KivMob show_interstitial: {e}')
 
             @run_on_ui_thread
             def show_interstitial_callback(self, py_callback):
                 from jnius import PythonJavaClass, java_method
                 from kivy.clock import Clock
 
-                if self._interstitial is None or not self.is_interstitial_loaded():
+                if not self.is_interstitial_loaded():
                     Clock.schedule_once(lambda *_: py_callback(False), 0)
                     return
 
-                AdListener = autoclass('com.google.android.gms.ads.AdListener')
                 bridge = self
+                fired = [False]
 
-                class _CloseListener(PythonJavaClass):
-                    __javaclasses__ = ['com/google/android/gms/ads/AdListener']
+                def _once(ok):
+                    if fired[0]:
+                        return
+                    fired[0] = True
+                    py_callback(ok)
 
-                    @java_method('()V')
-                    def onAdClosed(self):
-                        Clock.schedule_once(lambda *_: py_callback(True), 0)
-                        try:
-                            bridge.request_interstitial()
-                        except Exception:
-                            pass
+                try:
+                    class _InterFullScreenCb(PythonJavaClass):
+                        __javaclasses__ = ['com/google/android/gms/ads/FullScreenContentCallback']
 
-                    @java_method('(I)V')
-                    def onAdFailedToLoad(self, error_code):
-                        Clock.schedule_once(lambda *_: py_callback(False), 0)
+                        @java_method('()V')
+                        def onAdDismissedFullScreenContent(self):
+                            Clock.schedule_once(lambda *_: _once(True), 0)
+                            bridge._interstitial = None
+                            bridge._interstitial_loaded = False
+                            try:
+                                bridge.request_interstitial()
+                            except Exception:
+                                pass
 
-                listener = _CloseListener()
-                bridge._close_listener = listener
-                bridge._interstitial.setAdListener(listener)
-                bridge._interstitial.show()
+                        @java_method('(Lcom/google/android/gms/ads/AdError;)V')
+                        def onAdFailedToShowFullScreenContent(self, ad_error):
+                            Clock.schedule_once(lambda *_: _once(False), 0)
+                            bridge._interstitial = None
+                            bridge._interstitial_loaded = False
+                            try:
+                                bridge.request_interstitial()
+                            except Exception:
+                                pass
+
+                    ad = bridge._interstitial
+                    bridge._interstitial_loaded = False
+                    bridge._interstitial = None
+                    ad.setFullScreenContentCallback(_InterFullScreenCb())
+                    ad.show(bridge._activity)
+                    return
+                except Exception as e:
+                    Logger.error(f'KivMob show_interstitial_callback modern error: {e}')
+
+                try:
+                    AdListener = autoclass('com.google.android.gms.ads.AdListener')
+                    class _CloseListener(PythonJavaClass):
+                        __javaclasses__ = ['com/google/android/gms/ads/AdListener']
+
+                        @java_method('()V')
+                        def onAdClosed(self):
+                            Clock.schedule_once(lambda *_: py_callback(True), 0)
+                            try:
+                                bridge.request_interstitial()
+                            except Exception:
+                                pass
+
+                        @java_method('(I)V')
+                        def onAdFailedToLoad(self, error_code):
+                            Clock.schedule_once(lambda *_: py_callback(False), 0)
+
+                    listener = _CloseListener()
+                    bridge._close_listener = listener
+                    bridge._interstitial.setAdListener(listener)
+                    bridge._interstitial.show()
+                except Exception as e:
+                    Logger.error(f'KivMob show_interstitial_callback legacy error: {e}')
+                    Clock.schedule_once(lambda *_: py_callback(False), 0)
 
             @run_on_ui_thread
             def new_rewarded(self, unitID):
