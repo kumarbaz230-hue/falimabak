@@ -60,10 +60,7 @@ def _magaza_sayfasi_ac():
 
 
 def magaza_degerlendir():
-    """Önce uygulama içi değerlendirme; olmazsa Play Store sayfası."""
-    if _android_mi():
-        if _in_app_review_dene():
-            return True
+    """Harici Play Store uygulamasını / web sayfasını doğrudan aç."""
     return _magaza_sayfasi_ac()
 
 
