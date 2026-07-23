@@ -695,24 +695,22 @@ class Anasayfa(Screen):
 
     def _kur(self):
         from dil import t
-        from coin_ui import CoinChip
-        from theme import png_ikon_widget
+        from theme import png_ikon_widget, COIN_SAG_BOSLUK
 
         ana = BoxLayout(
             orientation='vertical',
-            padding=[dp(12), SAFE_UST + dp(6), dp(12), 0],
+            padding=[dp(12), SAFE_UST + dp(4), dp(12), 0],
             spacing=dp(8),
         )
 
         ust_bar = BoxLayout(
             orientation='horizontal',
             size_hint_y=None,
-            height=dp(42),
+            height=dp(38),
             padding=[dp(2), 0, dp(2), 0],
-            spacing=dp(8),
         )
         brand = BoxLayout(orientation='horizontal', size_hint_x=1, spacing=dp(8))
-        app_icon = png_ikon_widget('app_icon.png', boyut=dp(32))
+        app_icon = png_ikon_widget('app_icon.png', boyut=dp(30))
         if app_icon:
             brand.add_widget(app_icon)
         brand.add_widget(metin_label(
@@ -721,7 +719,7 @@ class Anasayfa(Screen):
             halign='left', valign='middle',
         ))
         ust_bar.add_widget(brand)
-        ust_bar.add_widget(CoinChip())
+        ust_bar.add_widget(BoxLayout(size_hint_x=None, width=COIN_SAG_BOSLUK))
         ana.add_widget(ust_bar)
 
         self._kurabiye = SansKurabiyesiKarti()
@@ -735,16 +733,15 @@ class Anasayfa(Screen):
             padding=[dp(4), 0, dp(4), 0],
         )
         baslik_kutu.add_widget(metin_label(
-            '───   ✦   FALLARINIZ   ✦   ───',
-            font_size='12sp', bold=True, color=RENKLER['altin_parlak'],
+            '—  FALLARINIZ  —',
+            font_size='13sp', bold=True, color=RENKLER['altin_parlak'],
             halign='center', valign='middle',
         ))
         ana.add_widget(baslik_kutu)
 
         menu_wrap = BoxLayout(orientation='vertical', size_hint_y=1)
-        gorsel_arkaplan_ekle(menu_wrap, 'menu_bg.png', opak=0.88)
         menu_kaydir = ScrollView(size_hint_y=1, do_scroll_x=False, bar_width=dp(3))
-        menu = BoxLayout(orientation='vertical', spacing=dp(10), size_hint_y=None, padding=[dp(4), dp(6), dp(4), dp(8)])
+        menu = BoxLayout(orientation='vertical', spacing=dp(10), size_hint_y=None, padding=[dp(4), dp(4), dp(4), dp(8)])
         menu.bind(minimum_height=menu.setter('height'))
         for baslik, aciklama, ikon, renk, hedef in [
             (t('menu_tarot'), t('menu_tarot_desc'), 'tarot', RENKLER['mor'], 'tarot'),
