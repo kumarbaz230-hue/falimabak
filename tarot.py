@@ -640,14 +640,15 @@ class TarotScreen(Screen):
             y += f"[color={c}]({durum})[/color]\n[color={RENKLER['gri_acik']}]{a}[/color]\n\n"
 
         y += f"[color={RENKLER['altin']}]💫 Kart Mesajı:[/color]\n"
-        y += f"[color={RENKLER['pembe_acik']}]{random.choice([
+        mesaj = random.choice([
             'Hayatınızda önemli değişimlerin eşiğindesiniz. Sezgilerinize güvenin.',
             'Geçmişi bırakın, gelecek size gülümsüyor.',
             'Aşk ve para sizi bekliyor.',
             'İç sesinizi dinleyin.',
             'Kariyerinizde büyük bir sıçrama yapmaya hazır olun!',
             'Evren size işaretler gönderiyor.',
-        ])}[/color]\n\n"
+        ])
+        y += f"[color={RENKLER['pembe_acik']}]{mesaj}[/color]\n\n"
         y += f"[color={RENKLER['gri']}]📚 Siz {self.kart_adet} kart seçtiniz[/color]"
         self.yorum_label.markup = True
         self.yorum_label.text = y
