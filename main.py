@@ -10,9 +10,14 @@ import traceback
 os.environ['KIVY_ORIENTATION'] = 'portrait'
 
 from kivy.config import Config
+from kivy.utils import platform as kivy_platform
 
+# Python-for-Android normally exposes ANDROID_ARGUMENT, but that variable is
+# not guaranteed on every bootstrap/device. Kivy's platform value is the
+# authoritative check; keep the environment checks for older bootstraps.
 _ANDROID = (
-    'ANDROID_ARGUMENT' in os.environ
+    kivy_platform == 'android'
+    or 'ANDROID_ARGUMENT' in os.environ
     or 'ANDROID_ROOT' in os.environ
     or 'ANDROID_BOOTLOGO' in os.environ
 )

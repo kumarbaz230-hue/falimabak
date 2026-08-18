@@ -9,6 +9,7 @@ import traceback
 
 from kivy.clock import Clock
 from kivy.metrics import dp
+from kivy.utils import platform as kivy_platform
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 SECRETS_YOLU = os.path.join(BASE_DIR, 'secrets.json')
@@ -32,8 +33,11 @@ _deneme = 0
 
 
 def _android_mi():
+    # ANDROID_ARGUMENT is absent with some python-for-android bootstraps.
+    # Kivy's platform value is reliable once the app has started.
     return (
-        'ANDROID_ARGUMENT' in os.environ
+        kivy_platform == 'android'
+        or 'ANDROID_ARGUMENT' in os.environ
         or 'ANDROID_ROOT' in os.environ
         or 'ANDROID_BOOTLOGO' in os.environ
     )
@@ -41,18 +45,19 @@ def _android_mi():
 
 def _reklam_ayar():
     veri = dict(_VARSAYILAN_ADMOB)
-    yollar = [
-        os.path.join(BASE_DIR, 'config.ornek.json'),
-        SECRETS_YOLU,
-    ]
+    # Defaults first; runtime/user configuration and secrets must override
+    # them. The old order loaded config.json first and then overwrote it with
+    # config.ornek.json, making a valid runtime AdMob configuration ineffective.
+    yollar = [os.path.join(BASE_DIR, 'config.ornek.json')]
     if _android_mi():
         try:
             from kivy.app import App
             app = App.get_running_app()
             if app and app.user_data_dir:
-                yollar.insert(0, os.path.join(app.user_data_dir, 'config.json'))
+                yollar.append(os.path.join(app.user_data_dir, 'config.json'))
         except Exception:
             pass
+    yollar.append(SECRETS_YOLU)
     for yol in yollar:
         if yol and os.path.isfile(yol):
             try:
@@ -63,8 +68,21 @@ def _reklam_ayar():
 
     from kivmob import TestIds
 
-    def _gecerli(unit_id):
-        return unit_id and 'XXXX' not in unit_id and unit_id.startswith('ca-app-pub-')
+    def _gecerli_app_id(app_id):
+        return (
+            app_id
+            and 'XXXX' not in app_id
+            and app_id.startswith('ca-app-pub-')
+            and '~' in app_id
+        )
+
+    def _gecerli_unit_id(unit_id):
+        return (
+            unit_id
+            and 'XXXX' not in unit_id
+            and unit_id.startswith('ca-app-pub-')
+            and '/' in unit_id
+        )
 
     test_mod = bool(veri.get('admob_test_mod', False))
 
@@ -83,13 +101,17 @@ def _reklam_ayar():
     inter_id = veri.get('admob_interstitial_id', '').strip()
     rewarded_id = veri.get('admob_rewarded_id', '').strip()
 
-    if not _gecerli(app_id):
+    if not _gecerli_app_id(app_id):
+        print('AdMob app ID geçersiz; test app ID kullanılacak', flush=True)
         app_id = TestIds.APP
-    if not _gecerli(banner_id):
+    if not _gecerli_unit_id(banner_id):
+        print('AdMob banner ID geçersiz; test banner ID kullanılacak', flush=True)
         banner_id = TestIds.BANNER
-    if not _gecerli(inter_id):
+    if not _gecerli_unit_id(inter_id):
+        print('AdMob interstitial ID geçersiz; test interstitial ID kullanılacak', flush=True)
         inter_id = TestIds.INTERSTITIAL
-    if not _gecerli(rewarded_id):
+    if not _gecerli_unit_id(rewarded_id):
+        print('AdMob rewarded ID geçersiz; test rewarded ID kullanılacak', flush=True)
         rewarded_id = TestIds.REWARDED
 
     return {
@@ -133,7 +155,11 @@ def reklam_hazirla():
         return
     if _baslati:
         return
-    if _deneme >= 3:
+    # A first call can race the Activity/Java bridge during cold start. Keep
+    # trying for a few seconds instead of permanently disabling ads after
+    # three early exceptions.
+    if _deneme >= 10:
+        print('AdMob başlatma denemeleri tükendi', flush=True)
         return
     _deneme += 1
 
@@ -141,7 +167,13 @@ def reklam_hazirla():
         from kivmob import KivMob
         ayar = _reklam_ayar()
         mod = 'test' if ayar.get('test_mod') else 'canli'
-        print(f"Reklam başlatılıyor ({mod}): app={ayar['app_id'][:24]}...", flush=True)
+        print(
+            f"Reklam başlatılıyor ({mod}): "
+            f"app={ayar['app_id']}, banner={ayar['banner_id']}, "
+            f"interstitial={ayar['interstitial_id']}, "
+            f"rewarded={ayar['rewarded_id']}",
+            flush=True,
+        )
         _ads = KivMob(ayar['app_id'])
         _ads.new_banner(ayar['banner_id'], top_pos=False)
         _ads.request_banner()
@@ -164,6 +196,8 @@ def reklam_hazirla():
     except Exception:
         print(f'Reklam hatası: {traceback.format_exc()}', flush=True)
         _baslati = False
+        if _deneme < 10:
+            Clock.schedule_once(lambda *_: reklam_hazirla(), 2.0)
 
 
 def _banner_goster():
