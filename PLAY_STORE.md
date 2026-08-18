@@ -88,7 +88,7 @@ $env:P4A_RELEASE_KEYALIAS_PASSWD = "sifren"
 buildozer android release
 ```
 
-Çıktı: `bin/falimabak-1.1.0-arm64-v8a_armeabi-v7a-release.aab`
+Çıktı: `bin/falimabak-1.9.1-arm64-v8a_armeabi-v7a-release.aab`
 
 ---
 
@@ -149,9 +149,32 @@ Mevcut uygulama ekranından screenshot al veya `tools/generate_store_assets.py` 
 
 ---
 
+## 8. Reklam gelmiyorsa teşhis
+
+AdMob panelindeki **"Hazır"** durumu tek başına cihazın reklam isteği gönderdiğini göstermez. Önce yeni oluşturulan AAB/APK'yı gerçekten telefona kurup test edin; Play Store'daki eski sürümdeki kod değişiklikleri otomatik olarak çalışmaz.
+
+1. Geçici bir test build'inde `config.ornek.json` içindeki `admob_test_mod` değerini `true` yapın. Google'ın test banner'ı bile görünmüyorsa sorun canlı reklam doluluğu değil, manifest/SDK/Android bridge tarafındadır. Test reklamlarına tıklamayın.
+2. Telefonda logcat'te şu mesajları arayın:
+   - `AdMob SDK başlatıldı`
+   - `Banner reklam isteği gönderildi`
+   - `Banner reklam yüklendi`
+   - veya `Banner reklam yüklenemedi: kod / alan / mesaj`
+3. `3` genellikle **no fill**, `2` ağ, `1` geçersiz istek, `0` dahili hata anlamına gelir. No fill durumunda interneti, ülkeyi, reklam biriminin etkinliğini ve AdMob Policy Center'daki reklam sunma kısıtlarını kontrol edin.
+4. AdMob → **Raporlar** bölümünde önce **Ad requests** değerine bakın. İstek sayısı sıfırsa kod/manifest/uygulama sürümü; istek var ama gösterim sıfırsa birim, no-fill veya politika sorunudur.
+5. `app-ads.txt` adresi tarayıcıda doğrudan yalnızca tek satır düz metin döndürmeli ve Play Console'daki geliştirici web sitesi alanı bu alan adıyla aynı olmalıdır. AdMob doğrulaması birkaç gün sürebilir.
+
+Log almak için USB hata ayıklama açık cihazda:
+
+```bash
+adb logcat -c
+adb logcat -v time | grep -iE "AdMob|Ads|Banner reklam|Interstitial|Ödüllü"
+```
+
+---
+
 ## Paket bilgisi
 
 - **Application ID:** `org.kumar.falimabak.falimabak`
-- **Sürüm:** 1.1.0
+- **Sürüm:** 1.9.1
 - **Min SDK:** 24 (Android 7.0)
-- **Target SDK:** 34
+- **Target SDK:** 36

@@ -16,7 +16,8 @@ if platform == 'android':
         AdView = autoclass('com.google.android.gms.ads.AdView')
         Gravity = autoclass('android.view.Gravity')
         LayoutParams = autoclass('android.view.ViewGroup$LayoutParams')
-        LinearLayout = autoclass('android.widget.LinearLayout')
+        FrameLayout = autoclass('android.widget.FrameLayout')
+        FrameLayoutParams = autoclass('android.widget.FrameLayout$LayoutParams')
         MobileAds = autoclass('com.google.android.gms.ads.MobileAds')
         View = autoclass('android.view.View')
 
@@ -43,21 +44,79 @@ if platform == 'android':
             def __init__(self, appID):
                 self._loaded = False
                 self._activity = PythonActivity.mActivity
+                self._app_id = appID or ''
+                self._initialized = False
+                self._init_listener = None
+                self._banner_pending = False
+                self._interstitial_pending = False
+                self._rewarded_pending = False
+                self._banner_container = None
+                self._banner_requested = False
+                self._banner_loaded = False
+                self._banner_listener = None
+                self._banner_retry_delay = 15.0
                 self._interstitial = None
                 self._interstitial_loaded = False
                 self._interstitial_unit_id = ''
+                self._inter_load_cb = None
+                self._inter_fullscreen_cb = None
                 self._rewarded = None
                 self._rewarded_loaded = False
                 self._rewarded_unit_id = ''
+                self._reward_load_cb = None
+                self._reward_cb = None
+                self._reward_fullscreen_cb = None
                 self._test_devices = []
-                try:
-                    MobileAds.initialize(self._activity)
-                except Exception:
-                    try:
-                        MobileAds.initialize(self._activity, appID)
-                    except Exception as e:
-                        Logger.error(f'KivMob MobileAds: {e}')
                 self._adview = AdView(self._activity)
+
+                # Loading before the SDK finishes initialization is a common
+                # source of silent failures with a Python/Java bridge. Queue
+                # requests until Google's completion callback fires.
+                bridge = self
+                try:
+                    from jnius import PythonJavaClass, java_method
+
+                    class _InitCb(PythonJavaClass):
+                        __javainterfaces__ = [
+                            'com/google/android/gms/ads/initialization/'
+                            'OnInitializationCompleteListener'
+                        ]
+
+                        @java_method(
+                            '(Lcom/google/android/gms/ads/initialization/'
+                            'InitializationStatus;)V'
+                        )
+                        def onInitializationComplete(self, status):
+                            bridge._initialized = True
+                            print('AdMob SDK başlatıldı', flush=True)
+                            if bridge._banner_pending:
+                                bridge._banner_pending = False
+                                bridge.request_banner()
+                            if bridge._interstitial_pending:
+                                bridge._interstitial_pending = False
+                                bridge.request_interstitial()
+                            if bridge._rewarded_pending:
+                                bridge._rewarded_pending = False
+                                bridge.request_rewarded()
+
+                    self._init_listener = _InitCb()
+                    MobileAds.initialize(self._activity, self._init_listener)
+                    # The SDK queues loadAd calls internally while the
+                    # adapters finish. Do not make ad delivery depend on a
+                    # Python callback being dispatched successfully.
+                    self._initialized = True
+                    print('AdMob SDK başlatma isteği gönderildi', flush=True)
+                except Exception as e:
+                    # The one-argument overload is available in older GMA
+                    # versions. Requests are still accepted by the SDK, but
+                    # keep a clear log instead of failing silently.
+                    Logger.error(f'KivMob MobileAds initialize callback: {e}')
+                    try:
+                        MobileAds.initialize(self._activity)
+                        self._initialized = True
+                        print('AdMob SDK başlatıldı (callback yok)', flush=True)
+                    except Exception as init_error:
+                        Logger.error(f'KivMob MobileAds initialize: {init_error}')
 
             @run_on_ui_thread
             def add_test_device(self, testID):
@@ -65,34 +124,127 @@ if platform == 'android':
 
             @run_on_ui_thread
             def new_banner(self, unitID, top_pos=True):
+                from jnius import PythonJavaClass, java_method
+                from kivy.clock import Clock
+
+                bridge = self
+                self._banner_unit_id = unitID or ''
+                self._banner_requested = False
+                self._banner_loaded = False
                 self._adview = AdView(self._activity)
-                self._adview.setAdUnitId(unitID)
+                self._adview.setAdUnitId(self._banner_unit_id)
                 try:
                     self._adview.setAdSize(AdSize.BANNER)
                 except Exception:
+                    # SMART_BANNER was removed from newer SDKs, but this
+                    # fallback keeps the bridge compatible with old builds.
                     self._adview.setAdSize(AdSize.SMART_BANNER)
+
+                class _BannerListener(PythonJavaClass):
+                    __javaclasses__ = ['com/google/android/gms/ads/AdListener']
+
+                    @java_method('()V')
+                    def onAdLoaded(self):
+                        bridge._banner_loaded = True
+                        bridge._banner_retry_delay = 15.0
+                        print('Banner reklam yüklendi', flush=True)
+                        if bridge._banner_requested and bridge._banner_container:
+                            bridge._adview.setVisibility(View.VISIBLE)
+                            bridge._banner_container.setVisibility(View.VISIBLE)
+
+                    @java_method('(Lcom/google/android/gms/ads/LoadAdError;)V')
+                    def onAdFailedToLoad(self, error):
+                        bridge._banner_loaded = False
+                        if bridge._banner_container:
+                            bridge._banner_container.setVisibility(View.GONE)
+                        try:
+                            print(
+                                'Banner reklam yüklenemedi: '
+                                f'{error.getCode()} / {error.getDomain()} / '
+                                f'{error.getMessage()}',
+                                flush=True,
+                            )
+                        except Exception:
+                            print('Banner reklam yüklenemedi', flush=True)
+                        # No-fill/network failures are often temporary. Retry
+                        # with a small exponential backoff instead of making
+                        # a single request at app startup and giving up.
+                        delay = bridge._banner_retry_delay
+                        bridge._banner_retry_delay = min(delay * 2.0, 120.0)
+                        Clock.schedule_once(
+                            lambda *_: bridge.request_banner(), delay,
+                        )
+
+                # Keep the listener alive for the lifetime of AdView. A local
+                # PythonJavaClass can otherwise be garbage-collected before
+                # the asynchronous Google callback arrives.
+                self._banner_listener = _BannerListener()
+                self._adview.setAdListener(self._banner_listener)
+
                 self._adview.setVisibility(View.GONE)
-                ad_lp = LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT)
+                ad_lp = FrameLayoutParams(
+                    LayoutParams.MATCH_PARENT,
+                    LayoutParams.WRAP_CONTENT,
+                )
                 self._adview.setLayoutParams(ad_lp)
-                layout = LinearLayout(self._activity)
-                if not top_pos:
-                    layout.setGravity(Gravity.BOTTOM)
-                layout.addView(self._adview)
-                root_lp = LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT)
-                layout.setLayoutParams(root_lp)
-                self._activity.addContentView(layout, root_lp)
+
+                # Attach only a wrap-content banner at the edge of the
+                # activity. The old full-screen LinearLayout could sit above
+                # the Kivy surface and make the ad appear to be missing.
+                self._banner_container = FrameLayout(self._activity)
+                self._banner_container.setVisibility(View.GONE)
+                self._banner_container.addView(self._adview, ad_lp)
+                gravity = Gravity.TOP if top_pos else Gravity.BOTTOM
+                gravity |= Gravity.CENTER_HORIZONTAL
+                try:
+                    root_lp = FrameLayoutParams(
+                        LayoutParams.MATCH_PARENT,
+                        LayoutParams.WRAP_CONTENT,
+                        gravity,
+                    )
+                except Exception:
+                    root_lp = FrameLayoutParams(
+                        LayoutParams.MATCH_PARENT,
+                        LayoutParams.WRAP_CONTENT,
+                    )
+                    try:
+                        root_lp.gravity = gravity
+                    except Exception:
+                        pass
+                self._activity.addContentView(self._banner_container, root_lp)
 
             @run_on_ui_thread
             def request_banner(self, options=None):
-                self._adview.loadAd(self._get_builder(options).build())
+                self._banner_pending = True
+                if not self._initialized:
+                    print('Banner isteği: AdMob SDK başlatılması bekleniyor', flush=True)
+                    return
+                self._banner_pending = False
+                if not self._adview or not getattr(self, '_banner_unit_id', ''):
+                    print('Banner isteği: AdView veya reklam birimi yok', flush=True)
+                    return
+                try:
+                    self._adview.loadAd(self._get_builder(options).build())
+                    print('Banner reklam isteği gönderildi', flush=True)
+                except Exception as e:
+                    Logger.error(f'KivMob request_banner: {e}')
 
             @run_on_ui_thread
             def show_banner(self):
-                self._adview.setVisibility(View.VISIBLE)
+                self._banner_requested = True
+                if self._banner_container:
+                    # It is safe to make the container visible before the
+                    # async load callback; AdView stays empty until loaded.
+                    self._adview.setVisibility(View.VISIBLE)
+                    self._banner_container.setVisibility(View.VISIBLE)
 
             @run_on_ui_thread
             def hide_banner(self):
-                self._adview.setVisibility(View.GONE)
+                self._banner_requested = False
+                if self._adview:
+                    self._adview.setVisibility(View.GONE)
+                if self._banner_container:
+                    self._banner_container.setVisibility(View.GONE)
 
             @run_on_ui_thread
             def new_interstitial(self, unitID):
@@ -120,7 +272,13 @@ if platform == 'android':
             def request_interstitial(self, options=None):
                 if not _INTERSTITIAL_OK or not self._interstitial_unit_id:
                     self._interstitial_loaded = False
+                    print('Interstitial isteği atlandı: SDK veya reklam birimi yok', flush=True)
                     return
+                if not self._initialized:
+                    self._interstitial_pending = True
+                    print('Interstitial isteği: AdMob SDK başlatılması bekleniyor', flush=True)
+                    return
+                self._interstitial_pending = False
                 from jnius import PythonJavaClass, java_method
                 bridge = self
                 request = self._get_builder(options).build()
@@ -140,17 +298,25 @@ if platform == 'android':
                             bridge._interstitial = None
                             bridge._interstitial_loaded = False
                             try:
-                                print(f'Interstitial reklam yüklenemedi: {error.getMessage()}', flush=True)
+                                print(
+                                    'Interstitial reklam yüklenemedi: '
+                                    f'{error.getCode()} / {error.getDomain()} / '
+                                    f'{error.getMessage()}',
+                                    flush=True,
+                                )
                             except Exception:
                                 print('Interstitial reklam yüklenemedi', flush=True)
 
                     self._interstitial = None
                     self._interstitial_loaded = False
+                    # Retain the callback; it is invoked asynchronously by
+                    # Google after this Python frame has returned.
+                    self._inter_load_cb = _InterLoadCb()
                     InterstitialAd.load(
                         self._activity,
                         self._interstitial_unit_id,
                         request,
-                        _InterLoadCb(),
+                        self._inter_load_cb,
                     )
                 except Exception as e:
                     Logger.error(f'KivMob request_interstitial: {e}')
@@ -222,7 +388,10 @@ if platform == 'android':
                     ad = bridge._interstitial
                     bridge._interstitial_loaded = False
                     bridge._interstitial = None
-                    ad.setFullScreenContentCallback(_InterFullScreenCb())
+                    # Keep the callback and the ad reference alive while the
+                    # full-screen activity is open.
+                    bridge._inter_fullscreen_cb = _InterFullScreenCb()
+                    ad.setFullScreenContentCallback(bridge._inter_fullscreen_cb)
                     ad.show(bridge._activity)
                     return
                 except Exception as e:
@@ -247,8 +416,9 @@ if platform == 'android':
 
                     listener = _CloseListener()
                     bridge._close_listener = listener
-                    bridge._interstitial.setAdListener(listener)
-                    bridge._interstitial.show()
+                    legacy_ad = bridge._interstitial or ad
+                    legacy_ad.setAdListener(listener)
+                    legacy_ad.show()
                 except Exception as e:
                     Logger.error(f'KivMob show_interstitial_callback legacy error: {e}')
                     Clock.schedule_once(lambda *_: py_callback(False), 0)
@@ -266,9 +436,14 @@ if platform == 'android':
             def request_rewarded(self, options=None):
                 if not _REWARDED_OK or not self._rewarded_unit_id:
                     self._rewarded_loaded = False
+                    print('Ödüllü isteği atlandı: SDK veya reklam birimi yok', flush=True)
                     return
+                if not self._initialized:
+                    self._rewarded_pending = True
+                    print('Ödüllü isteği: AdMob SDK başlatılması bekleniyor', flush=True)
+                    return
+                self._rewarded_pending = False
                 from jnius import PythonJavaClass, java_method
-                from kivy.clock import Clock
 
                 bridge = self
                 request = self._get_builder(options).build()
@@ -286,18 +461,27 @@ if platform == 'android':
                         bridge._rewarded = None
                         bridge._rewarded_loaded = False
                         try:
-                            print(f'Ödüllü reklam yüklenemedi: {error.getMessage()}', flush=True)
+                            print(
+                                'Ödüllü reklam yüklenemedi: '
+                                f'{error.getCode()} / {error.getDomain()} / '
+                                f'{error.getMessage()}',
+                                flush=True,
+                            )
                         except Exception:
                             print('Ödüllü reklam yüklenemedi', flush=True)
 
                 self._rewarded = None
                 self._rewarded_loaded = False
-                RewardedAd.load(
-                    self._activity,
-                    self._rewarded_unit_id,
-                    request,
-                    _LoadCb(),
-                )
+                self._reward_load_cb = _LoadCb()
+                try:
+                    RewardedAd.load(
+                        self._activity,
+                        self._rewarded_unit_id,
+                        request,
+                        self._reward_load_cb,
+                    )
+                except Exception as e:
+                    Logger.error(f'KivMob request_rewarded: {e}')
 
             @run_on_ui_thread
             def show_rewarded_callback(self, py_callback):
@@ -354,8 +538,10 @@ if platform == 'android':
 
                 ad = bridge._rewarded
                 bridge._rewarded_loaded = False
-                ad.setFullScreenContentCallback(_FullScreenCb())
-                ad.show(bridge._activity, _RewardCb())
+                bridge._reward_fullscreen_cb = _FullScreenCb()
+                bridge._reward_cb = _RewardCb()
+                ad.setFullScreenContentCallback(bridge._reward_fullscreen_cb)
+                ad.show(bridge._activity, bridge._reward_cb)
 
             def _get_builder(self, options):
                 builder = AdRequestBuilder()
