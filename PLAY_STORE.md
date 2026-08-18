@@ -88,7 +88,7 @@ $env:P4A_RELEASE_KEYALIAS_PASSWD = "sifren"
 buildozer android release
 ```
 
-Çıktı: `bin/falimabak-1.9.1-arm64-v8a_armeabi-v7a-release.aab`
+Çıktı: `bin/falimabak-1.9.2-arm64-v8a_armeabi-v7a-release.aab`
 
 ---
 
@@ -175,6 +175,6 @@ adb logcat -v time | grep -iE "AdMob|Ads|Banner reklam|Interstitial|Ödüllü"
 ## Paket bilgisi
 
 - **Application ID:** `org.kumar.falimabak.falimabak`
-- **Sürüm:** 1.9.1
+- **Sürüm:** 1.9.2
 - **Min SDK:** 24 (Android 7.0)
 - **Target SDK:** 36
